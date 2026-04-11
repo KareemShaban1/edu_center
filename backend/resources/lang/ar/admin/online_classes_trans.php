@@ -1,0 +1,26 @@
+<?php
+
+return array (
+  '' => '',
+  'Add_Online_Class' => 'أضافة حصة أونلاين',
+  'Choose' => 'أختار من القائمة',
+  'Class' => 'الصف الدراسى',
+  'Close' => 'الغاء',
+  'Controls' => 'التحكم',
+  'Created_By' => 'بواسطة',
+  'Delete' => 'حذف',
+  'Delete_Online_Classes_Warning' => 'هل انت متاكد مع عملية الحذف ؟',
+  'Edit_Online_Class' => 'تعديل حصة أونلاين',
+  'Grade' => 'المرحلة الدراسية',
+  'Join_Now' => 'أنضم الأن',
+  'Online_Class_Date' => 'تاريخ الحصة',
+  'Online_Class_Duration' => 'مدة الحصة',
+  'Online_Class_Link' => 'لينك الحصة',
+  'Online_Class_Time' => 'وقت الحصة',
+  'Online_Class_Title' => 'عنوان الحصة',
+  'Online_Classes' => 'حصص أونلاين',
+  'Section' => 'المجموعة',
+  'Submit' => 'تأكيد',
+  'Teacher' => 'المعلم',
+  'delete_online_classes_warning' => 'حذف تحذير الفصول عبر الإنترنت',
+);

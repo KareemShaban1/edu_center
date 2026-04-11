@@ -1,0 +1,75 @@
+controllers with Repository
+- Controllers/Students/AttendanceController.php => app/Repository/AttendanceRepository.php - AttendanceRepositoryInterface.php
+- Controllers/Students/FeeController.php => app/Repository/FeeRepository.php - FeeRepositoryInterface.php
+- Controllers/Students/LibraryController.php => app/Repository/LibraryRepository.php - LibraryRepositoryInterface.php
+- Controllers/Students/PaymentController.php => app/Repository/PaymentRepository.php - PaymentRepositoryInterface.php
+- Controllers/Students/StudentController.php => app/Repository/StudentRepository.php - StudentRepositoryInterface.php
+- Controllers/Subjects/SubjectController.php => app/Repository/SubjectRepository.php - SubjectRepositoryInterface.php
+
+
+controllers without repository
+- Controllers/Classrooms/ClassroomController.php
+- Controllers/Grades/GradeController.php
+- Controllers/Sections/SectionController.php
+- controllers/AjexController.php
+- controllers/SettingController.php
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+A Teacher Education Center System built with Laravel and featuring four distinct dashboards (Admin, Teacher, Parent, and Student) can help manage various aspects of the educational process, streamline communication, and improve overall efficiency. Below is a detailed description of the key features and functionalities of each dashboard:
+
+1. **Admin Dashboard:**
+   The Admin Dashboard is the central control panel that provides full access to manage the entire system. It is typically accessible to school administrators or authorized personnel. Key features of the Admin Dashboard include:
+
+   - **User Management:** The ability to add, edit, and delete users (teachers, parents, and students) with different roles and permissions.
+   - **Class Management:** Managing classes, assigning teachers to classes, and handling class-related data such as enrollment, schedules, and subjects.
+   - **Teacher Management:** The capability to manage teacher profiles, qualifications, courses taught, and performance evaluations.
+   - **Student Management:** Managing student information, enrollment status, attendance records, and academic performance.
+   - **Parent Management:** Managing parent profiles and their association with respective students.
+   - **Course Management:** Managing courses, subjects, and curriculum details.
+   - **Attendance Tracking:** Monitoring attendance records for students and teachers.
+   - **Announcements and Notifications:** Sending school-wide or specific group announcements and notifications to teachers, parents, and students.
+   - **Reporting and Analytics:** Generating various reports, such as student progress reports, teacher performance reports, attendance reports, and more.
+
+2. **Teacher Dashboard:**
+   The Teacher Dashboard is designed to facilitate teachers in managing their classes, students, and academic materials. Key features of the Teacher Dashboard include:
+
+   - **Class Overview:** Access to the list of classes assigned to the teacher, along with their details and schedules.
+   - **Student Management:** Access to student profiles, attendance records, and academic progress for the assigned classes.
+   - **Course Material Management:** The ability to upload and share course materials, assignments, and resources with students.
+   - **Grades and Assessment:** Recording and managing student grades and assessments.
+   - **Communication:** Communication tools to interact with parents and students, including sending messages, announcements, and feedback.
+   - **Attendance Management:** Recording and tracking student attendance in the assigned classes.
+   - **Calendar Integration:** Integration with a calendar system to schedule classes and events.
+
+3. **Parent Dashboard:**
+   The Parent Dashboard provides parents with an interface to monitor and engage in their child's academic journey. Key features of the Parent Dashboard include:
+
+   - **Student Overview:** Access to their child's profile, including academic progress, attendance records, and class schedule.
+   - **Teacher Communication:** Ability to communicate with teachers, view teacher feedback, and receive announcements.
+   - **Attendance Tracking:** Monitoring their child's attendance records and leave requests.
+   - **Academic Performance:** Viewing their child's grades, progress reports, and assessments.
+   - **Calendar Integration:** Access to their child's class schedules and school events.
+
+4. **Student Dashboard:**
+   The Student Dashboard allows students to keep track of their academic activities and communicate with teachers. Key features of the Student Dashboard include:
+
+   - **Class Overview:** Access to class schedules, course materials, and teacher information.
+   - **Grades and Assessments:** Viewing grades, assessments, and progress reports.
+   - **Attendance Tracking:** Monitoring their attendance records and leave requests.
+   - **Communication:** Ability to send messages to teachers, receive feedback, and stay updated with announcements.
+   - **Personal Information:** Viewing and updating their own profile information.
+
+These are the core functionalities and features of a Teacher Education Center System with Laravel and four different dashboards. The system can be extended with additional features like online examinations, library management, fee management, and more, based on the specific needs of the educational institution.

@@ -1,0 +1,25 @@
+<?php
+
+return array (
+  'Add_Fee' => 'Add Fee',
+  'Amount' => 'Amount',
+  'Book_Fees' => 'Book Fees',
+  'Choose' => 'Choose',
+  'Class' => 'Class',
+  'Delete_Fee_Warning' => 'Delete Fee Warning',
+  'Edit_Fee' => 'Edit Fee',
+  'Fee_Type' => 'Fee Type',
+  'Fees_Title' => 'Fees Title',
+  'Grade' => 'Grade',
+  'Groups_Fees' => 'Groups Fees',
+  'Half_Month_Fees' => 'Half Month Fees',
+  'Month' => 'Month',
+  'Month_Fees' => 'Month Fees',
+  'Notes' => 'Notes',
+  'Notes_Fees' => 'Notes Fees',
+  'Other_Fees' => 'Other Fees',
+  'Processes' => 'Processes',
+  'Section' => 'Section',
+  'Submit' => 'Submit',
+  'Year' => 'Year',
+);

@@ -1,0 +1,15 @@
+
+- Notify parents & students about absence status only           done
+- Notify parents & students about upcoming exams and quizzes.
+    ->page to insert specific exam date , what if i wanna add more than date?
+- Notify parents when exam or quiz grades are posted.
+- Payment status.
+
+
+- Create Notifications front module
+    - absence + grades = Page_1
+    - upcoming + general = Page_2
+- Mark Notifications As Read
+- Translate Notification Messages
+
+- enhance code and parent / student dashboard

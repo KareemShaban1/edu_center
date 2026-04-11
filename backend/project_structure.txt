@@ -1,0 +1,222 @@
++---app
+|   +---Console
+|   |       Kernel.php
+|   +---Exceptions
+|   |       Handler.php
+|   +---Http
+|   |   +---Controllers
+|   |   |    +---admin
+|   |   |    |   +---Announcements 
+|   |   |    |   |   AnnouncementsController.php
+|   |   |    |   +---Classes 
+|   |   |    |   |   ClassesController.php          (Repository Pattern)
+|   |   |    |   +---Exam 
+|   |   |    |   |   ExamController.php             (Repository Pattern)
+|   |   |    |   +---Grades 
+|   |   |    |   |   GradeController.php            (Repository Pattern)
+|   |   |    |   +---Quiz 
+|   |   |    |   |   QuizController.php             (Repository Pattern)
+|   |   |    |   +---Sections 
+|   |   |    |   |   SectionController.php          (Repository Pattern)
+|   |   |    |   +---Students 
+|   |   |    |   |   AttendanceController.php       (Repository Pattern)
+|   |   |    |   |   FeesController.php             (Repository Pattern)
+|   |   |    |   |   LibraryController.php          (Repository Pattern)
+|   |   |    |   |   OnlineClassesController.php 
+|   |   |    |   |   PaymentController.php          (Repository Pattern)
+|   |   |    |   |   StudentController.php          (Repository Pattern)
+|   |   |    |   +---Teacher 
+|   |   |    |   |   TeacherController.php          (Repository Pattern)
+|   |   |    |   HomeController.php
+|   |   |    |   MonthsController.php
+|   |   |    |   SettingsController.php
+|   |   |    +---Auth
+|   |   |    |   ConfirmPasswordController.php
+|   |   |    |   ForgotPasswordController.php
+|   |   |    |   LoginController.php
+|   |   |    |   RegisterController.php
+|   |   |    |   ResetPasswordController.php
+|   |   |    |   VerificationController.php
+|   |   |    +---Parents_Dashboard
+|   |   |    |   ChildrenController.php
+|   |   |    +---Students_Dashboard
+|   |   |    |   ProfileController.php
+|   |   |    |   StudentDashboardController.php
+|   |   |    +---Teacher_Dashboard
+|   |   |    |   OnlineZoomClassesController.php
+|   |   |    |   ProfileController.php
+|   |   |    |   QuestionController.php
+|   |   |    |   StudentController.php
+|   |   |    |   TeacherDashboardController.php
+|   |   |    AjaxControllerController.php
+|   |   |    Controller.php
+|   |   |    
+|   |   +---Livewire
+|   |   |       AddParent.php
+|   |   |       Calendar.php
+|   |   |       CalendarStudent.php
+|   |   |       Payment.php
+|   |   |       
+|   |   +---Middleware
+|   |   |       Authenticate.php
+|   |   |       CheckForMaintenanceMode.php
+|   |   |       EncryptCookies.php
+|   |   |       PreventRequestsDuringMaintenance.php
+|   |   |       RedirectIfAuthenticated.php
+|   |   |       TrimStrings.php
+|   |   |       TrustHosts.php
+|   |   |       TrustProxies.php
+|   |   |       VerifyCsrfToken.php
+|   |   |
+|   |   +---Requests
+|   |   |   |   StoreClassesRequest.php
+|   |   |   |   StoreExamRequest.php
+|   |   |   |   StoreFeesRequest.php
+|   |   |   |   StoreGradesRequest.php
+|   |   |   |   StoreSectionRequest.php
+|   |   |   |   StoreStudentsRequest.php
+|   |   |   |   StoreTeachersRequest.php
+|   |   |   |   UpdateExamRequest.php
+|   |   |   |   UpateStudentsRequest.php
+|   |   |   
+|   |   +---Traits
+|   |   |       AttachFileTrait.php
+|   |   |       AuthTrait.php
+|   |   |       ZoomMeetingTrait.php
+|   |   |   
+|   |    \---Kernel.php   
+|   |   
+|   +---Models
+|   |   Announcement.php
+|   |   Attendance.php
+|   |   Classes.php
+|   |   Event.php
+|   |   Exam.php
+|   |   Fee.php
+|   |   Gender.php
+|   |   Grade.php
+|   |   Image.php
+|   |   Library.php
+|   |   Months.php
+|   |   OnlineClasses.php
+|   |   ParentAttachment.php
+|   |   Parents.php
+|   |   Payment.php
+|   |   Quiz.php
+|   |   Section.php
+|   |   Setting.php
+|   |   Student.php
+|   |   StudentAccount.php
+|   |   Teacher.php
+|   |     
+|   +---Proviers
+|   |   AppServiceProvider.php
+|   |   AuthServiceProvider.php
+|   |   BroadcastServiceProvider.php
+|   |   CartServiceProvider.php
+|   |   EventServiceProvider.php
+|   |   RepoServiceProvider.php
+|   |   RouteServiceProvider.php
+|   |
+|   +---Repository
+|          AttendanceRepository.php
+|          AttendanceRepositoryInterface.php
+|          ClassesRepository.php
+|          ClassesRepositoryInterface.php
+|          ExamRepository.php
+|          ExamRepositoryInterface.php
+|          FeesRepository.php
+|          FeesRepositoryInterface.php
+|          GradeRepository.php
+|          GradeRepositoryInterface.php
+|          LibraryRepository.php
+|          LibraryRepositoryInterface.php
+|          PaymentRepository.php
+|          PaymentRepositoryInterface.php
+|          QuizRepository.php
+|          QuizRepositoryInterface.php
+|          SectionRepository.php
+|          SectionRepositoryInterface.php
+|          StudentRepository.php
+|          StudentRepositoryInterface.php
+|          TeacherRepository.php
+|          TeacherRepositoryInterface.php
++---database
+|   \---factories
+|           UserFactory.php
+|   \---migrations
+|           
+|   \---seeders
+|           ClassesSeeder.php
+|           DatabaseSeeder.php
+|           GenderSeeder.php
+|           GradeSeeder.php
+|           MonthsSeeder.php
+|           ParentsSeeder.php
+|           SectionsSeeder.php
+|           SettingsSeeder.php
+|           StudentsSeeder.php
+|           TeacherSeeder.php
+|
+\---resources
+    |
+    |
+    \---views
+        |   welcome.blade.php
+        |   
+        +---sessions
+        |   |   create.blade.php
+        |   |   
+        |   \---passwords
+        |           reset.blade.php
+        |           verify.blade.php
+        |           
+        +---components
+        |   |   layout.blade.php
+        |   |   plugins.blade.php
+        |   |   
+        |   +---footers
+        |   |       auth.blade.php
+        |   |       guest.blade.php
+        |   |       
+        |   \---navbars
+        |      |   sidebar.blade.php
+        |      |   
+        |      \---navs
+        |             auth.blade.php
+        |             guest.blade.php
+        |              
+        |           
+        +---pages
+        |   |   billing.blade.php
+        |   |   notifications.blade.php
+        |   |   profile.blade.php
+        |   |   rtl.blade.php
+        |   |   static-sign-in.blade.php
+        |   |   static-sign-up.blade.php
+        |   |   tables.blade.php
+        |   |   virtual-reality.blade.php
+        |   |  
+        |   \---laravel-examples
+        |           user-management.blade.php
+        |           user-profile.blade.php
+        |       
+        +---dashboard
+        |       index.blade.php
+        | 
+        +---errors
+        |       401.blade.php
+        |       403.blade.php
+        |       404.blade.php
+        |       405.blade.php
+        |       419.blade.php
+        |       429.blade.php
+        |       500.blade.php
+        |       503.blade.php
+        |
+        \---register
+                create.blade.php
+
+
+
+

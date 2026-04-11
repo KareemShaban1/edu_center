@@ -1,0 +1,16 @@
+1- announcement    --
+2- attendance      -- 
+3- classes         -- 
+4- dashboard       -- 
+5- Exam            --
+6- Fees            --
+7- Grades          -- 
+8- Library         --
+9- online_classes  -- 
+10- Payment        --
+11- Quiz           --
+12- Sections       --
+13- Settings       --
+14- Students       
+
+

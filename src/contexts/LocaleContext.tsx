@@ -1,0 +1,686 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+export type Locale = 'en' | 'ar';
+
+interface LocaleContextType {
+  locale: Locale;
+  dir: 'ltr' | 'rtl';
+  setLocale: (locale: Locale) => void;
+  t: (key: string) => string;
+}
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    // App
+    'app.name': 'EduCenter',
+    'app.welcome': 'Welcome to EduCenter',
+    'app.signIn': 'Sign in to your account',
+    'app.demoMode': 'Demo mode — use any email/password to sign in',
+
+    // Auth
+    'auth.signInAs': 'Sign in as',
+    'auth.email': 'Email',
+    'auth.password': 'Password',
+    'auth.signIn': 'Sign In',
+    'auth.signingIn': 'Signing in...',
+    'auth.signOut': 'Sign Out',
+    'auth.tenantCode': 'Tenant Code',
+    'auth.invalidCredentials': 'Invalid credentials. Please try again.',
+
+    // Roles
+    'role.admin': 'Admin',
+    'role.teacher': 'Teacher',
+    'role.student': 'Student',
+    'role.parent': 'Parent',
+    'role.super_admin': 'Super Admin',
+    'role.platform_admin': 'Platform Admin',
+
+    // Navigation - Admin
+    'nav.dashboard': 'Dashboard',
+    'nav.students': 'Students',
+    'nav.teachers': 'Teachers',
+    'nav.parents': 'Parents',
+    'nav.attendance': 'Attendance',
+    'nav.fees': 'Fees & Payments',
+    'nav.payments': 'Payments',
+    'nav.exams': 'Exams',
+    'nav.library': 'Library',
+    'nav.announcements': 'Announcements',
+    'nav.reports': 'Reports',
+    'nav.settings': 'Settings',
+    'nav.grades': 'Grades',
+    'nav.classes': 'Classes',
+    'nav.sections': 'Sections',
+    'nav.units': 'Units',
+    'nav.lessons': 'Lessons',
+    'nav.meetingSeriesAdmin': 'Meeting Series',
+
+    // Navigation - Teacher
+    'nav.myClasses': 'My Classes',
+    'nav.meetingSeries': 'Weekly Series',
+    'nav.quizzes': 'Quizzes',
+    'nav.homework': 'Homework',
+
+    // Navigation - Student
+    'nav.myCourses': 'My Courses',
+    'nav.myMeetings': 'Meetings',
+    'nav.myGrades': 'Grades',
+
+    // Navigation - Parent
+    'nav.children': 'Children',
+    'nav.fees_short': 'Fees',
+
+    // Navigation - Platform
+    'nav.tenants': 'Tenants',
+    'nav.subscriptions': 'Subscriptions',
+    'nav.users': 'Users',
+    'nav.roles': 'Roles',
+    'nav.activityLogs': 'Activity Logs',
+
+    // Dashboard titles
+    'dashboard.admin': 'Admin Dashboard',
+    'dashboard.admin.desc': 'Overview of your educational center',
+    'dashboard.teacher': 'Teacher Dashboard',
+    'dashboard.teacher.desc': 'Welcome back! Here\'s your teaching overview',
+    'dashboard.student': 'Student Dashboard',
+    'dashboard.student.desc': 'Track your academic progress',
+    'dashboard.parent': 'Parent Dashboard',
+    'dashboard.parent.desc': 'Monitor your children\'s progress',
+    'dashboard.platform': 'Platform Dashboard',
+    'dashboard.platform.desc': 'System-wide overview and management',
+    'dashboard.superAdmin': 'Super Admin Dashboard',
+    'dashboard.superAdmin.desc': 'Control tenants, subscriptions, and platform operations',
+
+    // Stats
+    'stat.totalStudents': 'Total Students',
+    'stat.teachers': 'Teachers',
+    'stat.attendanceRate': 'Attendance Rate',
+    'stat.revenue': 'Revenue',
+    'stat.myClasses': 'My Classes',
+    'stat.totalStudentsSmall': 'Total Students',
+    'stat.avgAttendance': 'Avg Attendance',
+    'stat.pendingHomework': 'Pending Homework',
+    'stat.enrolledCourses': 'Enrolled Courses',
+    'stat.gpa': 'GPA',
+    'stat.completedHomework': 'Completed',
+    'stat.children': 'Children',
+    'stat.avgGrade': 'Avg Grade',
+    'stat.pendingFees': 'Pending Fees',
+    'stat.totalTenants': 'Total Tenants',
+    'stat.activeUsers': 'Active Users',
+    'stat.systemHealth': 'System Health',
+    'stat.apiCalls': 'API Calls',
+    'stat.vsLastMonth': 'vs last month',
+    'stat.vsLastWeek': 'vs last week',
+    'stat.today': 'today',
+
+    // CRUD
+    'crud.addNew': 'Add New',
+    'crud.edit': 'Edit',
+    'crud.delete': 'Delete',
+    'crud.search': 'Search...',
+    'crud.results': 'results',
+    'crud.noData': 'No data found',
+    'crud.save': 'Save',
+    'crud.saving': 'Saving...',
+    'crud.cancel': 'Cancel',
+    'crud.deleted': 'Deleted',
+    'crud.deletedDesc': 'Item has been deleted successfully.',
+    'crud.deleteConfirm': 'Are you sure you want to delete this item? This action cannot be undone.',
+    'crud.deleting': 'Deleting...',
+    'crud.actions': 'Actions',
+    'crud.showing': 'Showing',
+    'crud.of': 'of',
+    'crud.page': 'Page',
+
+    // Pages
+    'page.students.desc': 'Manage all enrolled students',
+    'page.teachers.desc': 'Manage teaching staff',
+    'page.parents.desc': 'Manage parent accounts',
+    'page.attendance.desc': 'View and manage student attendance records',
+    'page.fees.desc': 'Manage fees and payment records',
+    'page.payments.desc': 'Manage section payments and history',
+    'page.exams.desc': 'Manage examination records',
+    'page.library.desc': 'Manage library resources',
+    'page.announcements.desc': 'Manage announcements and notifications',
+    'page.reports.desc': 'View analytics and reports',
+    'page.settings.desc': 'Manage school settings',
+    'page.classes.desc': 'View and manage your classes',
+    'page.quizzes.desc': 'Create and manage quizzes',
+    'page.homework.desc': 'Manage homework assignments',
+    'page.courses.desc': 'View your enrolled courses',
+    'page.meetings.desc': 'Single meetings: Jitsi, LiveKit, or external links for your section',
+    'page.grades.desc': 'View your grades and results',
+    'page.children.desc': 'View your children\'s information',
+    'page.tenants.desc': 'Manage platform tenants',
+    'page.users.desc': 'Manage platform users',
+    'page.roles.desc': 'Manage user roles and permissions',
+    'page.logs.desc': 'View system activity logs',
+
+    // Table columns
+    'col.id': 'ID',
+    'col.name': 'Name',
+    'col.email': 'Email',
+    'col.gender': 'Gender',
+    'col.grade': 'Grade',
+    'col.class': 'Class',
+    'col.phone': 'Phone',
+    'col.subject': 'Subject',
+    'col.status': 'Status',
+    'col.date': 'Date',
+    'col.student': 'Student',
+    'col.amount': 'Amount',
+    'col.type': 'Type',
+    'col.title': 'Title',
+    'col.author': 'Author',
+    'col.category': 'Category',
+    'col.content': 'Content',
+    'col.target': 'Target',
+    'col.score': 'Score',
+    'col.total': 'Total',
+    'col.course': 'Course',
+    'col.dueDate': 'Due Date',
+    'col.startDate': 'Start Date',
+    'col.description': 'Description',
+    'col.durationMinutes': 'Duration (min)',
+    'col.domain': 'Domain',
+    'col.plan': 'Plan',
+    'col.role': 'Role',
+    'col.action': 'Action',
+    'col.user': 'User',
+    'col.timestamp': 'Timestamp',
+    'col.enrolled': 'Enrolled',
+    'col.parent': 'Parent',
+    'col.password': 'Password',
+    'col.attachments': 'Attachments',
+    'col.child': 'Child',
+    'col.section': 'Section',
+    'col.notes': 'Notes',
+    'col.media': 'Media',
+    'col.addFiles': 'Add Files',
+    'col.remove': 'Remove',
+    'col.noFiles': 'No files selected',
+    'col.teacher': 'Teacher',
+    'col.unit': 'Unit',
+
+    // Academic pages
+    'page.gradesAdmin.desc': 'Manage academic grades',
+    'page.classesAdmin.desc': 'Manage classes and classrooms',
+    'page.sectionsAdmin.desc': 'Manage sections grouped by grade and class',
+    'page.unitsAdmin.desc': 'Manage curriculum units',
+    'page.lessonsAdmin.desc': 'Manage lessons within units',
+    'page.homeworkAdmin.desc': 'Manage homework assignments',
+
+    // Status options
+    'status.active': 'Active',
+    'status.inactive': 'Inactive',
+    'status.graduated': 'Graduated',
+    'status.suspended': 'Suspended',
+
+    // Form
+    'form.selectParent': 'Select Parent',
+    'form.noParent': 'No Parent',
+    'form.addAttachments': 'Add Attachments',
+    'form.filesSelected': 'files selected',
+    'form.assignedClasses': 'Assigned Classes',
+    'col.children_count': 'Children',
+    'col.relation': 'Relation',
+    'col.jobTitle': 'Job Title',
+    'col.address': 'Address',
+
+    // Sections
+    'section.recentStudents': 'Recent Students',
+    'section.announcements': 'Announcements',
+    'section.todaySchedule': 'Today\'s Schedule',
+    'section.quickStats': 'Quick Stats',
+    'section.upcomingAssignments': 'Upcoming Assignments',
+    'section.recentGrades': 'Recent Grades',
+    'section.childrenOverview': 'Children Overview',
+    'section.recentPayments': 'Recent Payments',
+    'section.recentTenants': 'Recent Tenants',
+    'section.recentActivity': 'Recent Activity',
+    'section.schoolInfo': 'School Information',
+    'section.academicSettings': 'Academic Settings',
+    'section.schoolName': 'School Name',
+    'section.schoolEmail': 'School Email',
+    'section.schoolPhone': 'School Phone',
+    'section.currentYear': 'Current Academic Year',
+    'section.gradeSystem': 'Grading System',
+    'section.saveSettings': 'Save Settings',
+
+    // Attendance
+    'attendance.today': 'Today',
+    'attendance.history': 'History',
+    'attendance.present': 'Present',
+    'attendance.absent': 'Absent',
+    'attendance.late': 'Late',
+    'attendance.markAllPresent': 'Mark All Present',
+    'attendance.markAllAbsent': 'Mark All Absent',
+    'attendance.markAllLate': 'Mark All Late',
+    'attendance.submit': 'Submit Attendance',
+    'attendance.saved': 'Attendance Saved',
+    'attendance.savedDesc': 'Attendance recorded for',
+    'attendance.notesPlaceholder': 'Notes (optional)',
+    'attendance.forDate': 'Attendance for',
+    'attendance.view': 'View',
+
+    // Exams
+    'exam.degree': 'Degree',
+    'exam.submit': 'Submit Exam',
+    'exam.saved': 'Exam Saved',
+    'exam.savedDesc': 'Exam data recorded for',
+
+    // Quizzes
+    'quiz.degree': 'Degree',
+    'quiz.submit': 'Submit Quiz',
+    'quiz.saved': 'Quiz Saved',
+    'quiz.savedDesc': 'Quiz data recorded for',
+
+    // Misc
+    'misc.noDataAvailable': 'No data available',
+    'misc.previousPage': 'Previous page',
+    'misc.nextPage': 'Next page',
+    'misc.language': 'Language',
+    'misc.close': 'Close',
+    'misc.back': 'Back',
+    'misc.moreLinks': 'More Links',
+
+    'meetings.join': 'Join',
+    'meetings.openLiveKit': 'Open in LiveKit',
+    'provider.guide.jitsi.title': 'Jitsi (free)',
+    'provider.guide.jitsi.students': 'Students: good for small to medium classes (about 10-50).',
+    'provider.guide.jitsi.internet': 'Internet: at least 2-5 Mbps upload for teacher, 1-3 Mbps per student.',
+    'provider.guide.jitsi.notes': 'Notes: easiest free option, no paid license required.',
+    'provider.guide.livekit.title': 'LiveKit',
+    'provider.guide.livekit.students': 'Students: supports larger classes when server/resources are configured well.',
+    'provider.guide.livekit.internet': 'Internet: recommended 5+ Mbps upload for teacher, 2+ Mbps per student.',
+    'provider.guide.livekit.notes': 'Notes: best performance/flexibility, requires LIVEKIT_URL/API key/secret setup.',
+    'provider.guide.zoom.title': 'Zoom',
+    'provider.guide.zoom.students': 'Students: depends on your Zoom plan and meeting policy.',
+    'provider.guide.zoom.internet': 'Internet: around 3-6 Mbps upload for teacher, 1.5-3 Mbps per student.',
+    'provider.guide.zoom.notes': 'Notes: paste join URL (and optional host URL) from Zoom.',
+    'provider.guide.teams.title': 'Microsoft Teams',
+    'provider.guide.teams.students': 'Students: depends on your Microsoft 365 plan.',
+    'provider.guide.teams.internet': 'Internet: around 2-5 Mbps upload for teacher, 1-2 Mbps per student.',
+    'provider.guide.teams.notes': 'Notes: paste Teams join URL (and optional organizer link).',
+    'provider.guide.gmeet.title': 'Google Meet',
+    'provider.guide.gmeet.students': 'Students: depends on Google Workspace plan.',
+    'provider.guide.gmeet.internet': 'Internet: around 2-4 Mbps upload for teacher, 1-2 Mbps per student.',
+    'provider.guide.gmeet.notes': 'Notes: paste Meet join URL and optional host URL.',
+    'provider.guide.external.title': 'External link',
+    'provider.guide.external.students': 'Students: depends on your external provider capacity.',
+    'provider.guide.external.internet': 'Internet: depends on provider requirements.',
+    'provider.guide.external.notes': 'Notes: provide student join URL; host/moderator URL is optional but recommended.',
+    'provider.guide.offline.title': 'Offline',
+    'provider.guide.offline.students': 'Students: based on physical room capacity.',
+    'provider.guide.offline.internet': 'Internet: not required.',
+    'provider.guide.offline.notes': 'Notes: set location and optional notes for students.',
+    'meetings.liveKitRoom': 'LiveKit room',
+
+    // Admin Users & Roles
+    'nav.adminUsers': 'Users',
+    'nav.rolesPermissions': 'Roles & Permissions',
+    'page.adminUsers.desc': 'Manage system users and access',
+    'page.rolesPermissions.desc': 'Manage roles and their permissions',
+    'crud.view': 'View',
+    'col.permissions': 'Permissions',
+    'col.usersCount': 'Users',
+    'form.leaveBlank': 'Leave blank to keep current',
+  },
+
+  ar: {
+    // App
+    'app.name': 'المركز التعليمي',
+    'app.welcome': 'مرحباً بك في المركز التعليمي',
+    'app.signIn': 'تسجيل الدخول إلى حسابك',
+    'app.demoMode': 'وضع تجريبي — استخدم أي بريد إلكتروني/كلمة مرور للدخول',
+
+    // Auth
+    'auth.signInAs': 'تسجيل الدخول كـ',
+    'auth.email': 'البريد الإلكتروني',
+    'auth.password': 'كلمة المرور',
+    'auth.signIn': 'تسجيل الدخول',
+    'auth.signingIn': 'جاري تسجيل الدخول...',
+    'auth.signOut': 'تسجيل الخروج',
+    'auth.tenantCode': 'رمز المستأجر',
+    'auth.invalidCredentials': 'بيانات الدخول غير صحيحة. حاول مرة أخرى.',
+
+    // Roles
+    'role.admin': 'مدير',
+    'role.teacher': 'معلم',
+    'role.student': 'طالب',
+    'role.parent': 'ولي أمر',
+    'role.super_admin': 'مدير عام',
+    'role.platform_admin': 'مدير المنصة',
+
+    // Navigation - Admin
+    'nav.dashboard': 'لوحة التحكم',
+    'nav.students': 'الطلاب',
+    'nav.teachers': 'المعلمون',
+    'nav.parents': 'أولياء الأمور',
+    'nav.attendance': 'الحضور',
+    'nav.fees': 'الرسوم والمدفوعات',
+    'nav.payments': 'المدفوعات',
+    'nav.exams': 'الاختبارات',
+    'nav.library': 'المكتبة',
+    'nav.announcements': 'الإعلانات',
+    'nav.reports': 'التقارير',
+    'nav.settings': 'الإعدادات',
+    'nav.grades': 'المراحل',
+    'nav.classes': 'الفصول',
+    'nav.sections': 'المجموعات',
+    'nav.units': 'الوحدات',
+    'nav.lessons': 'الدروس',
+    'nav.meetingSeriesAdmin': 'السلاسل الأسبوعية',
+
+    // Navigation - Teacher
+    'nav.myClasses': 'صفوفي',
+    'nav.meetingSeries': 'سلاسل أسبوعية',
+    'nav.quizzes': 'الاختبارات القصيرة',
+    'nav.homework': 'الواجبات',
+
+    // Navigation - Student
+    'nav.myCourses': 'موادي',
+    'nav.myMeetings': 'الجلسات',
+    'nav.myGrades': 'الدرجات',
+
+    // Navigation - Parent
+    'nav.children': 'الأبناء',
+    'nav.fees_short': 'الرسوم',
+
+    // Navigation - Platform
+    'nav.tenants': 'المستأجرون',
+    'nav.subscriptions': 'الاشتراكات',
+    'nav.users': 'المستخدمون',
+    'nav.roles': 'الأدوار',
+    'nav.activityLogs': 'سجل النشاطات',
+
+    // Dashboard titles
+    'dashboard.admin': 'لوحة تحكم المدير',
+    'dashboard.admin.desc': 'نظرة عامة على مركزك التعليمي',
+    'dashboard.teacher': 'لوحة تحكم المعلم',
+    'dashboard.teacher.desc': 'مرحباً بعودتك! إليك نظرة عامة على التدريس',
+    'dashboard.student': 'لوحة تحكم الطالب',
+    'dashboard.student.desc': 'تتبع تقدمك الأكاديمي',
+    'dashboard.parent': 'لوحة تحكم ولي الأمر',
+    'dashboard.parent.desc': 'تابع تقدم أبنائك',
+    'dashboard.platform': 'لوحة تحكم المنصة',
+    'dashboard.platform.desc': 'نظرة عامة على النظام وإدارته',
+    'dashboard.superAdmin': 'لوحة تحكم المدير العام',
+    'dashboard.superAdmin.desc': 'التحكم في المستأجرين والاشتراكات وعمليات المنصة',
+
+    // Stats
+    'stat.totalStudents': 'إجمالي الطلاب',
+    'stat.teachers': 'المعلمون',
+    'stat.attendanceRate': 'معدل الحضور',
+    'stat.revenue': 'الإيرادات',
+    'stat.myClasses': 'صفوفي',
+    'stat.totalStudentsSmall': 'إجمالي الطلاب',
+    'stat.avgAttendance': 'متوسط الحضور',
+    'stat.pendingHomework': 'واجبات معلقة',
+    'stat.enrolledCourses': 'المواد المسجلة',
+    'stat.gpa': 'المعدل التراكمي',
+    'stat.completedHomework': 'مكتملة',
+    'stat.children': 'الأبناء',
+    'stat.avgGrade': 'متوسط الدرجة',
+    'stat.pendingFees': 'رسوم معلقة',
+    'stat.totalTenants': 'إجمالي المستأجرين',
+    'stat.activeUsers': 'المستخدمون النشطون',
+    'stat.systemHealth': 'حالة النظام',
+    'stat.apiCalls': 'طلبات API',
+    'stat.vsLastMonth': 'مقارنة بالشهر الماضي',
+    'stat.vsLastWeek': 'مقارنة بالأسبوع الماضي',
+    'stat.today': 'اليوم',
+
+    // CRUD
+    'crud.addNew': 'إضافة جديد',
+    'crud.edit': 'تعديل',
+    'crud.delete': 'حذف',
+    'crud.search': 'بحث...',
+    'crud.results': 'نتيجة',
+    'crud.noData': 'لا توجد بيانات',
+    'crud.save': 'حفظ',
+    'crud.saving': 'جاري الحفظ...',
+    'crud.cancel': 'إلغاء',
+    'crud.deleted': 'تم الحذف',
+    'crud.deletedDesc': 'تم حذف العنصر بنجاح.',
+    'crud.deleteConfirm': 'هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
+    'crud.deleting': 'جاري الحذف...',
+    'crud.actions': 'إجراءات',
+    'crud.showing': 'عرض',
+    'crud.of': 'من',
+    'crud.page': 'صفحة',
+
+    // Pages
+    'page.students.desc': 'إدارة جميع الطلاب المسجلين',
+    'page.teachers.desc': 'إدارة الطاقم التعليمي',
+    'page.parents.desc': 'إدارة حسابات أولياء الأمور',
+    'page.attendance.desc': 'عرض وإدارة سجلات حضور الطلاب',
+    'page.fees.desc': 'إدارة الرسوم وسجلات الدفع',
+    'page.payments.desc': 'إدارة مدفوعات الأقسام وسجلها',
+    'page.exams.desc': 'إدارة سجلات الاختبارات',
+    'page.library.desc': 'إدارة موارد المكتبة',
+    'page.announcements.desc': 'إدارة الإعلانات والإشعارات',
+    'page.reports.desc': 'عرض التحليلات والتقارير',
+    'page.settings.desc': 'إدارة إعدادات المدرسة',
+    'page.classes.desc': 'عرض وإدارة صفوفك',
+    'page.quizzes.desc': 'إنشاء وإدارة الاختبارات القصيرة',
+    'page.homework.desc': 'إدارة الواجبات المنزلية',
+    'page.courses.desc': 'عرض المواد المسجلة',
+    'page.meetings.desc': 'جلسات فردية: Jitsi أو LiveKit أو روابط خارجية لمجموعتك',
+    'page.grades.desc': 'عرض درجاتك ونتائجك',
+    'page.children.desc': 'عرض معلومات أبنائك',
+    'page.tenants.desc': 'إدارة مستأجري المنصة',
+    'page.users.desc': 'إدارة مستخدمي المنصة',
+    'page.roles.desc': 'إدارة أدوار وصلاحيات المستخدمين',
+    'page.logs.desc': 'عرض سجل نشاطات النظام',
+
+    // Table columns
+    'col.id': 'الرقم',
+    'col.name': 'الاسم',
+    'col.email': 'البريد الإلكتروني',
+    'col.gender': 'الجنس',
+    'col.grade': 'المرحلة',
+    'col.class': 'الصف',
+    'col.phone': 'الهاتف',
+    'col.subject': 'المادة',
+    'col.status': 'الحالة',
+    'col.date': 'التاريخ',
+    'col.student': 'الطالب',
+    'col.amount': 'المبلغ',
+    'col.type': 'النوع',
+    'col.title': 'العنوان',
+    'col.author': 'المؤلف',
+    'col.category': 'الفئة',
+    'col.content': 'المحتوى',
+    'col.target': 'الهدف',
+    'col.score': 'الدرجة',
+    'col.total': 'الإجمالي',
+    'col.course': 'المادة',
+    'col.dueDate': 'تاريخ التسليم',
+    'col.startDate': 'تاريخ البدء',
+    'col.description': 'الوصف',
+    'col.durationMinutes': 'المدة (دقيقة)',
+    'col.domain': 'النطاق',
+    'col.plan': 'الخطة',
+    'col.role': 'الدور',
+    'col.action': 'الإجراء',
+    'col.user': 'المستخدم',
+    'col.timestamp': 'الوقت',
+    'col.enrolled': 'تاريخ التسجيل',
+    'col.parent': 'ولي الأمر',
+    'col.password': 'كلمة المرور',
+    'col.attachments': 'المرفقات',
+    'col.child': 'الابن',
+    'col.section': 'القسم',
+    'col.notes': 'ملاحظات',
+    'col.media': 'الوسائط',
+    'col.addFiles': 'إضافة ملفات',
+    'col.remove': 'إزالة',
+    'col.noFiles': 'لم يتم اختيار ملفات',
+    'col.teacher': 'المعلم',
+    'col.unit': 'الوحدة',
+
+    // Academic pages
+    'page.gradesAdmin.desc': 'إدارة المراحل الدراسية',
+    'page.classesAdmin.desc': 'إدارة الفصول والقاعات',
+    'page.sectionsAdmin.desc': 'إدارة المجموعات مجمّعة حسب المرحلة والفصل',
+    'page.unitsAdmin.desc': 'إدارة الوحدات الدراسية',
+    'page.lessonsAdmin.desc': 'إدارة الدروس ضمن الوحدات',
+    'page.homeworkAdmin.desc': 'إدارة الواجبات المنزلية',
+
+    // Status options
+    'status.active': 'نشط',
+    'status.inactive': 'غير نشط',
+    'status.graduated': 'متخرج',
+    'status.suspended': 'موقوف',
+
+    // Form
+    'form.selectParent': 'اختر ولي الأمر',
+    'form.noParent': 'بدون ولي أمر',
+    'form.addAttachments': 'إضافة مرفقات',
+    'form.filesSelected': 'ملفات محددة',
+    'form.assignedClasses': 'الصفوف المعينة',
+    'col.children_count': 'الأبناء',
+    'col.relation': 'صلة القرابة',
+    'col.jobTitle': 'المسمى الوظيفي',
+    'col.address': 'العنوان',
+
+    // Sections
+    'section.recentStudents': 'الطلاب الجدد',
+    'section.announcements': 'الإعلانات',
+    'section.todaySchedule': 'جدول اليوم',
+    'section.quickStats': 'إحصائيات سريعة',
+    'section.upcomingAssignments': 'الواجبات القادمة',
+    'section.recentGrades': 'آخر الدرجات',
+    'section.childrenOverview': 'نظرة عامة على الأبناء',
+    'section.recentPayments': 'آخر المدفوعات',
+    'section.recentTenants': 'آخر المستأجرين',
+    'section.recentActivity': 'آخر النشاطات',
+    'section.schoolInfo': 'معلومات المدرسة',
+    'section.academicSettings': 'الإعدادات الأكاديمية',
+    'section.schoolName': 'اسم المدرسة',
+    'section.schoolEmail': 'البريد الإلكتروني للمدرسة',
+    'section.schoolPhone': 'هاتف المدرسة',
+    'section.currentYear': 'العام الدراسي الحالي',
+    'section.gradeSystem': 'نظام الدرجات',
+    'section.saveSettings': 'حفظ الإعدادات',
+
+    // Attendance
+    'attendance.today': 'اليوم',
+    'attendance.history': 'السجل',
+    'attendance.present': 'حاضر',
+    'attendance.absent': 'غائب',
+    'attendance.late': 'متأخر',
+    'attendance.markAllPresent': 'تحضير الكل',
+    'attendance.markAllAbsent': 'تغييب الكل',
+    'attendance.markAllLate': 'تأخير الكل',
+    'attendance.submit': 'حفظ الحضور',
+    'attendance.saved': 'تم حفظ الحضور',
+    'attendance.savedDesc': 'تم تسجيل الحضور لتاريخ',
+    'attendance.notesPlaceholder': 'ملاحظات (اختياري)',
+    'attendance.forDate': 'حضور يوم',
+    'attendance.view': 'عرض',
+
+    // Exams
+    'exam.degree': 'الدرجة',
+    'exam.submit': 'حفظ الاختبار',
+    'exam.saved': 'تم حفظ الاختبار',
+    'exam.savedDesc': 'تم تسجيل بيانات الاختبار لتاريخ',
+
+    // Quizzes
+    'quiz.degree': 'الدرجة',
+    'quiz.submit': 'حفظ الاختبار القصير',
+    'quiz.saved': 'تم حفظ الاختبار القصير',
+    'quiz.savedDesc': 'تم تسجيل بيانات الاختبار القصير لتاريخ',
+
+    // Misc
+    'misc.noDataAvailable': 'لا توجد بيانات متاحة',
+    'misc.previousPage': 'الصفحة السابقة',
+    'misc.nextPage': 'الصفحة التالية',
+    'misc.language': 'اللغة',
+    'misc.close': 'إغلاق',
+    'misc.back': 'رجوع',
+    'misc.moreLinks': 'روابط إضافية',
+
+    'meetings.join': 'انضم',
+    'meetings.openLiveKit': 'فتح في LiveKit',
+    'provider.guide.jitsi.title': 'Jitsi (مجاني)',
+    'provider.guide.jitsi.students': 'الطلاب: مناسب للفصول الصغيرة إلى المتوسطة (تقريبا 10-50).',
+    'provider.guide.jitsi.internet': 'الإنترنت: يوصى بسرعة رفع 2-5 Mbps للمعلم و 1-3 Mbps لكل طالب.',
+    'provider.guide.jitsi.notes': 'ملاحظات: أسهل خيار مجاني ولا يحتاج ترخيص مدفوع.',
+    'provider.guide.livekit.title': 'LiveKit',
+    'provider.guide.livekit.students': 'الطلاب: يدعم فصولا أكبر عند ضبط الخادم والموارد بشكل جيد.',
+    'provider.guide.livekit.internet': 'الإنترنت: يوصى بسرعة رفع 5+ Mbps للمعلم و 2+ Mbps لكل طالب.',
+    'provider.guide.livekit.notes': 'ملاحظات: أداء ومرونة أفضل، ويتطلب إعداد LIVEKIT_URL/API key/secret.',
+    'provider.guide.zoom.title': 'Zoom',
+    'provider.guide.zoom.students': 'الطلاب: يعتمد على خطة Zoom وسياسة الاجتماع لديك.',
+    'provider.guide.zoom.internet': 'الإنترنت: تقريبا 3-6 Mbps رفع للمعلم و 1.5-3 Mbps لكل طالب.',
+    'provider.guide.zoom.notes': 'ملاحظات: ضع رابط الانضمام (ورابط المضيف اختياري).',
+    'provider.guide.teams.title': 'Microsoft Teams',
+    'provider.guide.teams.students': 'الطلاب: يعتمد على خطة Microsoft 365 لديك.',
+    'provider.guide.teams.internet': 'الإنترنت: تقريبا 2-5 Mbps رفع للمعلم و 1-2 Mbps لكل طالب.',
+    'provider.guide.teams.notes': 'ملاحظات: ضع رابط Teams (ورابط المنظم اختياري).',
+    'provider.guide.gmeet.title': 'Google Meet',
+    'provider.guide.gmeet.students': 'الطلاب: يعتمد على خطة Google Workspace لديك.',
+    'provider.guide.gmeet.internet': 'الإنترنت: تقريبا 2-4 Mbps رفع للمعلم و 1-2 Mbps لكل طالب.',
+    'provider.guide.gmeet.notes': 'ملاحظات: ضع رابط Meet ورابط المضيف إن توفر.',
+    'provider.guide.external.title': 'رابط خارجي',
+    'provider.guide.external.students': 'الطلاب: يعتمد على سعة مزود الخدمة الخارجي.',
+    'provider.guide.external.internet': 'الإنترنت: يعتمد على متطلبات المزود.',
+    'provider.guide.external.notes': 'ملاحظات: أضف رابط انضمام الطلاب، ورابط المضيف اختياري ويفضل إضافته.',
+    'provider.guide.offline.title': 'حضوري',
+    'provider.guide.offline.students': 'الطلاب: حسب سعة القاعة الفعلية.',
+    'provider.guide.offline.internet': 'الإنترنت: غير مطلوب.',
+    'provider.guide.offline.notes': 'ملاحظات: حدد الموقع وأي ملاحظات إضافية للطلاب.',
+    'meetings.liveKitRoom': 'غرفة LiveKit',
+
+    // Admin Users & Roles
+    'nav.adminUsers': 'المستخدمون',
+    'nav.rolesPermissions': 'الأدوار والصلاحيات',
+    'page.adminUsers.desc': 'إدارة مستخدمي النظام والوصول',
+    'page.rolesPermissions.desc': 'إدارة الأدوار وصلاحياتها',
+    'crud.view': 'عرض',
+    'col.permissions': 'الصلاحيات',
+    'col.usersCount': 'المستخدمون',
+    'form.leaveBlank': 'اتركه فارغاً للإبقاء على الحالي',
+  },
+};
+
+const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
+
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    const saved = localStorage.getItem('edu-locale');
+    return (saved === 'ar' ? 'ar' : 'en') as Locale;
+  });
+
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
+
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.setAttribute('lang', locale);
+    document.documentElement.style.fontFamily = locale === 'ar'
+      ? '"Noto Sans Arabic", "Plus Jakarta Sans", sans-serif'
+      : '"Plus Jakarta Sans", "Inter", sans-serif';
+    localStorage.setItem('edu-locale', locale);
+  }, [locale, dir]);
+
+  const setLocale = useCallback((l: Locale) => setLocaleState(l), []);
+
+  const t = useCallback((key: string): string => {
+    return translations[locale]?.[key] ?? translations.en?.[key] ?? key;
+  }, [locale]);
+
+  return (
+    <LocaleContext.Provider value={{ locale, dir, setLocale, t }}>
+      {children}
+    </LocaleContext.Provider>
+  );
+}
+
+export function useLocale() {
+  const ctx = useContext(LocaleContext);
+  if (!ctx) throw new Error('useLocale must be used within a LocaleProvider');
+  return ctx;
+}

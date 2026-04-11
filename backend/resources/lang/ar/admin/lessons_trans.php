@@ -1,0 +1,25 @@
+<?php
+
+return array (
+  'Add_Lesson' => 'إضافة درس',
+  'Class' => 'الصف',
+  'Close' => 'إغلاق',
+  'Delete' => 'حذف',
+  'Delete_Lesson' => 'حذف الدرس',
+  'Edit' => 'تعديل',
+  'Edit_Lesson' => 'تعديل درس',
+  'Name' => 'الاسم',
+  'Notes' => 'الملاحظات',
+  'Processes' => 'العمليات',
+  'Show' => 'عرض',
+  'Unit' => 'الوحدة',
+  'Warning_Lesson' => 'درس تحذير',
+  'Words' => 'الكلمات',
+  'lessons' => 'الدروس',
+  'name' => 'الاسم',
+  'select_lesson' => 'اختر درس',
+  'select_unit' => 'اختر وحدة',
+  'stage_name_ar' => 'الاسم',
+  'submit' => 'حفظ',
+  'unit' => 'الوحدة',
+);

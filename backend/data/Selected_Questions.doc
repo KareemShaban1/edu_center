@@ -1,0 +1,41 @@
+﻿
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+              xmlns:w="urn:schemas-microsoft-com:office:word" 
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { direction: rtl; font-family: Arial, sans-serif; }
+                .question-checkbox { display: none !important; }
+            </style>
+        </head>
+        <body>
+            <h2>Questions</h2>
+            <div class='question-block'>
+            <div class="flex items-center gap-4">
+                
+                <div class="flex items-center gap-2">
+                    <h4>1. question 1
+                    </h4>
+                </div>
+            </div>
+
+            <div class="answers">
+                                <ul style="list-style-type:lower-alpha">
+                                        <li>
+                                                <!-- <b> -->
+                        <span>answer 1</span>
+                        <!-- </b> -->
+                                            </li>
+                                        <li>
+                                                answer 2
+                                            </li>
+                                        <li>
+                                                answer 3
+                                            </li>
+                                    </ul>
+
+                            </div>
+        </div>
+        </body>
+        </html>

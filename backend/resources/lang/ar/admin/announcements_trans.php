@@ -1,0 +1,27 @@
+<?php
+
+return array (
+  '' => '',
+  'Add' => 'أضافة',
+  'Add_Announcement' => 'أضافة أعلان',
+  'All_Announcements' => 'كل الأعلانات',
+  'Announcement_Name' => 'أسم الأعلان',
+  'Announcement_Text' => 'محتوى الأعلان',
+  'Announcement_Type' => 'نوع الأعلان',
+  'Announcements' => 'الأعلانات',
+  'Are_You_Sure' => 'هل انت متاكد مع عملية الحذف ؟',
+  'Choose' => 'أختار من القائمة',
+  'Class_Name' => ' الصف الدراسى',
+  'Close' => 'أغلاق',
+  'Control' => 'التحكم',
+  'Date_Time' => 'وقت أضافة الأعلان',
+  'Delete_Announcement' => 'حذف الأعلان',
+  'Edit' => 'تعديل',
+  'Edit_Announcement' => 'تعديل أعلان',
+  'Exam' => 'أمتحان',
+  'Grade_Name' => 'المرحلة الدراسية',
+  'Other' => 'أخرى',
+  'Quiz' => 'تسميع / كويز',
+  'Section_Name' => 'المجموعة',
+  'Submit' => 'تأكيد',
+);

@@ -1,0 +1,14 @@
+.button{
+          background-color: #282a39;
+          border: #282a39;
+}
+
+.accordion.gray .acd-group.acd-active .acd-heading {
+          color: #ffffffff;
+          background: #282a39;
+}
+
+.page-title {
+          padding: 20px;
+          background-color: antiquewhite;
+}

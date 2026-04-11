@@ -1,0 +1,16 @@
+- add whatsapp button to send notes / degree to parent in exam and quiz degree (done)
+- add whatsapp button to send attendance to parent (done)
+- check/ test the uploading images / files processes and ensure it work correct (local , server) (done)
+- test all features of system to discover issues to fix them 
+- change structure of project (make it clean code)
+
+
+
+primary color : #2C3E50
+
+- add notes , amount in payment table (done)
+- add search in payments (done)
+- edit and handle parent module / not use livewire
+- add is_active boolean in parents / students
+- add import students , parents from excel
+- in announcement allow select multiple sections/groups 

@@ -125,21 +125,90 @@ The Blade landing in `backend/resources/views/frontend/` is separate from the Vi
 
 ---
 
-## 6. aaPanel-specific tips
+## 6. Nginx: one hostname — Vite `dist` + Laravel `/api`
+
+If the site **`root`** is only the SPA build (e.g. `/www/wwwroot/edu-center.kareemsoft.org/dist`), Nginx looks for files like `dist/api/auth/guards`. Those paths do not exist, so you get **404** for every `/api/...` request. Nothing hits `backend/public/index.php`, so Laravel never runs.
+
+API routes in this project are registered for **`central_domains`** with prefix **`/api`** (see `RouteServiceProvider::mapApiRoutes()`). The host (e.g. `edu-center.kareemsoft.org`) must already appear in `config/tenancy.php` → `central_domains`.
+
+### Fix: route `/api` to Laravel with FastCGI
+
+1. Find your PHP socket (must match the PHP version aaPanel enabled for the site). On the server:
+
+   ```bash
+   grep -r fastcgi_pass /www/server/panel/vhost/nginx/enable-php*.conf
+   ```
+
+   Typical values: `unix:/tmp/php-cgi-81.sock` or `unix:/tmp/php-cgi-82.sock`.
+
+2. Put this **inside the same `server { }` block** as your SPA, **before** any broad `location /` that only serves static files. Adjust paths and `fastcgi_pass` to match your server.
+
+   ```nginx
+   # Laravel — all /api requests go to index.php (paths = your real dirs)
+   set $laravel_public /www/wwwroot/edu-center.kareemsoft.org/backend/public;
+
+   location ^~ /api {
+       include fastcgi_params;
+       fastcgi_param SCRIPT_FILENAME $laravel_public/index.php;
+       fastcgi_param DOCUMENT_ROOT $laravel_public;
+       fastcgi_param REQUEST_URI $request_uri;
+       fastcgi_param QUERY_STRING $query_string;
+       fastcgi_param REQUEST_METHOD $request_method;
+       fastcgi_pass unix:/tmp/php-cgi-82.sock;
+   }
+   ```
+
+3. **SPA fallback** (React Router): if it is not already in your rewrite include, add:
+
+   ```nginx
+   location / {
+       root /www/wwwroot/edu-center.kareemsoft.org/dist;
+       try_files $uri $uri/ /index.html;
+   }
+   ```
+
+4. **Do not** rely on `include enable-php-81.conf` alone for `/api` URLs — those locations usually match only `*.php` filenames. `/api/login` has no `.php` in the URL, so you need the `location ^~ /api` block above.
+
+5. Reload Nginx:
+
+   ```bash
+   nginx -t && systemctl reload nginx
+   ```
+
+6. Quick test:
+
+   ```bash
+   curl -sI "https://edu-center.kareemsoft.org/api/auth/guards"
+   ```
+
+   You should see **200** (or **401/405**), not **404** from Nginx.
+
+---
+
+## 7. aaPanel-specific tips
 
 - **One site** for Laravel with `public` as root; optional second site for the static SPA.
 - **PHP-FPM** user should match file ownership (`www` or your panel default).
-- **MySQL**: create the central database/user in aaPanel; grant **`CREATE`** (or full create DB rights) if tenants are provisioned automatically.
+- **MySQL (multi-tenant)**: In aaPanel → **Database** → **phpMyAdmin**, as **root** run:
+
+  ```sql
+  GRANT CREATE, DROP ON *.* TO 'your_user'@'localhost';
+  GRANT ALL PRIVILEGES ON `tenant\_%`.* TO 'your_user'@'localhost';
+  GRANT ALL PRIVILEGES ON `your_central_db`.* TO 'your_user'@'localhost';
+  FLUSH PRIVILEGES;
+  ```
+
+  The `tenant\_%` pattern grants rights on every database whose name starts with `tenant_` (needed after `CREATE DATABASE` or you get **SELECT denied** on `migrations`). Replace `your_user`, `localhost`, and `your_central_db` with values from `.env`. Alternatively, on a dedicated app server only: `GRANT ALL PRIVILEGES ON *.* TO 'your_user'@'localhost';`
 - **Backups**: include the central database and all `tenant_%` databases (or dump the whole MySQL instance).
 
 ---
 
-## 7. Pre-launch checklist
+## 8. Pre-launch checklist
 
 1. `central_domains` lists every hostname used for platform access without tenancy.
 2. Wildcard (or per-tenant) DNS and SSL for tenant hosts.
 3. Tenant records have **domains** matching real FQDNs users open in the browser.
-4. MySQL user can create databases for new tenants.
+4. MySQL user can **create** tenant databases and has **ALL** on `tenant\_%`.* (and the central DB).
 5. `APP_URL` correct, `APP_DEBUG=false`, `APP_KEY` set.
 6. Queue worker running if tenant jobs are queued.
 7. React build uses `VITE_API_BASE_URL` pointing at the live API if you ship the SPA.

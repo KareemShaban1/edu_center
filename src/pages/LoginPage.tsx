@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { GraduationCap, Shield, BookOpen, Users, Globe, Languages } from 'lucide-react';
+import { GraduationCap, Shield, BookOpen, Users, Languages } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
 import { authApi } from '@/services/endpoints/auth';
+import {
+  getTenantDefaultsForGuard,
+  isPlatformGuard,
+} from '@/config/login-defaults';
 
 const guardToRoleMap: Record<string, UserRole> = {
   users: 'admin',
@@ -19,44 +23,54 @@ const guardToRoleMap: Record<string, UserRole> = {
   admin: 'admin',
 };
 
-const isPlatformGuard = (guard: string) => guard === 'super_admin' || guard === 'platform_admin';
-
 const guardMeta: Record<string, { labelKey: string; icon: React.ElementType; color: string }> = {
   users: { labelKey: 'role.admin', icon: Shield, color: 'bg-primary/10 text-primary border-primary/20' },
   teacher: { labelKey: 'role.teacher', icon: BookOpen, color: 'bg-success/10 text-success border-success/20' },
   student: { labelKey: 'role.student', icon: GraduationCap, color: 'bg-info/10 text-info border-info/20' },
   parent: { labelKey: 'role.parent', icon: Users, color: 'bg-warning/10 text-warning border-warning/20' },
-  super_admin: { labelKey: 'role.super_admin', icon: Globe, color: 'bg-exams/10 text-exams border-exams/20' },
 };
 
 export default function LoginPage() {
   const { login } = useAuth();
   const { t, locale, setLocale } = useLocale();
   const navigate = useNavigate();
+  const initialDefaults = getTenantDefaultsForGuard('users');
   const [selectedGuard, setSelectedGuard] = useState<string>('users');
-  const [email, setEmail] = useState('admin@educenter.com');
-  const [password, setPassword] = useState('password');
-  const [tenantSlug, setTenantSlug] = useState('demo');
+  const [email, setEmail] = useState(initialDefaults.email);
+  const [password, setPassword] = useState(initialDefaults.password);
+  const [tenantSlug, setTenantSlug] = useState(initialDefaults.tenantSlug);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { data: guards = ['users', 'teacher', 'parent', 'student', 'super_admin'] } = useQuery({
+  const { data: guards = ['users', 'teacher', 'parent', 'student'] } = useQuery({
     queryKey: ['auth-guards'],
     queryFn: () => authApi.getGuards(),
   });
 
+  const tenantGuards = useMemo(() => {
+    const filtered = guards.filter(g => !isPlatformGuard(g));
+    return filtered.length > 0 ? filtered : ['users', 'teacher', 'parent', 'student'];
+  }, [guards]);
+
   useEffect(() => {
-    if (guards.length > 0 && !guards.includes(selectedGuard)) {
-      setSelectedGuard(guards[0]);
+    if (tenantGuards.length > 0 && !tenantGuards.includes(selectedGuard)) {
+      setSelectedGuard(tenantGuards[0]);
     }
-  }, [guards, selectedGuard]);
+  }, [tenantGuards, selectedGuard]);
+
+  useEffect(() => {
+    const d = getTenantDefaultsForGuard(selectedGuard);
+    setEmail(d.email);
+    setPassword(d.password);
+    setTenantSlug(d.tenantSlug);
+  }, [selectedGuard]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const user = await login(email, password, selectedGuard, isPlatformGuard(selectedGuard) ? undefined : tenantSlug);
+      const user = await login(email, password, selectedGuard, tenantSlug);
       const normalizedRole = guardToRoleMap[user.role] || user.role;
       navigate(getDashboardPath(normalizedRole));
     } catch {
@@ -70,6 +84,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       {/* Language toggle */}
       <button
+        type="button"
         onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
         className="fixed top-4 flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium shadow-card hover:bg-muted transition-colors ltr:right-4 rtl:left-4"
         aria-label={t('misc.language')}
@@ -91,43 +106,45 @@ export default function LoginPage() {
           {/* Role selection */}
           <div className="mb-5">
             <label className="mb-2 block text-sm font-medium">{t('auth.signInAs')}</label>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {guards.map((guard) => {
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {tenantGuards.map(guard => {
                 const meta = guardMeta[guard] || guardMeta.users;
                 return (
-                <button
-                  key={guard}
-                  type="button"
-                  onClick={() => setSelectedGuard(guard)}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-xl border p-2.5 text-xs font-medium transition-all',
-                    selectedGuard === guard
-                      ? cn(meta.color, 'ring-2 ring-offset-1 ring-ring')
-                      : 'border-border text-muted-foreground hover:bg-muted'
-                  )}
-                >
-                  <meta.icon className="h-4 w-4" />
-                  <span className="truncate">{t(meta.labelKey)}</span>
-                </button>
-              )})}
+                  <button
+                    key={guard}
+                    type="button"
+                    onClick={() => setSelectedGuard(guard)}
+                    className={cn(
+                      'flex flex-col items-center gap-1 rounded-xl border p-2.5 text-xs font-medium transition-all',
+                      selectedGuard === guard
+                        ? cn(meta.color, 'ring-2 ring-offset-1 ring-ring')
+                        : 'border-border text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    <meta.icon className="h-4 w-4" />
+                    <span className="truncate">{t(meta.labelKey)}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isPlatformGuard(selectedGuard) && (
-              <div>
-                <label htmlFor="tenant" className="mb-1.5 block text-sm font-medium">{t('auth.tenantCode')}</label>
-                <input
-                  id="tenant"
-                  type="text"
-                  value={tenantSlug}
-                  onChange={e => setTenantSlug(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="school-a"
-                />
-              </div>
-            )}
+            <div>
+              <label htmlFor="tenant" className="mb-1.5 block text-sm font-medium">
+                {t('auth.tenantCode')}
+              </label>
+              <input
+                id="tenant"
+                type="text"
+                value={tenantSlug}
+                onChange={e => setTenantSlug(e.target.value)}
+                required
+                autoComplete="organization"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="school-a"
+              />
+            </div>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium">{t('auth.email')}</label>
               <input
@@ -136,6 +153,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                autoComplete="username"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -161,6 +179,15 @@ export default function LoginPage() {
               {loading ? t('auth.signingIn') : t('auth.signIn')}
             </button>
           </form>
+
+          {/* <p className="mt-4 text-center">
+            <Link
+              to="/platform/login"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('auth.linkPlatformLogin')}
+            </Link>
+          </p> */}
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">

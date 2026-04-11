@@ -93,7 +93,7 @@ function extractAuthEnvelope(raw: unknown): LoginResponse {
 
 export const authApi = {
   async getGuards(): Promise<string[]> {
-    if (USE_MOCK) return ['users', 'teacher', 'parent', 'student', 'super_admin'];
+    if (USE_MOCK) return ['users', 'teacher', 'parent', 'student', 'super_admin', 'platform_admin'];
 
     const raw = await apiClient.get<unknown>(AUTH_GUARDS_ENDPOINT, undefined, false);
     if (Array.isArray(raw)) return raw.map(g => String(g));

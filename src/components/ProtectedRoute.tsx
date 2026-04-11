@@ -6,9 +6,11 @@ import { getDashboardPath } from '@/lib/routes';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
+  /** Where unauthenticated users are sent (default `/login`). */
+  loginPath?: string;
 }
 
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, allowedRoles, loginPath = '/login' }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
@@ -19,7 +21,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     );
   }
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={loginPath} replace />;
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to={getDashboardPath(user.role)} replace />;

@@ -26,6 +26,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'auth.signOut': 'Sign Out',
     'auth.tenantCode': 'Tenant Code',
     'auth.invalidCredentials': 'Invalid credentials. Please try again.',
+    'auth.platformPortalTitle': 'Platform sign-in',
+    'auth.platformPortalSubtitle': 'Central operators and super admins',
+    'auth.linkSchoolLogin': 'School / tenant sign-in',
+    'auth.linkPlatformLogin': 'Platform / super admin sign-in',
 
     // Roles
     'role.admin': 'Admin',
@@ -375,6 +379,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'auth.signOut': 'تسجيل الخروج',
     'auth.tenantCode': 'رمز المستأجر',
     'auth.invalidCredentials': 'بيانات الدخول غير صحيحة. حاول مرة أخرى.',
+    'auth.platformPortalTitle': 'تسجيل دخول المنصة',
+    'auth.platformPortalSubtitle': 'مشغّلو المنصة والمدير العام',
+    'auth.linkSchoolLogin': 'تسجيل دخول المدرسة / المستأجر',
+    'auth.linkPlatformLogin': 'تسجيل دخول المنصة / المدير العام',
 
     // Roles
     'role.admin': 'مدير',

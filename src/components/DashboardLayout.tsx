@@ -446,8 +446,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <button
             type="button"
             onClick={() => {
+              const platformSession = user && !user.tenant_slug && !user.tenant_id;
               logout();
-              navigate('/login');
+              navigate(platformSession ? '/platform/login' : '/login');
             }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
           >

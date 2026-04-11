@@ -8,6 +8,7 @@ import { LocaleProvider } from "@/contexts/LocaleContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
+import PlatformLoginPage from "@/pages/PlatformLoginPage";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -92,6 +93,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/platform/login" element={<PlatformLoginPage />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
@@ -160,12 +162,12 @@ const App = () => (
               <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={['parent']}><ParentReports /></ProtectedRoute>} />
 
               {/* Platform Admin Routes */}
-              <Route path="/platform" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformDashboard /></ProtectedRoute>} />
-              <Route path="/platform/tenants" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformTenants /></ProtectedRoute>} />
-              <Route path="/platform/subscriptions" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformSubscriptions /></ProtectedRoute>} />
-              <Route path="/platform/users" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformUsers /></ProtectedRoute>} />
-              <Route path="/platform/roles" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformRoles /></ProtectedRoute>} />
-              <Route path="/platform/logs" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']}><PlatformLogs /></ProtectedRoute>} />
+              <Route path="/platform" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDashboard /></ProtectedRoute>} />
+              <Route path="/platform/tenants" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformTenants /></ProtectedRoute>} />
+              <Route path="/platform/subscriptions" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSubscriptions /></ProtectedRoute>} />
+              <Route path="/platform/users" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformUsers /></ProtectedRoute>} />
+              <Route path="/platform/roles" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformRoles /></ProtectedRoute>} />
+              <Route path="/platform/logs" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformLogs /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

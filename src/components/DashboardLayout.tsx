@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getTenantLoginPath } from '@/lib/tenant-routes';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
@@ -28,6 +29,7 @@ import {
   ClipboardCheck,
   CircleDollarSign,
   FolderOpen,
+  Video,
   PieChart,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -147,7 +149,10 @@ const adminNavBlocks: NavBlock[] = [
       id: 'admin-meetings',
       labelKey: 'nav.group.meetings',
       icon: CalendarCheck,
-      items: [{ labelKey: 'nav.meetingSeriesAdmin', path: '/admin/meeting-series', icon: CalendarCheck }],
+      items: [
+        { labelKey: 'nav.adminMeetings', path: '/admin/meetings', icon: Video },
+        { labelKey: 'nav.meetingSeriesAdmin', path: '/admin/meeting-series', icon: CalendarCheck },
+      ],
     },
   },
   {
@@ -221,6 +226,7 @@ const teacherNavBlocks: NavBlock[] = [
       icon: BookOpen,
       items: [
         { labelKey: 'nav.myClasses', path: '/teacher/classes', icon: BookOpen },
+        { labelKey: 'nav.teacherMeetings', path: '/teacher/meetings', icon: Video },
         { labelKey: 'nav.meetingSeries', path: '/teacher/meeting-series', icon: CalendarCheck },
         { labelKey: 'nav.attendance', path: '/teacher/attendance', icon: CalendarCheck },
         { labelKey: 'nav.homework', path: '/teacher/homework', icon: FileText },
@@ -447,8 +453,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             type="button"
             onClick={() => {
               const platformSession = user && !user.tenant_slug && !user.tenant_id;
+              const tenantSlug = user?.tenant_slug;
               logout();
-              navigate(platformSession ? '/platform/login' : '/login');
+              navigate(platformSession ? '/platform/login' : getTenantLoginPath(tenantSlug));
             }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
           >

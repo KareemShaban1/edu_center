@@ -2,16 +2,18 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
+import { getTenantLoginPath } from '@/lib/tenant-routes';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: UserRole[];
-  /** Where unauthenticated users are sent (default `/login`). */
+  /** Where unauthenticated users are sent (default tenant login from session). */
   loginPath?: string;
 }
 
-export default function ProtectedRoute({ children, allowedRoles, loginPath = '/login' }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, allowedRoles, loginPath }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const resolvedLoginPath = loginPath ?? getTenantLoginPath(user?.tenant_slug);
 
   if (isLoading) {
     return (
@@ -21,7 +23,7 @@ export default function ProtectedRoute({ children, allowedRoles, loginPath = '/l
     );
   }
 
-  if (!isAuthenticated) return <Navigate to={loginPath} replace />;
+  if (!isAuthenticated) return <Navigate to={resolvedLoginPath} replace />;
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to={getDashboardPath(user.role)} replace />;

@@ -302,6 +302,9 @@ export interface Tenant {
   database?: string;
   plan?: string;
   users_count?: number;
+  teachers_count?: number;
+  students_count?: number;
+  parents_count?: number;
   subscription_status?: 'active' | 'trial' | 'past_due' | 'cancelled';
   status: 'active' | 'inactive';
   created_at: string;

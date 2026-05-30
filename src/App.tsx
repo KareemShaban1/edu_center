@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
+import { defaultTenantSlug } from "@/config/login-defaults";
 import LoginPage from "@/pages/LoginPage";
 import PlatformLoginPage from "@/pages/PlatformLoginPage";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ import AdminHomework from "@/pages/admin/AdminHomework";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminRolesPermissions from "@/pages/admin/AdminRolesPermissions";
 import AdminMeetingSeries from "@/pages/admin/AdminMeetingSeries";
+import AdminMeetings from "@/pages/admin/AdminMeetings";
 
 // Teacher
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
@@ -52,6 +54,7 @@ import TeacherQuizzes from "@/pages/teacher/TeacherQuizzes";
 import TeacherHomework from "@/pages/teacher/TeacherHomework";
 import TeacherLibrary from "@/pages/teacher/TeacherLibrary";
 import TeacherMeetingSeries from "@/pages/teacher/TeacherMeetingSeries";
+import TeacherMeetings from "@/pages/teacher/TeacherMeetings";
 import TeacherLiveKitMeeting from "@/pages/teacher/TeacherLiveKitMeeting";
 
 // Student
@@ -92,7 +95,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
+              <Route path="/login" element={<Navigate to={`/${defaultTenantSlug}/login`} replace />} />
+              <Route path="/:tenantSlug/login" element={<LoginPage />} />
               <Route path="/platform/login" element={<PlatformLoginPage />} />
 
               {/* Admin Routes */}
@@ -127,6 +131,7 @@ const App = () => (
               <Route path="/admin/units" element={<ProtectedRoute allowedRoles={['admin']}><AdminUnits /></ProtectedRoute>} />
               <Route path="/admin/lessons" element={<ProtectedRoute allowedRoles={['admin']}><AdminLessons /></ProtectedRoute>} />
               <Route path="/admin/homework" element={<ProtectedRoute allowedRoles={['admin']}><AdminHomework /></ProtectedRoute>} />
+              <Route path="/admin/meetings" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetings /></ProtectedRoute>} />
               <Route path="/admin/meeting-series" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetingSeries /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPermissions /></ProtectedRoute>} />
@@ -134,6 +139,7 @@ const App = () => (
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
               <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherClasses /></ProtectedRoute>} />
+              <Route path="/teacher/meetings" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherMeetings /></ProtectedRoute>} />
               <Route path="/teacher/meeting-series" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherMeetingSeries /></ProtectedRoute>} />
               <Route path="/teacher/meetings/:meetingId/livekit" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLiveKitMeeting /></ProtectedRoute>} />
               <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherAttendance /></ProtectedRoute>} />

@@ -23,7 +23,7 @@ interface CrudPageProps<T extends { id: number | string }> {
   perPage?: number;
   searchKeys?: string[];
   renderForm?: (item: T | null, onClose: () => void) => React.ReactNode;
-  onDelete?: (item: T) => void;
+  onDelete?: (item: T) => void | Promise<void>;
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
@@ -84,11 +84,20 @@ export default function CrudPage<T extends { id: number | string }>({
   };
 
   const handleDelete = () => {
-    if (deleteItem && onDelete) {
-      onDelete(deleteItem);
-      toast({ title: t('crud.deleted'), description: t('crud.deletedDesc') });
+    if (!deleteItem || !onDelete) {
+      setDeleteItem(null);
+      return;
     }
+    const item = deleteItem;
     setDeleteItem(null);
+    void (async () => {
+      try {
+        await Promise.resolve(onDelete(item));
+        toast({ title: t('crud.deleted'), description: t('crud.deletedDesc') });
+      } catch {
+        toast({ title: t('crud.deleteFailed'), description: t('crud.deleteFailedDesc'), variant: 'destructive' });
+      }
+    })();
   };
 
   return (

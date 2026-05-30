@@ -71,6 +71,9 @@ export default function PlatformTenants() {
     { key: 'domain', label: t('col.domain') },
     { key: 'plan', label: t('col.plan') },
     { key: 'users_count', label: t('nav.users'), sortable: true },
+    { key: 'teachers_count', label: t('nav.teachers'), sortable: true },
+    { key: 'students_count', label: t('nav.students'), sortable: true },
+    { key: 'parents_count', label: t('nav.parents'), sortable: true },
     { key: 'status', label: t('col.status'), render: r => <StatusBadge status={r.status} /> },
     { key: 'created_at', label: t('col.date'), sortable: true },
   ];

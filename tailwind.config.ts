@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
+        arabic: ["var(--font-arabic)", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

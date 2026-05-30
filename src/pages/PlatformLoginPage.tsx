@@ -12,6 +12,7 @@ import {
   getPlatformDefaultsForGuard,
   isPlatformGuard,
 } from '@/config/login-defaults';
+import { getTenantLoginPath } from '@/lib/tenant-routes';
 
 const guardToRoleMap: Record<string, UserRole> = {
   super_admin: 'super_admin',
@@ -163,7 +164,7 @@ export default function PlatformLoginPage() {
 
           <p className="mt-4 text-center">
             <Link
-              to="/login"
+              to={getTenantLoginPath()}
               className="text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
               {t('auth.linkSchoolLogin')}

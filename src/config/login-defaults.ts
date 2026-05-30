@@ -24,14 +24,13 @@ export const tenantLoginDefaults: Record<string, TenantGuardDefaults> = {
 
 export const defaultTenantSlug = 'demo';
 
-export function getTenantDefaultsForGuard(guard: string): TenantGuardDefaults {
-  return (
-    tenantLoginDefaults[guard] ?? {
-      email: '',
-      password: '',
-      tenantSlug: defaultTenantSlug,
-    }
-  );
+export function getTenantDefaultsForGuard(guard: string, tenantSlug = defaultTenantSlug): TenantGuardDefaults {
+  const base = tenantLoginDefaults[guard];
+  return {
+    email: base?.email ?? '',
+    password: base?.password ?? '',
+    tenantSlug,
+  };
 }
 
 export function isPlatformGuard(guard: string): boolean {

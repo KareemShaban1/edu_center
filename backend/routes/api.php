@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 use App\Models\Platform\Tenant;
 use App\Models\Platform\TenantInfo;
+use App\Http\Controllers\Platform\PlatformTenantApiController;
 use App\Models\Library;
 use App\Models\Announcement;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -944,17 +946,27 @@ Route::middleware([
 
         $teacherId = (int) Auth::guard('teacher')->id();
         $tenantDb = DB::connection('tenant');
-        $teacherRow = Schema::connection('tenant')->hasTable('teachers')
-            ? $tenantDb->table('teachers')->where('id', $teacherId)->first()
-            : null;
-        $teacherEmail = $teacherRow?->email ?? null;
-        if (!$teacherEmail) {
-            return response()->json(['message' => 'Teacher email not found'], 422);
+
+        $sectionIds = collect();
+        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
+            );
+        }
+        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
+            );
+        }
+        $sectionIds = $sectionIds->unique()->values();
+
+        if ($sectionIds->isEmpty()) {
+            return response()->json(['message' => 'Meeting not found'], 404);
         }
 
         $row = $tenantDb->table('meetings')
             ->where('id', $id)
-            ->where('created_by', $teacherEmail)
+            ->whereIn('section_id', $sectionIds)
             ->first();
 
         if (!$row || ($row->provider ?? '') !== 'livekit' || empty($row->room_slug)) {
@@ -973,6 +985,344 @@ Route::middleware([
             'url' => config('meetings.livekit.url'),
             'room' => $row->room_slug,
         ]);
+    });
+
+    Route::get('/teacher/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'teacher');
+        if ($guard !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Auth::guard('teacher')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $teacherId = (int) Auth::guard('teacher')->id();
+        $tenantDb = DB::connection('tenant');
+
+        $sectionIds = collect();
+        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
+            );
+        }
+        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
+            );
+        }
+        $sectionIds = $sectionIds->unique()->values();
+
+        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+            return response()->json(['meetings' => [], 'series_options' => []]);
+        }
+
+        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+
+        $rows = $tenantDb->table('meetings')
+            ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
+            ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
+            ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
+            ->whereIn('meetings.section_id', $sectionIds)
+            ->select(
+                'meetings.id',
+                'meetings.grade_id',
+                'meetings.class_id',
+                'meetings.section_id',
+                'meetings.topic',
+                'meetings.start_at',
+                'meetings.duration',
+                'meetings.provider',
+                'meetings.room_slug',
+                'meetings.join_url',
+                'meetings.moderator_url',
+                'meetings.password',
+                'meetings.record_enabled',
+                'meetings.external_ref',
+                'meetings.created_by',
+                DB::raw("trim(concat_ws(' - ', nullif(grades.grade_name, ''), nullif(classes.class_name, ''), nullif(sections.section_name, ''))) as section_label")
+            );
+
+        if ($hasSeriesCol) {
+            $rows->addSelect('meetings.series_id');
+        }
+        if ($hasLocationCol) {
+            $rows->addSelect('meetings.location', 'meetings.notes');
+        }
+
+        $meetings = $rows->orderByDesc('meetings.start_at')->get()->map(function ($row) use ($hasSeriesCol, $hasLocationCol) {
+            $m = [
+                'id' => (int) $row->id,
+                'grade_id' => (int) $row->grade_id,
+                'class_id' => (int) $row->class_id,
+                'section_id' => (int) $row->section_id,
+                'section_label' => (string) ($row->section_label ?? ''),
+                'topic' => (string) $row->topic,
+                'start_at' => $row->start_at ? (string) $row->start_at : '',
+                'duration' => (int) $row->duration,
+                'provider' => (string) ($row->provider ?? 'jitsi'),
+                'room_slug' => $row->room_slug ?? null,
+                'join_url' => $row->join_url ?? null,
+                'moderator_url' => $row->moderator_url ?? null,
+                'password' => $row->password ?? null,
+                'record_enabled' => (bool) ($row->record_enabled ?? false),
+                'external_ref' => $row->external_ref ?? null,
+                'created_by' => (string) ($row->created_by ?? ''),
+            ];
+            if ($hasSeriesCol) {
+                $m['series_id'] = isset($row->series_id) && $row->series_id !== null ? (int) $row->series_id : null;
+            }
+            if ($hasLocationCol) {
+                $m['location'] = $row->location ?? '';
+                $m['notes'] = $row->notes ?? '';
+            }
+
+            return $m;
+        })->values();
+
+        $seriesOptions = collect();
+        if (Schema::connection('tenant')->hasTable('meeting_series')) {
+            $seriesOptions = $tenantDb->table('meeting_series')
+                ->whereIn('section_id', $sectionIds)
+                ->orderBy('topic')
+                ->get(['id', 'topic', 'section_id'])
+                ->map(fn ($s) => [
+                    'id' => (int) $s->id,
+                    'topic' => (string) $s->topic,
+                    'section_id' => (int) $s->section_id,
+                ])
+                ->values();
+        }
+
+        return response()->json([
+            'meetings' => $meetings,
+            'series_options' => $seriesOptions,
+        ]);
+    });
+
+    Route::put('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'teacher');
+        if ($guard !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Auth::guard('teacher')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $teacherId = (int) Auth::guard('teacher')->id();
+        $tenantDb = DB::connection('tenant');
+
+        $sectionIds = collect();
+        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
+            );
+        }
+        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
+            );
+        }
+        $sectionIds = $sectionIds->unique()->values();
+
+        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+
+        $existing = $tenantDb->table('meetings')->where('id', $id)->first();
+        if (!$existing || !$sectionIds->contains((int) ($existing->section_id ?? 0))) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $payload = $request->validate([
+            'section_id' => ['required', 'integer'],
+            'topic' => ['required', 'string', 'max:255'],
+            'start_at' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:15', 'max:480'],
+            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
+            'series_id' => ['nullable', 'integer'],
+            'join_url' => ['nullable', 'string', 'max:2000'],
+            'moderator_url' => ['nullable', 'string', 'max:2000'],
+            'password' => ['nullable', 'string', 'max:255'],
+            'external_ref' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'record_enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $sectionId = (int) $payload['section_id'];
+        if (!$sectionIds->contains($sectionId)) {
+            return response()->json(['message' => 'Section not allowed'], 422);
+        }
+
+        $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
+        if (!$section) {
+            return response()->json(['message' => 'Section not found'], 404);
+        }
+        $gradeId = (int) ($section->grade_id ?? 0);
+        $classId = (int) ($section->class_id ?? 0);
+
+        $provider = (string) $payload['provider'];
+        $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
+        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+            return response()->json(['message' => 'join_url is required for this provider'], 422);
+        }
+        if ($provider === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline provider'], 422);
+        }
+
+        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
+        if ($hasSeriesCol && $seriesId) {
+            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
+            if (!$seriesRow) {
+                return response()->json(['message' => 'Meeting series not found'], 404);
+            }
+            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
+                return response()->json(['message' => 'series_id does not belong to this section'], 422);
+            }
+        } elseif ($seriesId) {
+            $seriesId = null;
+        }
+
+        $update = [
+            'grade_id' => $gradeId,
+            'class_id' => $classId,
+            'section_id' => $sectionId,
+            'topic' => (string) $payload['topic'],
+            'start_at' => $payload['start_at'],
+            'duration' => (int) $payload['duration'],
+            'password' => $payload['password'] ?? null,
+            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
+            'provider' => $provider,
+            'updated_at' => now(),
+        ];
+        if ($hasLocationCol) {
+            $update['location'] = $payload['location'] ?? null;
+            $update['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasSeriesCol) {
+            $update['series_id'] = $seriesId ?: null;
+        }
+
+        if ($provider === 'offline') {
+            $update['room_slug'] = null;
+            $update['join_url'] = '#';
+            $update['moderator_url'] = null;
+            $update['external_ref'] = null;
+            $update['password'] = null;
+        } elseif ($provider === 'jitsi') {
+            if (($existing->provider ?? '') !== 'jitsi' || empty($existing->room_slug)) {
+                $links = \App\Services\MeetingLinkService::forJitsi();
+                $update['room_slug'] = $links['room_slug'];
+                $update['join_url'] = $links['join_url'];
+                $update['moderator_url'] = $links['moderator_url'];
+                $update['external_ref'] = null;
+            }
+        } elseif ($provider === 'livekit') {
+            if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
+                return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
+            }
+            if (($existing->provider ?? '') !== 'livekit' || empty($existing->room_slug)) {
+                $slug = \App\Services\MeetingLinkService::generateRoomSlug();
+                $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+                $update['room_slug'] = $slug;
+                $update['join_url'] = $links['join_url'];
+                $update['moderator_url'] = $links['moderator_url'];
+                $update['external_ref'] = null;
+            }
+        } else {
+            $update['room_slug'] = null;
+            $update['join_url'] = (string) $payload['join_url'];
+            $update['moderator_url'] = $payload['moderator_url'] ?? null;
+            $update['external_ref'] = $payload['external_ref'] ?? null;
+        }
+
+        try {
+            $tenantDb->table('meetings')->where('id', $id)->update($update);
+        } catch (QueryException $e) {
+            if (str_contains((string) $e->getMessage(), 'Duplicate')) {
+                return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+            }
+            throw $e;
+        }
+
+        return response()->json(['ok' => true]);
+    });
+
+    Route::delete('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'teacher');
+        if ($guard !== 'teacher') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Auth::guard('teacher')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $teacherId = (int) Auth::guard('teacher')->id();
+        $tenantDb = DB::connection('tenant');
+
+        $sectionIds = collect();
+        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
+            );
+        }
+        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
+            );
+        }
+        $sectionIds = $sectionIds->unique()->values();
+
+        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $deleted = $tenantDb->table('meetings')
+            ->where('id', $id)
+            ->whereIn('section_id', $sectionIds)
+            ->delete();
+        if (!$deleted) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['ok' => true]);
     });
 
     Route::get('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
@@ -1225,6 +1575,426 @@ Route::middleware([
         }
         \App\Models\Meeting::query()->where('series_id', (int) $series->id)->delete();
         $series->delete();
+        return response()->json(['ok' => true]);
+    });
+
+    Route::get('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if (!in_array($guard, ['web', 'admin'], true)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Schema::connection('tenant')->hasTable('meetings')) {
+            return response()->json(['meetings' => [], 'series_options' => []]);
+        }
+
+        $tenantDb = DB::connection('tenant');
+        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+
+        $rows = $tenantDb->table('meetings')
+            ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
+            ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
+            ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
+            ->select(
+                'meetings.id',
+                'meetings.grade_id',
+                'meetings.class_id',
+                'meetings.section_id',
+                'meetings.topic',
+                'meetings.start_at',
+                'meetings.duration',
+                'meetings.provider',
+                'meetings.room_slug',
+                'meetings.join_url',
+                'meetings.moderator_url',
+                'meetings.password',
+                'meetings.record_enabled',
+                'meetings.external_ref',
+                'meetings.created_by',
+                DB::raw("trim(concat_ws(' - ', nullif(grades.grade_name, ''), nullif(classes.class_name, ''), nullif(sections.section_name, ''))) as section_label")
+            );
+
+        if ($hasSeriesCol) {
+            $rows->addSelect('meetings.series_id');
+        }
+        if ($hasLocationCol) {
+            $rows->addSelect('meetings.location', 'meetings.notes');
+        }
+
+        $meetings = $rows->orderByDesc('meetings.start_at')->get()->map(function ($row) use ($hasSeriesCol, $hasLocationCol) {
+            $m = [
+                'id' => (int) $row->id,
+                'grade_id' => (int) $row->grade_id,
+                'class_id' => (int) $row->class_id,
+                'section_id' => (int) $row->section_id,
+                'section_label' => (string) ($row->section_label ?? ''),
+                'topic' => (string) $row->topic,
+                'start_at' => $row->start_at ? (string) $row->start_at : '',
+                'duration' => (int) $row->duration,
+                'provider' => (string) ($row->provider ?? 'jitsi'),
+                'room_slug' => $row->room_slug ?? null,
+                'join_url' => $row->join_url ?? null,
+                'moderator_url' => $row->moderator_url ?? null,
+                'password' => $row->password ?? null,
+                'record_enabled' => (bool) ($row->record_enabled ?? false),
+                'external_ref' => $row->external_ref ?? null,
+                'created_by' => (string) ($row->created_by ?? ''),
+            ];
+            if ($hasSeriesCol) {
+                $m['series_id'] = isset($row->series_id) && $row->series_id !== null ? (int) $row->series_id : null;
+            }
+            if ($hasLocationCol) {
+                $m['location'] = $row->location ?? '';
+                $m['notes'] = $row->notes ?? '';
+            }
+
+            return $m;
+        })->values();
+
+        $seriesOptions = collect();
+        if (Schema::connection('tenant')->hasTable('meeting_series')) {
+            $seriesOptions = $tenantDb->table('meeting_series')
+                ->orderBy('topic')
+                ->get(['id', 'topic', 'section_id'])
+                ->map(fn ($s) => [
+                    'id' => (int) $s->id,
+                    'topic' => (string) $s->topic,
+                    'section_id' => (int) $s->section_id,
+                ])
+                ->values();
+        }
+
+        return response()->json([
+            'meetings' => $meetings,
+            'series_options' => $seriesOptions,
+        ]);
+    });
+
+    Route::post('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if (!in_array($guard, ['web', 'admin'], true)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Schema::connection('tenant')->hasTable('meetings')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $tenantDb = DB::connection('tenant');
+        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+
+        $payload = $request->validate([
+            'section_id' => ['required', 'integer'],
+            'topic' => ['required', 'string', 'max:255'],
+            'start_at' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:15', 'max:480'],
+            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
+            'series_id' => ['nullable', 'integer'],
+            'join_url' => ['nullable', 'string', 'max:2000'],
+            'moderator_url' => ['nullable', 'string', 'max:2000'],
+            'password' => ['nullable', 'string', 'max:255'],
+            'external_ref' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'record_enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $section = $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first();
+        if (!$section) {
+            return response()->json(['message' => 'Section not found'], 404);
+        }
+        $gradeId = (int) ($section->grade_id ?? 0);
+        $classId = (int) ($section->class_id ?? 0);
+        $sectionId = (int) $payload['section_id'];
+
+        $provider = (string) $payload['provider'];
+        $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
+        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+            return response()->json(['message' => 'join_url is required for this provider'], 422);
+        }
+        if ($provider === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline provider'], 422);
+        }
+
+        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
+        if ($hasSeriesCol && $seriesId) {
+            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
+            if (!$seriesRow) {
+                return response()->json(['message' => 'Meeting series not found'], 404);
+            }
+            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
+                return response()->json(['message' => 'series_id does not belong to this section'], 422);
+            }
+        } elseif ($seriesId) {
+            $seriesId = null;
+        }
+
+        $createdBy = (string) (optional(Auth::guard('web')->user())->email ?? 'Admin');
+
+        $base = [
+            'grade_id' => $gradeId,
+            'class_id' => $classId,
+            'section_id' => $sectionId,
+            'created_by' => $createdBy,
+            'topic' => (string) $payload['topic'],
+            'start_at' => $payload['start_at'],
+            'duration' => (int) $payload['duration'],
+            'password' => $payload['password'] ?? null,
+            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
+            'provider' => $provider,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        if ($hasLocationCol) {
+            $base['location'] = $payload['location'] ?? null;
+            $base['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasSeriesCol) {
+            $base['series_id'] = $seriesId ?: null;
+        }
+
+        $insertRow = function (array $extra) use ($tenantDb, $base) {
+            try {
+                $tenantDb->table('meetings')->insert(array_merge($base, $extra));
+
+                return response()->json(['ok' => true]);
+            } catch (QueryException $e) {
+                if (str_contains((string) $e->getMessage(), 'Duplicate')) {
+                    return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+                }
+                throw $e;
+            }
+        };
+
+        if ($provider === 'offline') {
+            return $insertRow([
+                'room_slug' => null,
+                'join_url' => '#',
+                'moderator_url' => null,
+                'external_ref' => null,
+                'password' => null,
+            ]);
+        }
+        if ($provider === 'jitsi') {
+            $links = \App\Services\MeetingLinkService::forJitsi();
+
+            return $insertRow([
+                'room_slug' => $links['room_slug'],
+                'join_url' => $links['join_url'],
+                'moderator_url' => $links['moderator_url'],
+                'external_ref' => null,
+            ]);
+        }
+        if ($provider === 'livekit') {
+            if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
+                return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
+            }
+            $slug = \App\Services\MeetingLinkService::generateRoomSlug();
+            $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+
+            return $insertRow([
+                'room_slug' => $slug,
+                'join_url' => $links['join_url'],
+                'moderator_url' => $links['moderator_url'],
+                'external_ref' => null,
+            ]);
+        }
+
+        return $insertRow([
+            'room_slug' => null,
+            'join_url' => (string) $payload['join_url'],
+            'moderator_url' => $payload['moderator_url'] ?? null,
+            'external_ref' => $payload['external_ref'] ?? null,
+        ]);
+    });
+
+    Route::put('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if (!in_array($guard, ['web', 'admin'], true)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Schema::connection('tenant')->hasTable('meetings')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $tenantDb = DB::connection('tenant');
+        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+
+        $existing = $tenantDb->table('meetings')->where('id', $id)->first();
+        if (!$existing) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $payload = $request->validate([
+            'section_id' => ['required', 'integer'],
+            'topic' => ['required', 'string', 'max:255'],
+            'start_at' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:15', 'max:480'],
+            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
+            'series_id' => ['nullable', 'integer'],
+            'join_url' => ['nullable', 'string', 'max:2000'],
+            'moderator_url' => ['nullable', 'string', 'max:2000'],
+            'password' => ['nullable', 'string', 'max:255'],
+            'external_ref' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'record_enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $section = $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first();
+        if (!$section) {
+            return response()->json(['message' => 'Section not found'], 404);
+        }
+        $gradeId = (int) ($section->grade_id ?? 0);
+        $classId = (int) ($section->class_id ?? 0);
+        $sectionId = (int) $payload['section_id'];
+
+        $provider = (string) $payload['provider'];
+        $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
+        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+            return response()->json(['message' => 'join_url is required for this provider'], 422);
+        }
+        if ($provider === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline provider'], 422);
+        }
+
+        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
+        if ($hasSeriesCol && $seriesId) {
+            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
+            if (!$seriesRow) {
+                return response()->json(['message' => 'Meeting series not found'], 404);
+            }
+            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
+                return response()->json(['message' => 'series_id does not belong to this section'], 422);
+            }
+        } elseif ($seriesId) {
+            $seriesId = null;
+        }
+
+        $update = [
+            'grade_id' => $gradeId,
+            'class_id' => $classId,
+            'section_id' => $sectionId,
+            'topic' => (string) $payload['topic'],
+            'start_at' => $payload['start_at'],
+            'duration' => (int) $payload['duration'],
+            'password' => $payload['password'] ?? null,
+            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
+            'provider' => $provider,
+            'updated_at' => now(),
+        ];
+        if ($hasLocationCol) {
+            $update['location'] = $payload['location'] ?? null;
+            $update['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasSeriesCol) {
+            $update['series_id'] = $seriesId ?: null;
+        }
+
+        if ($provider === 'offline') {
+            $update['room_slug'] = null;
+            $update['join_url'] = '#';
+            $update['moderator_url'] = null;
+            $update['external_ref'] = null;
+            $update['password'] = null;
+        } elseif ($provider === 'jitsi') {
+            if (($existing->provider ?? '') !== 'jitsi' || empty($existing->room_slug)) {
+                $links = \App\Services\MeetingLinkService::forJitsi();
+                $update['room_slug'] = $links['room_slug'];
+                $update['join_url'] = $links['join_url'];
+                $update['moderator_url'] = $links['moderator_url'];
+                $update['external_ref'] = null;
+            }
+        } elseif ($provider === 'livekit') {
+            if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
+                return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
+            }
+            if (($existing->provider ?? '') !== 'livekit' || empty($existing->room_slug)) {
+                $slug = \App\Services\MeetingLinkService::generateRoomSlug();
+                $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+                $update['room_slug'] = $slug;
+                $update['join_url'] = $links['join_url'];
+                $update['moderator_url'] = $links['moderator_url'];
+                $update['external_ref'] = null;
+            }
+        } else {
+            $update['room_slug'] = null;
+            $update['join_url'] = (string) $payload['join_url'];
+            $update['moderator_url'] = $payload['moderator_url'] ?? null;
+            $update['external_ref'] = $payload['external_ref'] ?? null;
+        }
+
+        try {
+            $tenantDb->table('meetings')->where('id', $id)->update($update);
+        } catch (QueryException $e) {
+            if (str_contains((string) $e->getMessage(), 'Duplicate')) {
+                return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+            }
+            throw $e;
+        }
+
+        return response()->json(['ok' => true]);
+    });
+
+    Route::delete('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if (!in_array($guard, ['web', 'admin'], true)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+
+        if (!Schema::connection('tenant')->hasTable('meetings')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $deleted = DB::connection('tenant')->table('meetings')->where('id', $id)->delete();
+        if (!$deleted) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
         return response()->json(['ok' => true]);
     });
 
@@ -1658,136 +2428,16 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/student/meetings', function (Request $request) use ($resolveStudentContext) {
-        $ctx = $resolveStudentContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $tenantDb = $ctx['tenantDb'];
-        $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
-        $payload = $request->validate([
-            'topic' => ['required', 'string', 'max:255'],
-            'start_at' => ['required', 'date'],
-            'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'provider' => ['required', 'in:jitsi,livekit,external,offline'],
-            'join_url' => ['required_if:provider,external', 'nullable', 'string', 'max:2000'],
-            'moderator_url' => ['nullable', 'string', 'max:2000'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'external_ref' => ['nullable', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-            'record_enabled' => ['nullable', 'boolean'],
-        ]);
-        $provider = $payload['provider'];
-        $base = [
-            'grade_id' => (int) $student->grade_id,
-            'class_id' => (int) $student->class_id,
-            'section_id' => (int) $student->section_id,
-            'created_by' => 'Student '.$ctx['studentId'],
-            'topic' => $payload['topic'],
-            'start_at' => $payload['start_at'],
-            'duration' => (int) $payload['duration'],
-            'password' => $payload['password'] ?? null,
-            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'provider' => $provider,
-            'location' => $payload['location'] ?? null,
-            'notes' => $payload['notes'] ?? null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        if ($provider === 'offline') {
-            $tenantDb->table('meetings')->insert(array_merge($base, [
-                'room_slug' => null,
-                'join_url' => '#',
-                'moderator_url' => null,
-                'external_ref' => null,
-                'password' => null,
-            ]));
-        } elseif ($provider === 'jitsi') {
-            $links = \App\Services\MeetingLinkService::forJitsi();
-            $tenantDb->table('meetings')->insert(array_merge($base, [
-                'room_slug' => $links['room_slug'],
-                'join_url' => $links['join_url'],
-                'moderator_url' => $links['moderator_url'],
-                'external_ref' => null,
-            ]));
-        } elseif ($provider === 'livekit') {
-            if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
-                return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
-            }
-            $slug = \App\Services\MeetingLinkService::generateRoomSlug();
-            $links = \App\Services\MeetingLinkService::forLiveKit($slug);
-            $tenantDb->table('meetings')->insert(array_merge($base, [
-                'room_slug' => $slug,
-                'join_url' => $links['join_url'],
-                'moderator_url' => $links['moderator_url'],
-                'external_ref' => null,
-            ]));
-        } else {
-            $tenantDb->table('meetings')->insert(array_merge($base, [
-                'room_slug' => null,
-                'join_url' => (string) $payload['join_url'],
-                'moderator_url' => $payload['moderator_url'] ?? null,
-                'external_ref' => $payload['external_ref'] ?? null,
-            ]));
-        }
-
-        return response()->json(['ok' => true]);
+    Route::post('/student/meetings', function () {
+        return response()->json(['message' => 'Students can only view meetings.'], 403);
     });
-    Route::put('/student/meetings/{id}', function (Request $request, int $id) use ($resolveStudentContext) {
-        $ctx = $resolveStudentContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $tenantDb = $ctx['tenantDb'];
-        $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
-        $payload = $request->validate([
-            'topic' => ['required', 'string', 'max:255'],
-            'start_at' => ['required', 'date'],
-            'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'provider' => ['required', 'in:jitsi,livekit,external,offline'],
-            'join_url' => ['required_if:provider,external', 'nullable', 'string', 'max:2000'],
-            'moderator_url' => ['nullable', 'string', 'max:2000'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'external_ref' => ['nullable', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-            'record_enabled' => ['nullable', 'boolean'],
-        ]);
-        $provider = $payload['provider'];
-        $update = [
-            'topic' => $payload['topic'],
-            'start_at' => $payload['start_at'],
-            'duration' => (int) $payload['duration'],
-            'password' => $payload['password'] ?? null,
-            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'provider' => $provider,
-            'location' => $payload['location'] ?? null,
-            'notes' => $payload['notes'] ?? null,
-            'updated_at' => now(),
-        ];
-        if ($provider === 'external') {
-            $update['join_url'] = (string) $payload['join_url'];
-            $update['moderator_url'] = $payload['moderator_url'] ?? null;
-            $update['external_ref'] = $payload['external_ref'] ?? null;
-        } elseif ($provider === 'offline') {
-            $update['join_url'] = '#';
-            $update['moderator_url'] = null;
-            $update['external_ref'] = null;
-            $update['password'] = null;
-        }
-        $updated = $tenantDb->table('meetings')->where('id', $id)->where('grade_id', (int) $student->grade_id)->where('class_id', (int) $student->class_id)->where('section_id', (int) $student->section_id)->update($update);
-        if (!$updated) return response()->json(['message' => 'Not found'], 404);
-        return response()->json(['ok' => true]);
+
+    Route::put('/student/meetings/{id}', function () {
+        return response()->json(['message' => 'Students can only view meetings.'], 403);
     });
-    Route::delete('/student/meetings/{id}', function (Request $request, int $id) use ($resolveStudentContext) {
-        $ctx = $resolveStudentContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $tenantDb = $ctx['tenantDb'];
-        $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
-        $deleted = $tenantDb->table('meetings')->where('id', $id)->where('grade_id', (int) $student->grade_id)->where('class_id', (int) $student->class_id)->where('section_id', (int) $student->section_id)->delete();
-        if (!$deleted) return response()->json(['message' => 'Not found'], 404);
-        return response()->json(['ok' => true]);
+
+    Route::delete('/student/meetings/{id}', function () {
+        return response()->json(['message' => 'Students can only view meetings.'], 403);
     });
 
     Route::get('/student/meetings/{id}/livekit-token', function (Request $request, int $id) use ($resolveStudentContext) {
@@ -2083,141 +2733,10 @@ Route::middleware([
         return ['error' => null, 'centralConnection' => $centralConnection, 'authUserId' => (int) $authUserId];
     };
 
-    Route::get('/platform/tenants', function (Request $request) use ($resolvePlatformContext) {
-        $ctx = $resolvePlatformContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $conn = $ctx['centralConnection'];
-        $rows = DB::connection($conn)->table('tenant_infos as ti')
-            ->leftJoin('tenants as t', 'ti.tenant_id', '=', 't.id')
-            ->leftJoin('domains as d', 'd.tenant_id', '=', 'ti.tenant_id')
-            ->select('ti.id as info_id', 'ti.tenant_id', 'ti.name', 'ti.subdomain', 'ti.status', 'ti.created_at', 't.data as tenant_data', 'd.domain')
-            ->orderByDesc('ti.id')
-            ->get();
-        $tenants = $rows->map(function ($row) {
-            $data = [];
-            if (!empty($row->tenant_data)) {
-                $decoded = json_decode((string) $row->tenant_data, true);
-                $data = is_array($decoded) ? $decoded : [];
-            }
-            $plan = data_get($data, 'plan', data_get($data, 'subscription.plan', 'Starter'));
-            return [
-                'id' => (int) $row->info_id,
-                'name' => $row->name,
-                'domain' => $row->domain ?: ($row->subdomain ? $row->subdomain . '.localhost' : ''),
-                'slug' => $row->subdomain,
-                'database' => data_get($data, 'tenancy_db_name'),
-                'plan' => $plan,
-                'users_count' => 0,
-                'subscription_status' => data_get($data, 'subscription.status', 'trial'),
-                'status' => ((int) $row->status) === 1 ? 'active' : 'inactive',
-                'created_at' => optional($row->created_at)->format('Y-m-d') ?? now()->toDateString(),
-            ];
-        })->values();
-        return response()->json($tenants);
-    });
-
-    Route::post('/platform/tenants', function (Request $request) use ($resolvePlatformContext) {
-        $ctx = $resolvePlatformContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $conn = $ctx['centralConnection'];
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'in:active,inactive'],
-            'plan' => ['nullable', 'string', 'max:100'],
-        ]);
-        $slug = !empty($payload['slug']) ? Str::slug($payload['slug']) : Str::slug($payload['name']);
-        if (!$slug) $slug = 'tenant-' . Str::lower(Str::random(6));
-        if (DB::connection($conn)->table('tenants')->where('id', $slug)->exists()) {
-            $slug = $slug . '-' . Str::lower(Str::random(4));
-        }
-        $now = now();
-        DB::connection($conn)->table('tenants')->insert([
-            'id' => $slug,
-            'data' => json_encode([
-                'plan' => $payload['plan'] ?? 'Starter',
-                'subscription' => [
-                    'plan' => $payload['plan'] ?? 'Starter',
-                    'amount' => 0,
-                    'billing_cycle' => 'monthly',
-                    'status' => (($payload['status'] ?? 'active') === 'active') ? 'trial' : 'cancelled',
-                    'next_billing_date' => now()->addMonth()->toDateString(),
-                ],
-            ], JSON_UNESCAPED_UNICODE),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        DB::connection($conn)->table('domains')->insert([
-            'domain' => $payload['domain'],
-            'tenant_id' => $slug,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        $infoId = DB::connection($conn)->table('tenant_infos')->insertGetId([
-            'tenant_id' => $slug,
-            'name' => $payload['name'],
-            'subdomain' => $slug,
-            'status' => (($payload['status'] ?? 'active') === 'active') ? 1 : 0,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-        return response()->json([
-            'id' => (int) $infoId,
-            'name' => $payload['name'],
-            'domain' => $payload['domain'],
-            'slug' => $slug,
-            'plan' => $payload['plan'] ?? 'Starter',
-            'status' => ($payload['status'] ?? 'active'),
-            'created_at' => now()->toDateString(),
-        ]);
-    });
-
-    Route::put('/platform/tenants/{id}', function (Request $request, int $id) use ($resolvePlatformContext) {
-        $ctx = $resolvePlatformContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $conn = $ctx['centralConnection'];
-        $info = DB::connection($conn)->table('tenant_infos')->where('id', $id)->first();
-        if (!$info) return response()->json(['message' => 'Tenant not found'], 404);
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'string', 'max:255'],
-            'status' => ['nullable', 'in:active,inactive'],
-            'plan' => ['nullable', 'string', 'max:100'],
-        ]);
-        DB::connection($conn)->table('tenant_infos')->where('id', $id)->update([
-            'name' => $payload['name'],
-            'status' => (($payload['status'] ?? 'active') === 'active') ? 1 : 0,
-            'updated_at' => now(),
-        ]);
-        DB::connection($conn)->table('domains')->where('tenant_id', $info->tenant_id)->update([
-            'domain' => $payload['domain'],
-            'updated_at' => now(),
-        ]);
-        $tenantRow = DB::connection($conn)->table('tenants')->where('id', $info->tenant_id)->first();
-        $data = [];
-        if ($tenantRow && !empty($tenantRow->data)) {
-            $decoded = json_decode((string) $tenantRow->data, true);
-            $data = is_array($decoded) ? $decoded : [];
-        }
-        data_set($data, 'plan', $payload['plan'] ?? data_get($data, 'plan', 'Starter'));
-        data_set($data, 'subscription.plan', $payload['plan'] ?? data_get($data, 'subscription.plan', 'Starter'));
-        DB::connection($conn)->table('tenants')->where('id', $info->tenant_id)->update([
-            'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
-            'updated_at' => now(),
-        ]);
-        return response()->json(['ok' => true]);
-    });
-
-    Route::delete('/platform/tenants/{id}', function (Request $request, int $id) use ($resolvePlatformContext) {
-        $ctx = $resolvePlatformContext($request);
-        if ($ctx['error']) return $ctx['error'];
-        $conn = $ctx['centralConnection'];
-        $info = DB::connection($conn)->table('tenant_infos')->where('id', $id)->first();
-        if (!$info) return response()->json(['message' => 'Tenant not found'], 404);
-        DB::connection($conn)->table('tenants')->where('id', $info->tenant_id)->delete();
-        return response()->json(['ok' => true]);
-    });
+    Route::get('/platform/tenants', [PlatformTenantApiController::class, 'index']);
+    Route::post('/platform/tenants', [PlatformTenantApiController::class, 'store']);
+    Route::put('/platform/tenants/{id}', [PlatformTenantApiController::class, 'update']);
+    Route::delete('/platform/tenants/{id}', [PlatformTenantApiController::class, 'destroy']);
 
     Route::get('/platform/subscriptions', function (Request $request) use ($resolvePlatformContext) {
         $ctx = $resolvePlatformContext($request);
@@ -2235,6 +2754,7 @@ Route::middleware([
                 $data = is_array($decoded) ? $decoded : [];
             }
             $sub = data_get($data, 'subscription', []);
+
             return [
                 'id' => (int) $row->info_id,
                 'tenant_id' => (int) $row->info_id,

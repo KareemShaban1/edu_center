@@ -41,6 +41,7 @@ export default function TeacherDashboard() {
       <DashboardHomeLinks
         mainLinks={[
           { labelKey: 'nav.myClasses', path: '/teacher/classes' },
+          { labelKey: 'nav.teacherMeetings', path: '/teacher/meetings' },
           { labelKey: 'nav.meetingSeries', path: '/teacher/meeting-series' },
           { labelKey: 'nav.attendance', path: '/teacher/attendance' },
           { labelKey: 'nav.quizzes', path: '/teacher/quizzes' },

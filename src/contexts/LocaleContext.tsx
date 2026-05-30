@@ -74,9 +74,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.units': 'Units',
     'nav.lessons': 'Lessons',
     'nav.meetingSeriesAdmin': 'Meeting Series',
+    'nav.adminMeetings': 'Scheduled meetings',
 
     // Navigation - Teacher
     'nav.myClasses': 'My Classes',
+    'nav.teacherMeetings': 'Meetings',
     'nav.meetingSeries': 'Weekly Series',
     'nav.quizzes': 'Quizzes',
     'nav.homework': 'Homework',
@@ -146,6 +148,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'crud.cancel': 'Cancel',
     'crud.deleted': 'Deleted',
     'crud.deletedDesc': 'Item has been deleted successfully.',
+    'crud.deleteFailed': 'Delete failed',
+    'crud.deleteFailedDesc': 'The item could not be deleted.',
     'crud.deleteConfirm': 'Are you sure you want to delete this item? This action cannot be undone.',
     'crud.deleting': 'Deleting...',
     'crud.actions': 'Actions',
@@ -170,6 +174,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'page.homework.desc': 'Manage homework assignments',
     'page.courses.desc': 'View your enrolled courses',
     'page.meetings.desc': 'Single meetings: Jitsi, LiveKit, or external links for your section',
+    'page.studentMeetings.desc': 'View meetings for your class (read-only).',
+    'page.teacherMeetings.desc': 'Meetings for your sections. Edit or delete sessions you manage.',
+    'page.adminMeetings.desc': 'View, create, edit, and delete meetings for any section.',
     'page.grades.desc': 'View your grades and results',
     'page.children.desc': 'View your children\'s information',
     'page.tenants.desc': 'Manage platform tenants',
@@ -413,7 +420,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.group.curriculum': 'المناهج والواجبات',
     'nav.group.meetings': 'الحصص',
     'nav.group.classroom': 'الحضور التقييمات',
-    'nav.group.finance': 'المالية',
+    'nav.group.finance': 'الحسابات',
     'nav.group.content': 'المكتبة والإعلانات',
     'nav.group.insights': 'التقارير',
     'nav.group.administration': 'الإدارة',
@@ -426,10 +433,12 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.group.access': 'الوصول والأمان',
     'nav.units': 'الوحدات',
     'nav.lessons': 'الدروس',
-    'nav.meetingSeriesAdmin': 'الحصص الأسبوعية',
+    'nav.meetingSeriesAdmin': 'مجموعات الحصص',
+    'nav.adminMeetings': 'جميع الحصص',
 
     // Navigation - Teacher
     'nav.myClasses': 'صفوفي',
+    'nav.teacherMeetings': 'الجلسات',
     'nav.meetingSeries': 'سلاسل أسبوعية',
     'nav.quizzes': 'الاختبارات القصيرة',
     'nav.homework': 'الواجبات',
@@ -444,7 +453,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.fees_short': 'الرسوم',
 
     // Navigation - Platform
-    'nav.tenants': 'المستأجرون',
+    'nav.tenants': 'المشتركين',
     'nav.subscriptions': 'الاشتراكات',
     'nav.users': 'المستخدمون',
     'nav.roles': 'الأدوار',
@@ -462,7 +471,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'dashboard.platform': 'لوحة تحكم المنصة',
     'dashboard.platform.desc': 'نظرة عامة على النظام وإدارته',
     'dashboard.superAdmin': 'لوحة تحكم المدير العام',
-    'dashboard.superAdmin.desc': 'التحكم في المستأجرين والاشتراكات وعمليات المنصة',
+    'dashboard.superAdmin.desc': 'التحكم في المشتركين والاشتراكات وعمليات المنصة',
 
     // Stats
     'stat.totalStudents': 'إجمالي الطلاب',
@@ -479,7 +488,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'stat.children': 'الأبناء',
     'stat.avgGrade': 'متوسط الدرجة',
     'stat.pendingFees': 'رسوم معلقة',
-    'stat.totalTenants': 'إجمالي المستأجرين',
+    'stat.totalTenants': 'إجمالي المشتركين',
     'stat.activeUsers': 'المستخدمون النشطون',
     'stat.systemHealth': 'حالة النظام',
     'stat.apiCalls': 'طلبات API',
@@ -501,6 +510,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'crud.cancel': 'إلغاء',
     'crud.deleted': 'تم الحذف',
     'crud.deletedDesc': 'تم حذف العنصر بنجاح.',
+    'crud.deleteFailed': 'فشل الحذف',
+    'crud.deleteFailedDesc': 'تعذر حذف العنصر.',
     'crud.deleteConfirm': 'هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
     'crud.deleting': 'جاري الحذف...',
     'crud.actions': 'إجراءات',
@@ -525,6 +536,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'page.homework.desc': 'إدارة الواجبات المنزلية',
     'page.courses.desc': 'عرض المواد المسجلة',
     'page.meetings.desc': 'جلسات فردية: Jitsi أو LiveKit أو روابط خارجية لمجموعتك',
+    'page.studentMeetings.desc': 'عرض الجلسات الخاصة بفصلك (للقراءة فقط).',
+    'page.teacherMeetings.desc': 'الجلسات لمجموعاتك. تعديل أو حذف الجلسات التي تديرها.',
+    'page.adminMeetings.desc': 'عرض وإنشاء وتعديل وحذف الجلسات لأي مجموعة.',
     'page.grades.desc': 'عرض درجاتك ونتائجك',
     'page.children.desc': 'عرض معلومات أبنائك',
     'page.tenants.desc': 'إدارة مستأجري المنصة',
@@ -569,7 +583,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'col.password': 'كلمة المرور',
     'col.attachments': 'المرفقات',
     'col.child': 'الابن',
-    'col.section': 'القسم',
+    'col.section': 'المجموعة',
     'col.notes': 'ملاحظات',
     'col.media': 'الوسائط',
     'col.addFiles': 'إضافة ملفات',
@@ -627,7 +641,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'section.recentGrades': 'آخر الدرجات',
     'section.childrenOverview': 'نظرة عامة على الأبناء',
     'section.recentPayments': 'آخر المدفوعات',
-    'section.recentTenants': 'آخر المستأجرين',
+    'section.recentTenants': 'آخر المشتركين',
     'section.recentActivity': 'آخر النشاطات',
     'section.schoolInfo': 'معلومات المدرسة',
     'section.academicSettings': 'الإعدادات الأكاديمية',
@@ -721,20 +735,24 @@ const translations: Record<Locale, Record<string, string>> = {
 
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
+function readInitialLocale(): Locale {
+  const saved = localStorage.getItem('edu-locale');
+  if (saved === 'ar' || saved === 'en') return saved;
+  if (typeof navigator !== 'undefined') {
+    const lang = navigator.language?.toLowerCase() ?? '';
+    if (lang.startsWith('ar')) return 'ar';
+  }
+  return 'en';
+}
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem('edu-locale');
-    return (saved === 'ar' ? 'ar' : 'en') as Locale;
-  });
+  const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
 
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     document.documentElement.setAttribute('dir', dir);
     document.documentElement.setAttribute('lang', locale);
-    document.documentElement.style.fontFamily = locale === 'ar'
-      ? '"Noto Sans Arabic", "Plus Jakarta Sans", sans-serif'
-      : '"Plus Jakarta Sans", "Inter", sans-serif';
     localStorage.setItem('edu-locale', locale);
   }, [locale, dir]);
 

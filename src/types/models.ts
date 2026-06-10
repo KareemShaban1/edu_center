@@ -48,12 +48,18 @@ export interface ClassRoom {
   grade?: Grade;
 }
 
+export interface SectionWeekDay {
+  day: string;
+  time: string;
+}
+
 export interface Section {
   id: number;
   name: string;
   class_id: number;
   grade_id: number;
   teacher_id?: number;
+  week_days?: SectionWeekDay[];
   classroom?: ClassRoom;
   grade?: Grade;
   teacher?: Teacher;
@@ -356,6 +362,10 @@ export interface DashboardItem {
   subtitle?: string;
   meta?: string;
   status?: string;
+  grade_name?: string;
+  class_name?: string;
+  section_name?: string;
+  fee_title?: string;
 }
 
 export interface DashboardSection {
@@ -367,4 +377,20 @@ export interface DashboardSection {
 export interface DashboardPayload {
   stats: DashboardStat[];
   sections: DashboardSection[];
+  payment_summary?: {
+    month: string;
+    expected_students: number;
+    paid_count: number;
+    unpaid_count: number;
+    unpaid_amount: number;
+    filters?: DashboardFilters;
+  };
+}
+
+export interface DashboardFilters {
+  month?: string | null;
+  year?: string | null;
+  grade_id?: number | null;
+  class_id?: number | null;
+  section_id?: number | null;
 }

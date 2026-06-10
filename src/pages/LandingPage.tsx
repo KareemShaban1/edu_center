@@ -44,6 +44,7 @@ import {
 } from '@/components/landing/LandingFeatureIllustrations';
 import { cn } from '@/lib/utils';
 import { getTenantLoginPath } from '@/lib/tenant-routes';
+import { PwaInstallButton } from '@/components/PwaInstallButton';
 
 /* Brand palette */
 const C = {
@@ -409,6 +410,11 @@ export default function LandingPage() {
               <Languages className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
               <span className="hidden sm:inline">{isAr ? 'English' : 'العربية'}</span>
             </button>
+            <PwaInstallButton
+              className="rounded-xl border px-2.5 py-2 transition-colors hover:opacity-90"
+              iconClassName="h-4 w-4 opacity-70"
+              style={{ borderColor: `${C.crimsonBright}33`, backgroundColor: C.surface, color: C.charcoal }}
+            />
             <motion.button
               type="button"
               whileHover={{ scale: 1.03 }}

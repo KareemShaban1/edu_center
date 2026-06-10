@@ -25,3 +25,4 @@ export { parentApi } from './parent';
 export { studentSelfApi } from './student-self';
 export { teacherMeetingSeriesApi } from './teacher-meeting-series';
 export { teacherMeetingsApi } from './teacher-meetings';
+export { adminLandingApi, publicLandingApi } from './admin-landing';

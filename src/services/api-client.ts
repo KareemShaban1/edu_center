@@ -1,9 +1,24 @@
 import type { ApiError, PaginatedResponse, TenantContext } from '@/types/models';
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+function resolveApiBaseUrl(): string {
+  if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    return `${window.location.origin}/api`;
+  }
+  const configured = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
+  return configured || 'http://127.0.0.1:8000/api';
+}
+
+const DEFAULT_BASE_URL = resolveApiBaseUrl();
 const DEFAULT_LOCALE = import.meta.env.VITE_DEFAULT_LOCALE || 'en';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const TENANT_STORAGE_KEY = 'edu_tenant_context';
+
+type SessionExpiredHandler = () => void;
+let onSessionExpired: SessionExpiredHandler | null = null;
+
+export function setSessionExpiredHandler(handler: SessionExpiredHandler | null) {
+  onSessionExpired = handler;
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -56,9 +71,32 @@ class ApiClient {
     return this.tenantContext;
   }
 
+  private getBaseUrl(): string {
+    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+      return `${window.location.origin}/api`;
+    }
+    return this.baseUrl;
+  }
+
   private buildUrl(path: string, useLocale = true): string {
     const prefix = useLocale ? `/${this.locale}` : '';
-    return `${this.baseUrl}${prefix}${path}`;
+    return `${this.getBaseUrl()}${prefix}${path}`;
+  }
+
+  /** Always resolve to an absolute same-origin URL so session cookies attach reliably. */
+  private resolveRequestUrl(path: string, useLocale = true): string {
+    const built = this.buildUrl(path, useLocale);
+    if (built.startsWith('http://') || built.startsWith('https://')) {
+      return built;
+    }
+    return new URL(built, typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1').href;
+  }
+
+  private withTenantQuery(path: string): string {
+    const slug = this.tenantContext.tenantSlug;
+    if (!slug || path.includes('tenant_slug=')) return path;
+    const sep = path.includes('?') ? '&' : '?';
+    return `${path}${sep}tenant_slug=${encodeURIComponent(slug)}`;
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -69,6 +107,9 @@ class ApiClient {
         errors: body.errors,
         status: response.status,
       };
+      if (response.status === 401 && onSessionExpired && this.token) {
+        onSessionExpired();
+      }
       throw error;
     }
     return response.json();
@@ -76,10 +117,13 @@ class ApiClient {
 
   private headers(): HeadersInit {
     const h: HeadersInit = {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-Locale': this.locale,
     };
-    if (this.token) h['Authorization'] = `Bearer ${this.token}`;
+    if (this.token) {
+      h['Authorization'] = `Bearer ${this.token}`;
+    }
     if (this.tenantContext.tenantId) h['X-Tenant-Id'] = String(this.tenantContext.tenantId);
     if (this.tenantContext.tenantSlug) h['X-Tenant-Slug'] = this.tenantContext.tenantSlug;
     if (this.tenantContext.database) h['X-Tenant-Database'] = this.tenantContext.database;
@@ -87,19 +131,16 @@ class ApiClient {
   }
 
   async get<T>(path: string, params?: Record<string, string | number>, useLocale = true): Promise<T> {
-    const builtUrl = this.buildUrl(path, useLocale);
-    const url = builtUrl.startsWith('http://') || builtUrl.startsWith('https://')
-      ? new URL(builtUrl)
-      : new URL(builtUrl, window.location.origin);
+    const url = new URL(this.resolveRequestUrl(this.withTenantQuery(path), useLocale));
     if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
-    const res = await fetch(url.toString(), { headers: this.headers(), credentials: 'include' });
+    const res = await fetch(url.href, { headers: this.headers(), credentials: 'include' });
     return this.handleResponse<T>(res);
   }
 
   async post<T>(path: string, body?: unknown, useLocale = true): Promise<T> {
-    const res = await fetch(this.buildUrl(path, useLocale), {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
       method: 'POST',
-      headers: this.headers(),
+      headers: { ...this.headers(), 'Content-Type': 'application/json' },
       credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -107,9 +148,9 @@ class ApiClient {
   }
 
   async put<T>(path: string, body?: unknown, useLocale = true): Promise<T> {
-    const res = await fetch(this.buildUrl(path, useLocale), {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
       method: 'PUT',
-      headers: this.headers(),
+      headers: { ...this.headers(), 'Content-Type': 'application/json' },
       credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -117,7 +158,7 @@ class ApiClient {
   }
 
   async delete<T>(path: string, useLocale = true): Promise<T> {
-    const res = await fetch(this.buildUrl(path, useLocale), {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
       method: 'DELETE',
       headers: this.headers(),
       credentials: 'include',
@@ -128,7 +169,7 @@ class ApiClient {
   async upload<T>(path: string, formData: FormData, useLocale = true): Promise<T> {
     const h = this.headers() as Record<string, string>;
     delete h['Content-Type'];
-    const res = await fetch(this.buildUrl(path, useLocale), {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
       method: 'POST',
       headers: h,
       credentials: 'include',

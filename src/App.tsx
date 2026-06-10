@@ -44,6 +44,10 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminRolesPermissions from "@/pages/admin/AdminRolesPermissions";
 import AdminMeetingSeries from "@/pages/admin/AdminMeetingSeries";
 import AdminMeetings from "@/pages/admin/AdminMeetings";
+import AdminLandingPages from "@/pages/admin/AdminLandingPages";
+import AdminLandingBuilder from "@/pages/admin/AdminLandingBuilder";
+import AdminLandingAnalytics from "@/pages/admin/AdminLandingAnalytics";
+import PublicLandingPage from "@/pages/PublicLandingPage";
 
 // Teacher
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
@@ -95,6 +99,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/:tenantSlug/p/*" element={<PublicLandingPage />} />
+              <Route path="/p/*" element={<PublicLandingPage />} />
               <Route path="/login" element={<Navigate to={`/${defaultTenantSlug}/login`} replace />} />
               <Route path="/:tenantSlug/login" element={<LoginPage />} />
               <Route path="/platform/login" element={<PlatformLoginPage />} />
@@ -135,6 +141,9 @@ const App = () => (
               <Route path="/admin/meeting-series" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetingSeries /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPermissions /></ProtectedRoute>} />
+              <Route path="/admin/landing" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingPages /></ProtectedRoute>} />
+              <Route path="/admin/landing/:pageId/edit" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingBuilder /></ProtectedRoute>} />
+              <Route path="/admin/landing/:pageId/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingAnalytics /></ProtectedRoute>} />
 
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />

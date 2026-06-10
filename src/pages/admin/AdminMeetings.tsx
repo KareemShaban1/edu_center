@@ -266,16 +266,21 @@ function MeetingForm({
         </FormField>
       )}
 
-      <FormField label="Recording (LiveKit)" id="adm-meet-rec">
-        <FormSelect
-          id="adm-meet-rec"
-          value={form.record_enabled ? '1' : '0'}
-          onChange={e => setForm(f => ({ ...f, record_enabled: e.target.value === '1' }))}
-        >
-          <option value="0">No</option>
-          <option value="1">Yes</option>
-        </FormSelect>
-      </FormField>
+	{form.provider === 'livekit' && (
+	<>
+	<FormField label="Recording (LiveKit)" id="adm-meet-rec">
+	<FormSelect
+		id="adm-meet-rec"
+		value={form.record_enabled ? '1' : '0'}
+		onChange={e => setForm(f => ({ ...f, record_enabled: e.target.value === '1' }))}
+	>
+		<option value="0">No</option>
+		<option value="1">Yes</option>
+	</FormSelect>
+	</FormField>
+	      </>
+	      )}
+
 
       {urlProviders.includes(form.provider) && (
         <>

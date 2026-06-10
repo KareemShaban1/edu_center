@@ -1,5 +1,5 @@
 import { apiClient, USE_MOCK } from '../api-client';
-import type { DashboardPayload, UserRole } from '@/types/models';
+import type { DashboardFilters, DashboardPayload, UserRole } from '@/types/models';
 
 const superAdminDashboard: DashboardPayload = {
   stats: [
@@ -35,9 +35,18 @@ const roleDashboards: Record<UserRole, DashboardPayload> = {
       { id: 'students', title: 'Total Students', value: '1,234', variant: 'default', icon: 'graduation-cap', trend: { value: 5.2, label: 'vs last month' } },
       { id: 'teachers', title: 'Teachers', value: '86', variant: 'default', icon: 'users', trend: { value: 2.1, label: 'vs last month' } },
       { id: 'attendance', title: 'Attendance Rate', value: '94.7%', variant: 'attendance', icon: 'calendar-check', trend: { value: 1.3, label: 'vs last week' } },
-      { id: 'revenue', title: 'Revenue', value: '$142K', variant: 'finance', icon: 'dollar-sign', trend: { value: -2.4, label: 'vs last month' } },
+      { id: 'unpaid_students', title: 'Unpaid This Month', value: '18', variant: 'alerts', icon: 'dollar-sign' },
+      { id: 'unpaid_amount', title: 'Unpaid Amount', value: '4,500.00', variant: 'finance', icon: 'dollar-sign' },
     ],
     sections: [
+      {
+        key: 'unpaid_students',
+        title: 'Unpaid Students — June 2026',
+        items: [
+          { id: '1-1', title: 'Student 1', subtitle: 'Grade 1 · Class A · Section A', grade_name: 'Grade 1', class_name: 'Class A', section_name: 'Section A', fee_title: 'Monthly Fee', meta: '250.00', status: 'unpaid' },
+          { id: '2-1', title: 'Student 2', subtitle: 'Grade 2 · Class B · Section B', grade_name: 'Grade 2', class_name: 'Class B', section_name: 'Section B', fee_title: 'Monthly Fee', meta: '250.00', status: 'unpaid' },
+        ],
+      },
       {
         key: 'recent_students',
         title: 'Recent Students',
@@ -56,6 +65,13 @@ const roleDashboards: Record<UserRole, DashboardPayload> = {
         ],
       },
     ],
+    payment_summary: {
+      month: 'June 2026',
+      expected_students: 120,
+      paid_count: 102,
+      unpaid_count: 18,
+      unpaid_amount: 4500,
+    },
   },
   teacher: {
     stats: [
@@ -142,11 +158,17 @@ const roleDashboards: Record<UserRole, DashboardPayload> = {
 };
 
 export const dashboardApi = {
-  async getByRole(role: UserRole): Promise<DashboardPayload> {
+  async getByRole(role: UserRole, filters?: DashboardFilters): Promise<DashboardPayload> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 250));
       return roleDashboards[role];
     }
-    return apiClient.get<DashboardPayload>('/dashboard', undefined, false);
+    const params: Record<string, string | number> = {};
+    if (filters?.month) params.month = filters.month;
+    if (filters?.year) params.year = filters.year;
+    if (filters?.grade_id) params.grade_id = filters.grade_id;
+    if (filters?.class_id) params.class_id = filters.class_id;
+    if (filters?.section_id) params.section_id = filters.section_id;
+    return apiClient.get<DashboardPayload>('/dashboard', Object.keys(params).length ? params : undefined, false);
   },
 };

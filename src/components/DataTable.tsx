@@ -44,7 +44,7 @@ export default function DataTable<T extends Record<string, unknown>>({ columns, 
           <thead>
             <tr className="border-b border-border bg-muted/50">
               {columns.map(col => (
-                <th key={col.key} className="px-4 py-3 text-left font-medium text-muted-foreground">
+                <th key={col.key} className="px-4 py-3 text-start font-medium text-muted-foreground">
                   {col.label}
                 </th>
               ))}

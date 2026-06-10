@@ -10,6 +10,7 @@ export const reservedTenantSlugs = new Set([
   'platform',
   'login',
   'api',
+  'p',
 ]);
 
 const TENANT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/i;
@@ -28,4 +29,43 @@ export function normalizeTenantSlug(raw: string | undefined): string | null {
   const slug = raw?.trim().toLowerCase();
   if (!isValidTenantSlug(slug)) return null;
   return slug;
+}
+
+export function resolvePublicLandingTenant(explicit?: string | null): string {
+  return normalizeTenantSlug(explicit ?? undefined)
+    ?? apiClient.getTenantContext().tenantSlug
+    ?? defaultTenantSlug;
+}
+
+/** Parses `/demo/p/my-page` or `/p/my-page` into tenant + slug segments. */
+export function parsePublicLandingRoute(pathname: string): { tenantSlug: string | null; slug: string } {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+
+  const tenantMatch = normalized.match(/^\/([^/]+)\/p\/(.+)$/);
+  if (tenantMatch) {
+    const tenantSlug = normalizeTenantSlug(tenantMatch[1]);
+    if (tenantSlug) {
+      return { tenantSlug, slug: decodeURIComponent(tenantMatch[2]) };
+    }
+  }
+
+  const simpleMatch = normalized.match(/^\/p\/(.+)$/);
+  if (simpleMatch) {
+    return { tenantSlug: null, slug: decodeURIComponent(simpleMatch[1]) };
+  }
+
+  return { tenantSlug: null, slug: '' };
+}
+
+export function getPublicLandingPath(
+  slug: string,
+  tenantSlug?: string | null,
+  options?: { preview?: boolean },
+): string {
+  const tenant = resolvePublicLandingTenant(tenantSlug);
+  const base = `/${tenant}/p/${slug}`;
+  if (options?.preview) {
+    return `${base}?preview=1`;
+  }
+  return base;
 }

@@ -17,8 +17,8 @@ export const mockClasses: ClassRoom[] = [
 ];
 
 export const mockSections: Section[] = [
-  { id: 1, name: 'Section 1', class_id: 1, grade_id: 1, teacher_id: 1 },
-  { id: 2, name: 'Section 2', class_id: 1, grade_id: 1, teacher_id: 2 },
+  { id: 1, name: 'Section 1', class_id: 1, grade_id: 1, teacher_id: 1, week_days: [{ day: 'monday', time: '09:00' }, { day: 'thursday', time: '11:00' }] },
+  { id: 2, name: 'Section 2', class_id: 1, grade_id: 1, teacher_id: 2, week_days: [{ day: 'tuesday', time: '10:30' }] },
   { id: 3, name: 'Section 1', class_id: 2, grade_id: 1, teacher_id: 3 },
   { id: 4, name: 'Section 1', class_id: 3, grade_id: 2, teacher_id: 4 },
   { id: 5, name: 'Section 2', class_id: 3, grade_id: 2, teacher_id: 5 },

@@ -32,10 +32,12 @@ import {
   Video,
   PieChart,
   SlidersHorizontal,
+  Layout,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { PwaInstallButton } from '@/components/PwaInstallButton';
 
 type NavIcon = React.ElementType;
 
@@ -189,6 +191,7 @@ const adminNavBlocks: NavBlock[] = [
       items: [
         { labelKey: 'nav.library', path: '/admin/library', icon: Library },
         { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
+        { labelKey: 'nav.landingBuilder', path: '/admin/landing', icon: Layout },
       ],
     },
   },
@@ -483,6 +486,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            <PwaInstallButton />
+
             <button
               type="button"
               onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}

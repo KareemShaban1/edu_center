@@ -44,6 +44,13 @@ import type { Section, Student } from '@/types/models';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminAcademicsApi } from '@/services/endpoints/admin-academics';
+import {
+  WEEK_DAYS,
+  emptyWeekDayRow,
+  formatWeekDays,
+  parseWeekDays,
+  type SectionWeekDay,
+} from '@/lib/section-week-days';
 
 
 export default function AdminSections() {
@@ -63,7 +70,7 @@ export default function AdminSections() {
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
 
   const saveMutation = useMutation({
-    mutationFn: ({ payload, id }: { payload: Pick<Section, 'name' | 'grade_id' | 'class_id' | 'teacher_id'>; id?: number }) => (
+    mutationFn: ({ payload, id }: { payload: Pick<Section, 'name' | 'grade_id' | 'class_id' | 'teacher_id' | 'week_days'>; id?: number }) => (
       id ? adminAcademicsApi.updateSection(id, payload) : adminAcademicsApi.createSection(payload)
     ),
     onSuccess: async () => {
@@ -189,6 +196,7 @@ export default function AdminSections() {
           grade_id: section.grade_id,
           class_id: section.class_id,
           teacher_id: section.teacher_id,
+          week_days: section.week_days,
         },
         id: editItem && editItem !== 'new' ? editItem.id : undefined,
       });
@@ -355,6 +363,7 @@ export default function AdminSections() {
                                 {sections.map(section => {
                                   const teacher = teachers.find(teacherRow => teacherRow.id === section.teacher_id);
                                   const sectionStudentCount = studentCountBySectionId.get(section.id) ?? 0;
+                                  const scheduleLabel = formatWeekDays(section.week_days, t);
                                   return (
                                     <li
                                       key={section.id}
@@ -375,6 +384,13 @@ export default function AdminSections() {
                                           ) : (
                                             <span className="text-xs text-muted-foreground">
                                               {t('page.sectionsAdmin.noTeacher')}
+                                            </span>
+                                          )}
+                                          {scheduleLabel ? (
+                                            <p className="text-xs text-muted-foreground">{scheduleLabel}</p>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground italic">
+                                              {t('page.sectionsAdmin.noWeekDays')}
                                             </span>
                                           )}
                                         </div>
@@ -550,8 +566,23 @@ function SectionForm({
   const [gradeId, setGradeId] = useState(item?.grade_id ?? grades[0]?.id ?? 0);
   const [classId, setClassId] = useState(item?.class_id ?? 0);
   const [teacherId, setTeacherId] = useState(item?.teacher_id ?? 0);
+  const [weekDays, setWeekDays] = useState<SectionWeekDay[]>(
+    parseWeekDays(item?.week_days).length > 0 ? parseWeekDays(item?.week_days) : [],
+  );
 
   const filteredClasses = classes.filter(c => c.grade_id === gradeId);
+
+  const updateWeekDay = (index: number, patch: Partial<SectionWeekDay>) => {
+    setWeekDays(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const removeWeekDay = (index: number) => {
+    setWeekDays(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addWeekDay = () => {
+    setWeekDays(prev => [...prev, emptyWeekDayRow()]);
+  };
 
   const handleGradeChange = (id: number) => {
     setGradeId(id);
@@ -568,6 +599,7 @@ function SectionForm({
       grade_id: gradeId,
       class_id: classId,
       teacher_id: teacherId || undefined,
+      week_days: weekDays.length > 0 ? weekDays : undefined,
     });
   };
 
@@ -646,6 +678,56 @@ function SectionForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>{t('page.sectionsAdmin.weekDays')}</Label>
+          <p className="text-xs text-muted-foreground">{t('page.sectionsAdmin.weekDaysHint')}</p>
+          <div className="space-y-2">
+            {weekDays.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">{t('page.sectionsAdmin.noWeekDays')}</p>
+            ) : (
+              weekDays.map((row, index) => (
+                <div key={index} className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={row.day}
+                    onValueChange={v => updateWeekDay(index, { day: v })}
+                  >
+                    <SelectTrigger className="w-[9.5rem]" aria-label={t('page.sectionsAdmin.weekDays')}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WEEK_DAYS.map(day => (
+                        <SelectItem key={day} value={day}>
+                          {t(`weekday.${day}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="time"
+                    value={row.time}
+                    onChange={e => updateWeekDay(index, { time: e.target.value })}
+                    className="w-[8.5rem]"
+                    aria-label={t('col.time')}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeWeekDay(index)}
+                    aria-label={t('crud.delete')}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addWeekDay}>
+              <Plus className="h-3.5 w-3.5" />
+              {t('page.sectionsAdmin.addWeekDay')}
+            </Button>
+          </div>
         </div>
       </div>
     </FormDialog>

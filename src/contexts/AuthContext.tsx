@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, UserRole } from '@/types/models';
 import { authApi } from '@/services/endpoints/auth';
-import { apiClient } from '@/services/api-client';
+import { apiClient, setSessionExpiredHandler } from '@/services/api-client';
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +19,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setSessionExpiredHandler(() => {
+      apiClient.setToken(null);
+      apiClient.setTenantContext(null);
+      localStorage.removeItem('auth_user');
+      setUser(null);
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
+  useEffect(() => {
     const token = apiClient.getToken();
+    if (token === 'session-auth') {
+      apiClient.setToken(null);
+      localStorage.removeItem('auth_user');
+      setIsLoading(false);
+      return;
+    }
     if (token) {
       authApi.getUser()
         .then(u => {
@@ -29,9 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             tenantSlug: u.tenant_slug ?? undefined,
           });
         })
-        .catch(() => {
-          apiClient.setToken(null);
-          apiClient.setTenantContext(null);
+        .catch((err: unknown) => {
+          const status = typeof err === 'object' && err !== null && 'status' in err
+            ? (err as { status?: number }).status
+            : undefined;
+          if (status === 401) {
+            apiClient.setToken(null);
+            apiClient.setTenantContext(null);
+            setUser(null);
+            localStorage.removeItem('auth_user');
+          }
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -46,9 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tenantId: res.user.tenant_id ?? undefined,
       tenantSlug: res.user.tenant_slug ?? tenantSlug,
     });
-    localStorage.setItem('auth_user', JSON.stringify(res.user));
-    setUser(res.user);
-    return res.user;
+    // Confirm session cookie works (login JSON alone is not enough for API auth).
+    const verified = await authApi.getUser();
+    localStorage.setItem('auth_user', JSON.stringify(verified));
+    setUser(verified);
+    return verified;
   }, []);
 
   const logout = useCallback(() => {

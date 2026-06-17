@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { CenterScopedRow } from '@/types/models';
 
-interface MeetingRow {
+interface MeetingRow extends CenterScopedRow {
   id: number;
   topic: string;
   teacher: string;
@@ -64,6 +66,7 @@ export default function StudentMeetings() {
   const [showItem, setShowItem] = useState<MeetingRow | null>(null);
   const rows = (data?.meetings || []) as MeetingRow[];
   const columns: CrudColumn<MeetingRow>[] = [
+    { key: 'center_name', label: t('col.center'), render: c => <CenterLabel name={c.center_name} /> },
     { key: 'topic', label: t('col.title'), sortable: true },
     { key: 'teacher', label: t('col.teacher') },
     { key: 'start_at', label: t('col.startDate'), sortable: true },
@@ -94,7 +97,8 @@ export default function StudentMeetings() {
         description={t('page.studentMeetings.desc')}
         columns={columns}
         data={rows}
-        searchKeys={['topic', 'teacher', 'start_at', 'provider']}
+        searchKeys={['topic', 'teacher', 'start_at', 'provider', 'center_name']}
+        rowKey={c => portalRowKey(c.center_id, c.id)}
         readOnly
         canEdit={false}
         canDelete={false}

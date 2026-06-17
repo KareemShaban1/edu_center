@@ -4,6 +4,7 @@ import StatCard from '@/components/StatCard';
 import { Users, CalendarCheck, DollarSign, FileText } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 
 export default function ParentDashboard() {
   const { t } = useLocale();
@@ -63,13 +64,16 @@ export default function ParentDashboard() {
           <h3 className="mb-3 font-display font-semibold">{t('section.childrenOverview')}</h3>
           <div className="space-y-3">
             {children.map(child => (
-              <div key={child.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
+              <div key={portalRowKey(child.center_id, child.id)} className="rounded-xl border border-border bg-card p-4 shadow-card">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
                     {child.name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-medium">{child.name}</h4>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-medium">{child.name}</h4>
+                      <CenterLabel name={child.center_name} />
+                    </div>
                     <p className="text-xs text-muted-foreground">{child.grade} - {child.class} - {child.section}</p>
                   </div>
                 </div>
@@ -83,9 +87,12 @@ export default function ParentDashboard() {
           <h3 className="mb-3 font-display font-semibold">{t('section.recentPayments')}</h3>
           <div className="space-y-2">
             {recentPayments.map(f => (
-              <div key={f.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-card">
+              <div key={portalRowKey(f.center_id, f.id)} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-card">
                 <div>
-                  <span className="text-sm font-medium">{f.item} - {f.student_name}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">{f.item} - {f.student_name}</span>
+                    <CenterLabel name={f.center_name} />
+                  </div>
                   <p className="text-xs text-muted-foreground">${f.amount.toLocaleString()} - {f.due_date}</p>
                 </div>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${

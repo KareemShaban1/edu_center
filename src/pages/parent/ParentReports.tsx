@@ -1,4 +1,5 @@
 import DashboardLayout from '@/components/DashboardLayout';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
 
@@ -14,9 +15,12 @@ export default function ParentReports() {
       </div>
       <div className="space-y-6">
         {reports.map(c => (
-          <div key={c.student_id} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+          <div key={portalRowKey(c.center_id, c.student_id)} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
             <div className="border-b border-border px-5 py-3 bg-muted/30">
-              <h3 className="font-display font-semibold">{c.student_name} — {c.grade}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-display font-semibold">{c.student_name} — {c.grade}</h3>
+                <CenterLabel name={c.center_name} />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

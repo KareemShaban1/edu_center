@@ -1,11 +1,8 @@
 import { apiClient, USE_MOCK } from '../api-client';
-
-
+import type { CenterScopedRow } from '@/types/models';
 
 export interface StudentSelfBootstrapPayload {
-
-  meetings: Array<{
-
+  meetings: Array<CenterScopedRow & {
     id: number;
 
     topic: string;
@@ -37,78 +34,48 @@ export interface StudentSelfBootstrapPayload {
 
   }>;
 
-  attendance: Array<{
-
+  attendance: Array<CenterScopedRow & {
     id: number;
-
     date: string;
-
     status: 'present' | 'absent' | 'late';
-
     notes?: string;
-
   }>;
 
-  grades: Array<{
-
+  grades: Array<CenterScopedRow & {
     id: number;
-
     source: 'exam' | 'quiz';
-
     subject: string;
-
     date: string;
-
     score: number | null;
-
     total: number;
-
     attendance_status?: 'present' | 'absent' | 'late';
-
     notes?: string;
-
   }>;
 
-  homework: Array<{
-
+  homework: Array<CenterScopedRow & {
     id: number | string;
-
     submission_id?: number | null;
-
     homework_id: number;
-
     title: string;
-
     subject: string;
-
     due_date: string;
-
     status: string;
-
     grade: string;
-
     student_notes?: string;
-
     response?: string;
-
   }>;
 
-  homework_options: Array<{ id: number; title: string }>;
+  homework_options: Array<{ id: number; title: string; center_id?: string | number }>;
 
-  library: Array<{
-
+  library: Array<CenterScopedRow & {
     id: number;
-
     title: string;
-
     type: string;
-
     notes?: string;
-
     url?: string | null;
-
   }>;
 
+  centers?: Array<{ center_id: string; center_name: string; center_slug?: string }>;
 }
 
 

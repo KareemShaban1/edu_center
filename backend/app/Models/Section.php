@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Translatable\HasTranslations;
 
 class Section extends Model
 {
+    use BelongsToCenter;
+
     // use HasTranslations;
     // public $translatable = ['section_name'];
-    protected $fillable = ['section_name', 'grade_id', 'class_id'];
+    protected $fillable = ['section_name', 'grade_id', 'class_id', 'status', 'week_days'];
 
     protected $table = 'sections';
+    protected $connection = 'center';
     public $timestamps = true;
 
 

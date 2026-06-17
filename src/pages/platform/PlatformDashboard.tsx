@@ -2,7 +2,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import DashboardHomeLinks from '@/components/DashboardHomeLinks';
 import StatCard from '@/components/StatCard';
 import DataTable from '@/components/DataTable';
-import { Globe, Users, Activity, Shield, CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { getPlatformDocUrl } from '@/config/platform-documentation';
+import { Globe, Users, Activity, Shield, CreditCard, BookOpen } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/endpoints/dashboard';
@@ -29,9 +32,17 @@ export default function PlatformDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="page-header">
-        <h1 className="page-title">{t('dashboard.superAdmin')}</h1>
-        <p className="page-description">{t('dashboard.superAdmin.desc')}</p>
+      <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="page-title">{t('dashboard.superAdmin')}</h1>
+          <p className="page-description">{t('dashboard.superAdmin.desc')}</p>
+        </div>
+        <Button asChild className="shrink-0">
+          <Link to={getPlatformDocUrl('index')}>
+            <BookOpen className="h-4 w-4 me-2" />
+            {t('nav.documentation')}
+          </Link>
+        </Button>
       </div>
 
       <DashboardHomeLinks
@@ -42,7 +53,9 @@ export default function PlatformDashboard() {
         ]}
         extraLinks={[
           { labelKey: 'nav.roles', path: '/platform/roles' },
+          { labelKey: 'nav.appearance', path: '/platform/settings' },
           { labelKey: 'nav.activityLogs', path: '/platform/logs' },
+          { labelKey: 'nav.documentation', path: '/platform/documentation' },
         ]}
       />
 

@@ -1,9 +1,11 @@
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import type { CenterScopedRow } from '@/types/models';
 
-interface ParentQuizRow {
+interface ParentQuizRow extends CenterScopedRow {
   id: number;
   student_name: string;
   grade?: string;
@@ -18,7 +20,7 @@ export default function ParentQuizzes() {
   const { data } = useParentBootstrap();
   const quizzes = (data?.quizzes || []) as ParentQuizRow[];
   const columns: CrudColumn<ParentQuizRow>[] = [
-    { key: 'id', label: t('col.id') },
+    { key: 'center_name', label: t('col.center'), render: q => <CenterLabel name={q.center_name} /> },
     { key: 'student_name', label: t('col.child'), sortable: true },
     { key: 'grade', label: t('col.grade') },
     { key: 'date', label: t('col.date'), sortable: true },
@@ -33,9 +35,9 @@ export default function ParentQuizzes() {
       description={t('page.quizzes.desc')}
       columns={columns}
       data={quizzes}
-      searchKeys={['student_name', 'date']}
+      searchKeys={['student_name', 'date', 'center_name']}
+      rowKey={q => portalRowKey(q.center_id, q.id)}
       readOnly
     />
   );
 }
-

@@ -10,10 +10,19 @@ export interface User {
   tenant_id?: number | null;
   tenant_slug?: string | null;
   tenant_name?: string | null;
+  portal_mode?: boolean;
+  center_count?: number;
+  memberships?: TenantMembershipOption[];
   permissions?: string[];
   avatar?: string;
   locale: string;
   created_at: string;
+}
+
+export interface CenterScopedRow {
+  center_id?: string | number;
+  center_name?: string | null;
+  center_slug?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -30,6 +39,18 @@ export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;
   status: number;
+  requires_tenant_selection?: boolean;
+  memberships?: TenantMembershipOption[];
+  user?: Partial<User>;
+}
+
+export interface TenantMembershipOption {
+  membership_id: number;
+  tenant_id: string;
+  tenant_slug?: string | null;
+  tenant_name?: string | null;
+  role: string;
+  profile_id: number;
 }
 
 // ===== Academic Setup =====
@@ -70,6 +91,9 @@ export interface Section {
 export interface Student {
   id: number;
   name: string;
+  grade_name?: string;
+  class_name?: string;
+  section_name?: string;
   email?: string;
   password?: string;
   gender: string;
@@ -301,7 +325,7 @@ export interface WhatsAppTemplate {
 // ===== Platform =====
 
 export interface Tenant {
-  id: number;
+  id: number | string;
   name: string;
   domain: string;
   slug?: string;
@@ -314,6 +338,36 @@ export interface Tenant {
   subscription_status?: 'active' | 'trial' | 'past_due' | 'cancelled';
   status: 'active' | 'inactive';
   created_at: string;
+}
+
+export interface TenantInitialUserRow {
+  name: string;
+  email: string;
+  password?: string;
+  subject?: string;
+  phone?: string;
+}
+
+export interface TenantCreatePayload extends Partial<Tenant> {
+  id?: number | string;
+  seed_default_accounts?: boolean;
+  initial_users?: {
+    admin?: TenantInitialUserRow;
+    teachers?: TenantInitialUserRow[];
+    parents?: TenantInitialUserRow[];
+    students?: TenantInitialUserRow[];
+  };
+}
+
+export interface TenantProvisionedAccount {
+  role: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface TenantCreateResponse extends Tenant {
+  default_accounts?: TenantProvisionedAccount[];
 }
 
 export interface ActivityLog {

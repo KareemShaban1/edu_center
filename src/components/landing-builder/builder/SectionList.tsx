@@ -1,4 +1,4 @@
-import { GripVertical, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, ChevronsLeft, ListTree } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Copy, Trash2, ChevronUp, ChevronDown, ChevronsLeft, ListTree, ScanEye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -16,11 +16,12 @@ interface SectionListProps {
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
   onToggleVisible: (id: string) => void;
+  onPreview: (section: LandingSection) => void;
 }
 
 export function SectionList({
   sections, selectedId, collapsed, onToggleCollapsed,
-  onSelect, onMove, onDuplicate, onRemove, onToggleVisible,
+  onSelect, onMove, onDuplicate, onRemove, onToggleVisible, onPreview,
 }: SectionListProps) {
   const { t } = useLocale();
   const sorted = [...sections].sort((a, b) => a.order - b.order);
@@ -42,7 +43,7 @@ export function SectionList({
   }
 
   return (
-    <div className="w-56 border-e bg-muted/20 flex flex-col shrink-0 h-full min-h-0">
+    <div className="w-72 border-e bg-muted/20 flex flex-col shrink-0 h-full min-h-0">
       <div className="p-3 border-b shrink-0">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold text-sm">{t('landing.pageStructure')}</h3>
@@ -58,9 +59,15 @@ export function SectionList({
         </div>
       </div>
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-1">
+        <div className="p-2 space-y-1" dir="rtl">
           {sorted.map((section, index) => {
             const meta = SECTION_CATALOG.find(s => s.type === section.type);
+            const customTitle = section.type === 'custom'
+              ? (section.content.title as { en?: string; ar?: string } | undefined)
+              : undefined;
+            const label = section.type === 'custom' && customTitle
+              ? (customTitle.en || customTitle.ar || t('landing.section.custom'))
+              : meta ? t(meta.labelKey) : section.type;
             return (
               <div
                 key={section.id}
@@ -87,7 +94,16 @@ export function SectionList({
                 onClick={() => onSelect(section.id)}
               >
                 <GripVertical className="w-3 h-3 shrink-0 text-muted-foreground cursor-grab" />
-                <span className="flex-1 truncate">{meta ? t(meta.labelKey) : section.type}</span>
+                <span className="flex-1 truncate">{label}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  title={t('landing.sectionPreview')}
+                  onClick={e => { e.stopPropagation(); onPreview(section); }}
+                >
+                  <ScanEye className="w-3 h-3" />
+                </Button>
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => { e.stopPropagation(); onMove(index, index - 1); }} disabled={index === 0}>
                     <ChevronUp className="w-3 h-3" />

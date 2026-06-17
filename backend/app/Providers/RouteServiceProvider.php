@@ -63,7 +63,7 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function mapWebRoutes()
     {
-        foreach (config('tenancy.central_domains', []) as $domain) {
+        foreach (config('centers.central_domains', []) as $domain) {
             Route::domain($domain)
                 ->middleware('web')
                 ->namespace($this->namespace)
@@ -100,7 +100,7 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function mapApiRoutes()
     {
-        foreach (config('tenancy.central_domains', []) as $domain) {
+        foreach (config('centers.central_domains', []) as $domain) {
             Route::domain($domain)
                 ->prefix('api')
                 ->middleware('api')
@@ -111,7 +111,7 @@ class RouteServiceProvider extends ServiceProvider
 
     protected function mapPlatformRoutes()
     {
-        foreach (config('tenancy.central_domains', []) as $domain) {
+        foreach (config('centers.central_domains', []) as $domain) {
             Route::domain($domain)
                 ->middleware('web')
                 ->namespace($this->namespace)

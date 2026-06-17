@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Translatable\HasTranslations;
 
 class Classes extends Model
 {
+    use BelongsToCenter;
 
     // use HasTranslations;
     // public $translatable = ['class_name'];
 
-
     protected $table = 'classes';
+    protected $connection = 'center';
     public $timestamps = true;
     protected $fillable=['class_name','grade_id'];
 

@@ -6,19 +6,25 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { useLocale } from '@/contexts/LocaleContext';
 import { ANIMATION_OPTIONS } from '@/lib/landing/constants';
 import { FONT_FAMILIES, FONT_WEIGHTS, getSectionTextFields } from '@/lib/landing/typography';
 import type { LandingPage, LandingSection, LocalizedText, TextStyle } from '@/types/landing';
 import { SECTION_CATALOG } from '@/lib/landing/constants';
+import { getSectionLayouts, resolveSectionLayout } from '@/lib/landing/section-layouts';
 import { TypographyControls } from './TypographyControls';
 import { SectionImageEditor } from './SectionImageEditor';
+import { ComponentBuilderPanel } from './ComponentBuilderPanel';
+import type { ComponentType } from '@/types/landing';
 
 interface PropertiesPanelProps {
   page: LandingPage;
   section: LandingSection | null;
   previewLocale: 'en' | 'ar';
   selectedTextKey?: string | null;
+  selectedComponentId?: string | null;
+  onSelectComponent?: (id: string | null) => void;
   onSelectTextField?: (key: string | null) => void;
   onUpdateSection: (id: string, patch: Partial<LandingSection>) => void;
   onUpdateSectionContent: (id: string, content: Record<string, unknown>) => void;
@@ -29,6 +35,10 @@ interface PropertiesPanelProps {
   onUpdateBranding: (branding: Partial<LandingPage['branding']>) => void;
   onUpdateMeta: (patch: Partial<LandingPage>) => void;
   onPickFromMedia?: (apply: (url: string) => void) => void;
+  onAddComponent?: (sectionId: string, type: ComponentType) => void;
+  onRemoveComponent?: (sectionId: string, componentId: string) => void;
+  onMoveComponent?: (sectionId: string, from: number, to: number) => void;
+  onUpdateComponentContent?: (sectionId: string, componentId: string, content: Record<string, unknown>) => void;
 }
 
 function LocalizedField({
@@ -51,18 +61,26 @@ function LocalizedField({
 }
 
 export function PropertiesPanel({
-  page, section, previewLocale, selectedTextKey, onSelectTextField,
+  page, section, previewLocale, selectedTextKey, selectedComponentId, onSelectComponent, onSelectTextField,
   onUpdateSection, onUpdateSectionContent, onUpdateSectionStyle, onUpdateTextStyle, onUpdateTheme, onUpdateSeo, onUpdateBranding, onUpdateMeta,
-  onPickFromMedia,
+  onPickFromMedia, onAddComponent, onRemoveComponent, onMoveComponent, onUpdateComponentContent,
 }: PropertiesPanelProps) {
   const { t } = useLocale();
-  const textFields = section ? getSectionTextFields(section.type) : [];
+  const textFields = section && section.type !== 'custom' ? getSectionTextFields(section.type) : [];
+  const layoutOptions = section ? getSectionLayouts(section.type) : [];
+  const currentLayout = section ? resolveSectionLayout(section) : '';
+  const isCustomSection = section?.type === 'custom';
 
   return (
     <div className="w-80 border-s bg-muted/30 flex flex-col shrink-0 h-full min-h-0 overflow-hidden">
-      <Tabs defaultValue="typography" className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <TabsList className="mx-3 mt-3 grid grid-cols-5 shrink-0">
-          <TabsTrigger value="typography" className="text-[10px] px-1">{t('landing.typography')}</TabsTrigger>
+      <Tabs defaultValue={isCustomSection ? 'components' : 'typography'} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <TabsList className={cn('mx-3 mt-3 grid shrink-0', isCustomSection ? 'grid-cols-6' : 'grid-cols-5')}>
+          {!isCustomSection && (
+            <TabsTrigger value="typography" className="text-[10px] px-1">{t('landing.typography')}</TabsTrigger>
+          )}
+          {isCustomSection && (
+            <TabsTrigger value="components" className="text-[10px] px-1">{t('landing.components')}</TabsTrigger>
+          )}
           <TabsTrigger value="section" className="text-[10px] px-1">{t('landing.section')}</TabsTrigger>
           <TabsTrigger value="design" className="text-[10px] px-1">{t('landing.design')}</TabsTrigger>
           <TabsTrigger value="seo" className="text-[10px] px-1">SEO</TabsTrigger>
@@ -71,6 +89,26 @@ export function PropertiesPanel({
 
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
           <div className="pb-4">
+          {isCustomSection && (
+            <TabsContent value="components" className="p-3 space-y-3 mt-0">
+              {!section ? (
+                <p className="text-sm text-muted-foreground">{t('landing.selectSection')}</p>
+              ) : (
+                <ComponentBuilderPanel
+                  section={section}
+                  previewLocale={previewLocale}
+                  selectedComponentId={selectedComponentId ?? null}
+                  onSelectComponent={onSelectComponent ?? (() => {})}
+                  onAddComponent={type => onAddComponent?.(section.id, type)}
+                  onRemoveComponent={componentId => onRemoveComponent?.(section.id, componentId)}
+                  onMoveComponent={(from, to) => onMoveComponent?.(section.id, from, to)}
+                  onUpdateComponentContent={(componentId, content) => onUpdateComponentContent?.(section.id, componentId, content)}
+                  onUpdateSectionContent={content => onUpdateSectionContent(section.id, content)}
+                  onPickFromMedia={onPickFromMedia}
+                />
+              )}
+            </TabsContent>
+          )}
           <TabsContent value="typography" className="p-3 space-y-3 mt-0">
             {!section ? (
               <p className="text-sm text-muted-foreground">{t('landing.selectSection')}</p>
@@ -107,6 +145,24 @@ export function PropertiesPanel({
                   <Label className="text-xs">{t('landing.visible')}</Label>
                   <Switch checked={section.visible} onCheckedChange={v => onUpdateSection(section.id, { visible: v })} />
                 </div>
+                {layoutOptions.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">{t('landing.layout')}</Label>
+                    <Select
+                      value={currentLayout}
+                      onValueChange={v => onUpdateSectionContent(section.id, { layout: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {layoutOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {t(option.labelKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <Label className="text-xs">{t('landing.animation')}</Label>
                   <Select value={section.animation ?? 'fade-in'} onValueChange={v => onUpdateSection(section.id, { animation: v as LandingSection['animation'] })}>
@@ -119,13 +175,17 @@ export function PropertiesPanel({
                   </Select>
                 </div>
                 <Separator />
-                <SectionImageEditor
-                  section={section}
-                  onPickFromMedia={onPickFromMedia}
-                  onUpdateContent={patch => onUpdateSectionContent(section.id, patch)}
-                  onUpdateStyle={patch => onUpdateSectionStyle(section.id, patch)}
-                />
-                <Separator />
+                {section.type !== 'custom' && (
+                  <>
+                    <SectionImageEditor
+                      section={section}
+                      onPickFromMedia={onPickFromMedia}
+                      onUpdateContent={patch => onUpdateSectionContent(section.id, patch)}
+                      onUpdateStyle={patch => onUpdateSectionStyle(section.id, patch)}
+                    />
+                    <Separator />
+                  </>
+                )}
                 <div className="space-y-1">
                   <Label className="text-xs">{t('landing.bgColor')}</Label>
                   <Input type="color" value={section.style?.backgroundColor ?? '#ffffff'} onChange={e => onUpdateSection(section.id, { style: { ...section.style, backgroundColor: e.target.value } })} />

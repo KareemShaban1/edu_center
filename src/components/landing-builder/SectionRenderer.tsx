@@ -9,6 +9,7 @@ import {
   MapsSection, GallerySection, TeachingMethodSection, CertificationsSection, CourseDetailsSection,
   TeamSection, BlogSection, LogosSection, StudentResultsSection, SubjectOverviewSection,
 } from './sections/SectionViews';
+import { CustomSectionView } from './sections/CustomSectionView';
 
 interface SectionRendererProps {
   section: LandingSection;
@@ -17,8 +18,10 @@ interface SectionRendererProps {
   editMode?: boolean;
   isSelected?: boolean;
   selectedTextKey?: string | null;
+  selectedComponentId?: string | null;
   onSelect?: () => void;
   onSelectTextField?: (fieldKey: string) => void;
+  onSelectComponent?: (componentId: string) => void;
   onContentChange?: (content: Record<string, unknown>) => void;
 }
 
@@ -29,8 +32,10 @@ export function SectionRenderer({
   editMode,
   isSelected,
   selectedTextKey,
+  selectedComponentId,
   onSelect,
   onSelectTextField,
+  onSelectComponent,
   onContentChange,
 }: SectionRendererProps) {
   if (!section.visible && !editMode) return null;
@@ -96,6 +101,14 @@ export function SectionRenderer({
     case 'blog': return wrap(<BlogSection {...props} />);
     case 'newsletter': return wrap(<NewsletterSection {...props} />);
     case 'footer': return wrap(<FooterSection {...props} />);
+    case 'custom':
+      return wrap(
+        <CustomSectionView
+          {...props}
+          selectedComponentId={selectedComponentId}
+          onSelectComponent={onSelectComponent}
+        />,
+      );
     default: return null;
   }
 }

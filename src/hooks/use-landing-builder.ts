@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LandingPage, LandingSection, PreviewDevice } from '@/types/landing';
+import { useCallback, useRef, useState } from 'react';
+import type { LandingPage, LandingSection, PreviewDevice, ComponentType } from '@/types/landing';
 import { createDefaultSection, normalizeLandingPage, uid } from '@/lib/landing/defaults';
+import { createDefaultComponent, cloneComponents } from '@/lib/landing/component-defaults';
 
 const MAX_HISTORY = 50;
 
 interface BuilderState {
   page: LandingPage;
   selectedSectionId: string | null;
+  selectedComponentId: string | null;
   selectedTextKey: string | null;
   previewDevice: PreviewDevice;
   previewLocale: 'ar' | 'en';
@@ -21,6 +23,7 @@ export function useLandingBuilder(initialPage: LandingPage) {
   const [state, setState] = useState<BuilderState>({
     page,
     selectedSectionId: page.sections[0]?.id ?? null,
+    selectedComponentId: null,
     selectedTextKey: null,
     previewDevice: 'desktop',
     previewLocale: 'ar',
@@ -31,7 +34,6 @@ export function useLandingBuilder(initialPage: LandingPage) {
 
   const historyRef = useRef<LandingPage[]>([structuredClone(page)]);
   const historyIndexRef = useRef(0);
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const pushHistory = useCallback((page: LandingPage) => {
     const hist = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -67,7 +69,11 @@ export function useLandingBuilder(initialPage: LandingPage) {
   }, [canRedo]);
 
   const selectSection = useCallback((id: string | null) => {
-    setState(prev => ({ ...prev, selectedSectionId: id, selectedTextKey: null }));
+    setState(prev => ({ ...prev, selectedSectionId: id, selectedComponentId: null, selectedTextKey: null }));
+  }, []);
+
+  const selectComponent = useCallback((id: string | null) => {
+    setState(prev => ({ ...prev, selectedComponentId: id, selectedTextKey: null }));
   }, []);
 
   const selectTextField = useCallback((fieldKey: string | null) => {
@@ -113,6 +119,9 @@ export function useLandingBuilder(initialPage: LandingPage) {
       const idx = page.sections.findIndex(s => s.id === id);
       if (idx < 0) return page;
       const copy = { ...structuredClone(page.sections[idx]), id: uid('sec') };
+      if (copy.type === 'custom' && copy.components?.length) {
+        copy.components = cloneComponents(copy.components);
+      }
       const sections = [...page.sections];
       sections.splice(idx + 1, 0, copy);
       return { ...page, sections: sections.map((s, i) => ({ ...s, order: i })) };
@@ -166,6 +175,66 @@ export function useLandingBuilder(initialPage: LandingPage) {
     }), false);
   }, [updatePage]);
 
+  const addComponent = useCallback((sectionId: string, type: ComponentType) => {
+    const newComponent = createDefaultComponent(type, 0);
+    updatePage(page => ({
+      ...page,
+      sections: page.sections.map(s => {
+        if (s.id !== sectionId) return s;
+        const components = [...(s.components ?? [])];
+        newComponent.order = components.length;
+        components.push(newComponent);
+        return { ...s, components };
+      }),
+    }));
+    setState(prev => ({ ...prev, selectedComponentId: newComponent.id }));
+  }, [updatePage]);
+
+  const removeComponent = useCallback((sectionId: string, componentId: string) => {
+    updatePage(page => ({
+      ...page,
+      sections: page.sections.map(s => {
+        if (s.id !== sectionId) return s;
+        const components = (s.components ?? [])
+          .filter(c => c.id !== componentId)
+          .map((c, i) => ({ ...c, order: i }));
+        return { ...s, components };
+      }),
+    }));
+    setState(prev => ({
+      ...prev,
+      selectedComponentId: prev.selectedComponentId === componentId ? null : prev.selectedComponentId,
+    }));
+  }, [updatePage]);
+
+  const moveComponent = useCallback((sectionId: string, fromIndex: number, toIndex: number) => {
+    updatePage(page => ({
+      ...page,
+      sections: page.sections.map(s => {
+        if (s.id !== sectionId) return s;
+        const components = [...(s.components ?? [])].sort((a, b) => a.order - b.order);
+        const [moved] = components.splice(fromIndex, 1);
+        components.splice(toIndex, 0, moved);
+        return { ...s, components: components.map((c, i) => ({ ...c, order: i })) };
+      }),
+    }), false);
+  }, [updatePage]);
+
+  const updateComponentContent = useCallback((sectionId: string, componentId: string, content: Record<string, unknown>) => {
+    updatePage(page => ({
+      ...page,
+      sections: page.sections.map(s => {
+        if (s.id !== sectionId) return s;
+        return {
+          ...s,
+          components: (s.components ?? []).map(c =>
+            c.id === componentId ? { ...c, content: { ...c.content, ...content } } : c,
+          ),
+        };
+      }),
+    }), false);
+  }, [updatePage]);
+
   const updateTheme = useCallback((theme: Partial<LandingPage['theme']>) => {
     updatePage(page => ({ ...page, theme: { ...page.theme, ...theme } }));
   }, [updatePage]);
@@ -191,6 +260,7 @@ export function useLandingBuilder(initialPage: LandingPage) {
       page: normalized,
       isDirty: false,
       selectedSectionId: normalized.sections[0]?.id ?? null,
+      selectedComponentId: null,
       selectedTextKey: null,
     }));
   }, []);
@@ -203,17 +273,6 @@ export function useLandingBuilder(initialPage: LandingPage) {
     setState(prev => ({ ...prev, isSaving }));
   }, []);
 
-  const scheduleAutoSave = useCallback((saveFn: () => Promise<void>) => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => {
-      saveFn();
-    }, 3000);
-  }, []);
-
-  useEffect(() => () => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-  }, []);
-
   const selectedSection = state.page.sections?.find(s => s.id === state.selectedSectionId) ?? null;
 
   return {
@@ -224,6 +283,7 @@ export function useLandingBuilder(initialPage: LandingPage) {
     undo,
     redo,
     selectSection,
+    selectComponent,
     selectTextField,
     setPreviewDevice,
     setPreviewLocale,
@@ -234,6 +294,10 @@ export function useLandingBuilder(initialPage: LandingPage) {
     updateSection,
     updateSectionContent,
     updateSectionStyle,
+    addComponent,
+    removeComponent,
+    moveComponent,
+    updateComponentContent,
     updateTextStyle,
     updateTheme,
     updateSeo,
@@ -242,7 +306,6 @@ export function useLandingBuilder(initialPage: LandingPage) {
     replacePage,
     markSaved,
     setSaving,
-    scheduleAutoSave,
     updatePage,
   };
 }

@@ -26,6 +26,7 @@ import { getPublicLandingPath, resolvePublicLandingTenant } from '@/lib/tenant-r
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { LANDING_TEMPLATES } from '@/lib/landing/templates';
 import { SUBJECT_LABELS, TEACHER_SUBJECT_TEMPLATES } from '@/lib/landing/constants';
+import { LandingTemplatePreview } from '@/components/landing-builder/LandingTemplatePreview';
 import type { LandingPageType, LandingPageListItem } from '@/types/landing';
 import { toast } from 'sonner';
 
@@ -217,7 +218,7 @@ export default function AdminLandingPages() {
 
       {/* Template Library Dialog */}
       <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader><DialogTitle>{t('landing.templateLibrary')}</DialogTitle></DialogHeader>
           <Tabs defaultValue="teacher" className="flex-1 overflow-hidden flex flex-col">
             <TabsList>
@@ -225,22 +226,26 @@ export default function AdminLandingPages() {
               <TabsTrigger value="other">{t('landing.otherTemplates')}</TabsTrigger>
             </TabsList>
             <TabsContent value="teacher" className="overflow-auto flex-1 mt-4">
-              <div className="grid sm:grid-cols-2 gap-3">
-                {TEACHER_SUBJECT_TEMPLATES.map(key => (
-                  <button
-                    key={key}
-                    type="button"
-                    className="p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors"
-                    onClick={() => templateMutation.mutate(`teacher-${key}`)}
-                  >
-                    <div className="font-medium">{SUBJECT_LABELS[key][locale]}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{t('landing.clickToUse')}</div>
-                  </button>
-                ))}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {TEACHER_SUBJECT_TEMPLATES.map(key => {
+                  const templateId = `teacher-${key}`;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className="p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors"
+                      onClick={() => templateMutation.mutate(templateId)}
+                    >
+                      <div className="font-medium">{SUBJECT_LABELS[key][locale]}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{t('landing.clickToUse')}</div>
+                      <LandingTemplatePreview templateId={templateId} locale={locale} />
+                    </button>
+                  );
+                })}
               </div>
             </TabsContent>
             <TabsContent value="other" className="overflow-auto flex-1 mt-4">
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-2 gap-4">
                 {LANDING_TEMPLATES.filter(tmpl => tmpl.category !== 'teacher').map(tmpl => (
                   <button
                     key={tmpl.id}
@@ -250,6 +255,7 @@ export default function AdminLandingPages() {
                   >
                     <div className="font-medium">{tmpl.name[locale]}</div>
                     <div className="text-xs text-muted-foreground mt-1">{tmpl.description[locale]}</div>
+                    <LandingTemplatePreview templateId={tmpl.id} locale={locale} />
                   </button>
                 ))}
               </div>

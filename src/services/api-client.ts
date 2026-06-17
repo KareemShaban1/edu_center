@@ -106,6 +106,9 @@ class ApiClient {
         message: body.message || `Request failed with status ${response.status}`,
         errors: body.errors,
         status: response.status,
+        requires_tenant_selection: body.requires_tenant_selection === true,
+        memberships: Array.isArray(body.memberships) ? body.memberships : undefined,
+        user: body.user,
       };
       if (response.status === 401 && onSessionExpired && this.token) {
         onSessionExpired();

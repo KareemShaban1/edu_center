@@ -35,35 +35,6 @@ function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => 
   );
 }
 
-function AttendanceForm({ item, onClose, onSave, saving }: { item: AttRow | null; onClose: () => void; onSave: (payload: StudentAttendancePayload, id?: number) => Promise<void>; saving: boolean; }) {
-  const { t } = useLocale();
-  const [form, setForm] = useState({
-    date: item?.date || new Date().toISOString().slice(0, 10),
-    status: item?.status || 'present',
-    notes: item?.notes || '',
-  });
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ date: form.date, status: form.status, notes: form.notes || undefined }, item?.id)
-      .then(onClose)
-      .catch((error: unknown) => {
-        toast({ title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save', variant: 'destructive' });
-      });
-  };
-  return (
-    <FormDialog open onClose={onClose} title={item ? `${t('crud.edit')} ${t('nav.attendance')}` : `${t('crud.addNew')} ${t('nav.attendance')}`} onSubmit={submit} loading={saving}>
-      <FormField label={t('col.date')} id="att-date" required><FormInput id="att-date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required /></FormField>
-      <FormField label={t('col.status')} id="att-status" required>
-        <FormSelect id="att-status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as AttRow['status'] }))}>
-          <option value="present">{t('attendance.present')}</option>
-          <option value="absent">{t('attendance.absent')}</option>
-          <option value="late">{t('attendance.late')}</option>
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.notes')} id="att-notes"><FormTextarea id="att-notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></FormField>
-    </FormDialog>
-  );
-}
 
 export default function StudentAttendance() {
   const { t } = useLocale();
@@ -93,9 +64,6 @@ export default function StudentAttendance() {
         columns={columns}
         data={rows}
         searchKeys={['date', 'status', 'notes']}
-        renderForm={(item, onClose) => (
-          <AttendanceForm item={item} onClose={onClose} onSave={async (payload, id) => saveMutation.mutateAsync({ payload, id })} saving={saveMutation.isPending} />
-        )}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}
       />
       {showItem && <AttendanceShowDialog item={showItem} onClose={() => setShowItem(null)} />}

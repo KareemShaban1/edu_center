@@ -26,3 +26,5 @@ export { studentSelfApi } from './student-self';
 export { teacherMeetingSeriesApi } from './teacher-meeting-series';
 export { teacherMeetingsApi } from './teacher-meetings';
 export { adminLandingApi, publicLandingApi } from './admin-landing';
+export { configApi } from './config';
+export type { AppConfig, TenancyMode } from './config';

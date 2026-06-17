@@ -6,7 +6,8 @@ import { apiClient, setSessionExpiredHandler } from '@/services/api-client';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, guard?: string, tenantSlug?: string) => Promise<User>;
+  login: (email: string, password: string, guard?: string, tenantSlug?: string, membershipId?: number) => Promise<User>;
+  loginPortal: (email: string, password: string, guard: 'parent' | 'student') => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
   hasRole: (role: UserRole) => boolean;
@@ -62,14 +63,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string, guard?: string, tenantSlug?: string) => {
-    const res = await authApi.login({ email, password, guard, tenantSlug });
+  const login = useCallback(async (email: string, password: string, guard?: string, tenantSlug?: string, membershipId?: number) => {
+    const result = await authApi.login({ email, password, guard, tenantSlug, membershipId });
+    if (result.type === 'tenant_selection') {
+      const err = new Error('TENANT_SELECTION_REQUIRED') as Error & {
+        memberships: typeof result.memberships;
+        user: typeof result.user;
+      };
+      err.memberships = result.memberships;
+      err.user = result.user;
+      throw err;
+    }
+    const res = result.response;
     apiClient.setToken(res.token);
     apiClient.setTenantContext({
       tenantId: res.user.tenant_id ?? undefined,
       tenantSlug: res.user.tenant_slug ?? tenantSlug,
     });
-    // Confirm session cookie works (login JSON alone is not enough for API auth).
+    const verified = await authApi.getUser();
+    localStorage.setItem('auth_user', JSON.stringify(verified));
+    setUser(verified);
+    return verified;
+  }, []);
+
+  const loginPortal = useCallback(async (email: string, password: string, guard: 'parent' | 'student') => {
+    const res = await authApi.loginPortal({ email, password, guard });
+    apiClient.setToken(res.token);
+    apiClient.setTenantContext(null);
     const verified = await authApi.getUser();
     localStorage.setItem('auth_user', JSON.stringify(verified));
     setUser(verified);
@@ -89,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isLoading,
       login,
+      loginPortal,
       logout,
       isAuthenticated: !!user,
       hasRole: (role: UserRole) => user?.role === role,

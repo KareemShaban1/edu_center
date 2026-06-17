@@ -4,12 +4,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
 import { defaultTenantSlug } from "@/config/login-defaults";
 import LoginPage from "@/pages/LoginPage";
 import PlatformLoginPage from "@/pages/PlatformLoginPage";
+import StudentLoginPage from "@/pages/StudentLoginPage";
+import ParentLoginPage from "@/pages/ParentLoginPage";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -86,6 +89,8 @@ import PlatformSubscriptions from "@/pages/platform/PlatformSubscriptions";
 import PlatformUsers from "@/pages/platform/PlatformUsers";
 import PlatformRoles from "@/pages/platform/PlatformRoles";
 import PlatformLogs from "@/pages/platform/PlatformLogs";
+import PlatformDocumentation from "@/pages/platform/PlatformDocumentation";
+import PlatformSettings from "@/pages/platform/PlatformSettings";
 
 const queryClient = new QueryClient();
 
@@ -96,12 +101,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <LocaleProvider>
+          <BrandingProvider>
           <AuthProvider>
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/:tenantSlug/p/*" element={<PublicLandingPage />} />
               <Route path="/p/*" element={<PublicLandingPage />} />
               <Route path="/login" element={<Navigate to={`/${defaultTenantSlug}/login`} replace />} />
+              <Route path="/student/login" element={<StudentLoginPage />} />
+              <Route path="/parent/login" element={<ParentLoginPage />} />
               <Route path="/:tenantSlug/login" element={<LoginPage />} />
               <Route path="/platform/login" element={<PlatformLoginPage />} />
 
@@ -158,23 +166,23 @@ const App = () => (
               <Route path="/teacher/library" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLibrary /></ProtectedRoute>} />
 
               {/* Student Routes */}
-              <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
-              <Route path="/student/meetings" element={<ProtectedRoute allowedRoles={['student']}><StudentMeetings /></ProtectedRoute>} />
-              <Route path="/student/meetings/:meetingId/livekit" element={<ProtectedRoute allowedRoles={['student']}><StudentLiveKitMeeting /></ProtectedRoute>} />
+              <Route path="/student" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentDashboard /></ProtectedRoute>} />
+              <Route path="/student/meetings" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentMeetings /></ProtectedRoute>} />
+              <Route path="/student/meetings/:meetingId/livekit" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLiveKitMeeting /></ProtectedRoute>} />
               <Route path="/student/courses" element={<Navigate to="/student/meetings" replace />} />
-              <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']}><StudentAttendance /></ProtectedRoute>} />
-              <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']}><StudentGrades /></ProtectedRoute>} />
-              <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']}><StudentHomework /></ProtectedRoute>} />
-              <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']}><StudentLibrary /></ProtectedRoute>} />
+              <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendance /></ProtectedRoute>} />
+              <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentGrades /></ProtectedRoute>} />
+              <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />
+              <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLibrary /></ProtectedRoute>} />
 
               {/* Parent Routes */}
-              <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><ParentDashboard /></ProtectedRoute>} />
-              <Route path="/parent/children" element={<ProtectedRoute allowedRoles={['parent']}><ParentChildren /></ProtectedRoute>} />
-              <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={['parent']}><ParentAttendance /></ProtectedRoute>} />
-              <Route path="/parent/exams" element={<ProtectedRoute allowedRoles={['parent']}><ParentExams /></ProtectedRoute>} />
-              <Route path="/parent/quizzes" element={<ProtectedRoute allowedRoles={['parent']}><ParentQuizzes /></ProtectedRoute>} />
-              <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={['parent']}><ParentFees /></ProtectedRoute>} />
-              <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={['parent']}><ParentReports /></ProtectedRoute>} />
+              <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentDashboard /></ProtectedRoute>} />
+              <Route path="/parent/children" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentChildren /></ProtectedRoute>} />
+              <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentAttendance /></ProtectedRoute>} />
+              <Route path="/parent/exams" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentExams /></ProtectedRoute>} />
+              <Route path="/parent/quizzes" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentQuizzes /></ProtectedRoute>} />
+              <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentFees /></ProtectedRoute>} />
+              <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentReports /></ProtectedRoute>} />
 
               {/* Platform Admin Routes */}
               <Route path="/platform" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDashboard /></ProtectedRoute>} />
@@ -183,10 +191,14 @@ const App = () => (
               <Route path="/platform/users" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformUsers /></ProtectedRoute>} />
               <Route path="/platform/roles" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformRoles /></ProtectedRoute>} />
               <Route path="/platform/logs" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformLogs /></ProtectedRoute>} />
+              <Route path="/platform/documentation" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
+              <Route path="/platform/documentation/:docId" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
+              <Route path="/platform/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSettings /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
+          </BrandingProvider>
         </LocaleProvider>
       </BrowserRouter>
     </TooltipProvider>

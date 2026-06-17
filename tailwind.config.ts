@@ -17,6 +17,7 @@ export default {
         display: ["var(--font-display)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
         arabic: ["var(--font-arabic)", "sans-serif"],
+        hajeen: ["'Hajeen'", "var(--font-arabic)", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -25,7 +26,7 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "var(--primary)",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -71,7 +72,7 @@ export default {
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
+          primary: "var(--sidebar-primary))",
           "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
           accent: "hsl(var(--sidebar-accent))",
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
@@ -111,5 +112,9 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/container-queries")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/container-queries"),
+    require("@tailwindcss/typography"),
+  ],
 } satisfies Config;

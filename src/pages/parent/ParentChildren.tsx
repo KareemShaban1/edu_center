@@ -2,6 +2,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { CalendarCheck, Trophy } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 
 export default function ParentChildren() {
   const { t } = useLocale();
@@ -18,13 +19,13 @@ export default function ParentChildren() {
       </div>
       <div className="space-y-6">
         {children.map(c => (
-          <div key={c.id} className="rounded-xl border border-border bg-card p-6 shadow-card">
+          <div key={portalRowKey(c.center_id, c.id)} className="rounded-xl border border-border bg-card p-6 shadow-card">
             {(() => {
-              const childAttendance = attendanceRows.filter(a => a.student_id === c.id);
+              const childAttendance = attendanceRows.filter(a => a.student_id === c.id && a.center_id === c.center_id);
               const presentCount = childAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
               const attendanceRate = childAttendance.length > 0 ? Math.round((presentCount / childAttendance.length) * 100) : 0;
-              const childExams = examRows.filter(e => e.student_id === c.id && typeof e.degree === 'number');
-              const childQuizzes = quizRows.filter(q => q.student_id === c.id && typeof q.degree === 'number');
+              const childExams = examRows.filter(e => e.student_id === c.id && e.center_id === c.center_id && typeof e.degree === 'number');
+              const childQuizzes = quizRows.filter(q => q.student_id === c.id && q.center_id === c.center_id && typeof q.degree === 'number');
               const examAvg = childExams.length > 0 ? (childExams.reduce((s, r) => s + (r.degree || 0), 0) / childExams.length).toFixed(1) : '—';
               const quizAvg = childQuizzes.length > 0 ? (childQuizzes.reduce((s, r) => s + (r.degree || 0), 0) / childQuizzes.length).toFixed(1) : '—';
               const recentResults = [...childExams.map(e => ({ type: 'Exam', score: e.degree })), ...childQuizzes.map(q => ({ type: 'Quiz', score: q.degree }))]
@@ -37,7 +38,10 @@ export default function ParentChildren() {
                 {c.name.charAt(0)}
               </div>
               <div>
-                <h3 className="font-display font-semibold text-lg">{c.name}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-display font-semibold text-lg">{c.name}</h3>
+                  <CenterLabel name={c.center_name} />
+                </div>
                 <p className="text-sm text-muted-foreground">{c.grade} - {c.class} - {c.section}</p>
               </div>
             </div>

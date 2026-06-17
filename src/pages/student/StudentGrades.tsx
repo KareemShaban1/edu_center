@@ -41,49 +41,6 @@ function GradeShowDialog({ item, onClose }: { item: GradeRow; onClose: () => voi
   );
 }
 
-function GradeForm({ item, onClose, onSave, saving }: { item: GradeRow | null; onClose: () => void; onSave: (payload: StudentGradePayload, id?: number, source?: 'exam' | 'quiz') => Promise<void>; saving: boolean; }) {
-  const { t } = useLocale();
-  const [form, setForm] = useState({
-    source: item?.source || 'exam',
-    date: item?.date || new Date().toISOString().slice(0, 10),
-    degree: item?.score ?? null as number | null,
-    attendance_status: item?.attendance_status || 'present',
-    notes: item?.notes || '',
-  });
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      source: form.source as 'exam' | 'quiz',
-      date: form.date,
-      degree: form.degree,
-      attendance_status: form.attendance_status as 'present' | 'absent' | 'late',
-      notes: form.notes || undefined,
-    }, item?.id, item?.source).then(onClose).catch((error: unknown) => {
-      toast({ title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save', variant: 'destructive' });
-    });
-  };
-  return (
-    <FormDialog open onClose={onClose} title={item ? `${t('crud.edit')} ${t('nav.grades')}` : `${t('crud.addNew')} ${t('nav.grades')}`} onSubmit={submit} loading={saving}>
-      <FormField label={t('nav.exams')} id="grade-source" required>
-        <FormSelect id="grade-source" value={form.source} disabled={!!item} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}>
-          <option value="exam">{t('nav.exams')}</option>
-          <option value="quiz">{t('nav.quizzes')}</option>
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.date')} id="grade-date" required><FormInput id="grade-date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required /></FormField>
-      <FormField label={t('col.score')} id="grade-score"><FormInput id="grade-score" type="number" value={form.degree ?? ''} onChange={e => setForm(f => ({ ...f, degree: e.target.value === '' ? null : Number(e.target.value) }))} /></FormField>
-      <FormField label={t('col.status')} id="grade-status" required>
-        <FormSelect id="grade-status" value={form.attendance_status} onChange={e => setForm(f => ({ ...f, attendance_status: e.target.value }))}>
-          <option value="present">{t('attendance.present')}</option>
-          <option value="absent">{t('attendance.absent')}</option>
-          <option value="late">{t('attendance.late')}</option>
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.notes')} id="grade-notes"><FormTextarea id="grade-notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></FormField>
-    </FormDialog>
-  );
-}
-
 export default function StudentGrades() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
@@ -121,9 +78,6 @@ export default function StudentGrades() {
         columns={columns}
         data={rows}
         searchKeys={['subject', 'source', 'date']}
-        renderForm={(item, onClose) => (
-          <GradeForm item={item} onClose={onClose} onSave={async (payload, id, source) => saveMutation.mutateAsync({ payload, id, source })} saving={saveMutation.isPending} />
-        )}
         onDelete={item => { void deleteMutation.mutateAsync({ source: item.source, id: item.id }); }}
       />
       {showItem && <GradeShowDialog item={showItem} onClose={() => setShowItem(null)} />}

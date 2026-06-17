@@ -2,6 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+const EMERALD = '#0d9488';
+const BOARD = '#115e59';
+
 const float = (delay = 0) => ({
   animate: {
     y: [0, -10, 0],
@@ -9,7 +12,7 @@ const float = (delay = 0) => ({
   },
 });
 
-/** Decorative hero artwork — education dashboard motif */
+/** Decorative hero artwork — Egypt education center motif */
 export function LandingHeroIllustration({ className }: { className?: string }) {
   return (
     <svg
@@ -32,6 +35,10 @@ export function LandingHeroIllustration({ className }: { className?: string }) {
           <stop stopColor="#ba181b" stopOpacity="0.12" />
           <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
+        <linearGradient id="landing-board-grad" x1="72" y1="72" x2="212" y2="168" gradientUnits="userSpaceOnUse">
+          <stop stopColor={BOARD} />
+          <stop offset="1" stopColor="#0f766e" />
+        </linearGradient>
       </defs>
 
       <motion.g {...float(0)}>
@@ -39,9 +46,15 @@ export function LandingHeroIllustration({ className }: { className?: string }) {
       </motion.g>
 
       <motion.g {...float(0.3)}>
-        <rect x="72" y="72" width="140" height="96" rx="12" stroke="#a4161a" strokeOpacity="0.3" strokeWidth="1.25" fill="#ba181b" fillOpacity="0.06" />
-        <circle cx="112" cy="108" r="14" fill="#ba181b" fillOpacity="0.35" />
-        <path d="M136 104h52v8h-52zm0 22h72v8h-72zm0 22h44v8h-44z" fill="#a4161a" fillOpacity="0.4" />
+        <rect x="72" y="72" width="140" height="96" rx="12" stroke="#0f766e" strokeOpacity="0.35" strokeWidth="1.25" fill="url(#landing-board-grad)" />
+        <text x="142" y="108" textAnchor="middle" fill="#ecfdf5" fontSize="11" fontWeight="700" direction="rtl">
+          مركز
+        </text>
+        <text x="142" y="124" textAnchor="middle" fill="#99f6e4" fontSize="9" direction="rtl">
+          تعليمي
+        </text>
+        <path d="M88 136h108M88 148h88M88 160h96" stroke="#99f6e4" strokeOpacity="0.45" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M196 148c8-6 16-6 24 0v20c-8 6-16 6-24 0v-20z" fill={EMERALD} fillOpacity="0.35" stroke={EMERALD} strokeOpacity="0.5" strokeWidth="1" />
       </motion.g>
 
       <motion.g {...float(0.6)}>

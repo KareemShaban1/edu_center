@@ -1,5 +1,7 @@
 import type { LandingPage, LandingSection, LocalizedText, SectionType } from '@/types/landing';
 import { DEFAULT_THEME } from './constants';
+import { createDefaultComponent } from './component-defaults';
+import { EDUCATION_EGYPT_GALLERY, EDUCATION_EGYPT_IMAGES } from '@/lib/education-assets';
 
 let sectionCounter = 0;
 
@@ -26,7 +28,7 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
           subheadline: lt('Personalized lessons designed for your success', 'دروس مخصصة مصممة لنجاحك'),
           ctaPrimary: lt('Book Free Trial', 'احجز تجربة مجانية'),
           ctaSecondary: lt('Learn More', 'اعرف المزيد'),
-          imageUrl: '',
+          imageUrl: EDUCATION_EGYPT_IMAGES.heroClassroom,
           showStats: true,
           stats: [
             { value: '500+', label: lt('Students', 'طالب') },
@@ -44,7 +46,7 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
             'Dedicated educator with a passion for helping students achieve their full potential.',
             'م educator متفاني شغوف بمساعدة الطلاب على تحقيق إمكاناتهم الكاملة.',
           ),
-          imageUrl: '',
+          imageUrl: EDUCATION_EGYPT_IMAGES.teacherLesson,
           highlights: [
             lt('Personalized approach', 'نهج شخصي'),
             lt('Proven results', 'نتائج مثبتة'),
@@ -58,7 +60,7 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
         content: {
           title: lt('About Our Center', 'عن مركزنا'),
           body: lt('Leading educational center committed to excellence.', 'مركز تعليمي رائد ملتزم بالتميز.'),
-          imageUrl: '',
+          imageUrl: EDUCATION_EGYPT_IMAGES.centerCampus,
         },
       };
     case 'teacher_bio':
@@ -199,7 +201,7 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
         ...base,
         content: {
           title: lt('Gallery', 'معرض الصور'),
-          images: [],
+          images: [...EDUCATION_EGYPT_GALLERY],
         },
       };
     case 'video':
@@ -311,7 +313,7 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
         content: {
           title: lt('Our Team', 'فريقنا'),
           members: [
-            { name: lt('Teacher Name', 'اسم المعلم'), role: lt('Subject Lead', 'رئيس المادة'), imageUrl: '' },
+            { name: lt('Teacher Name', 'اسم المعلم'), role: lt('Subject Lead', 'رئيس المادة'), imageUrl: EDUCATION_EGYPT_IMAGES.teacherLesson },
           ],
         },
       };
@@ -357,6 +359,19 @@ export function createDefaultSection(type: SectionType, order: number): LandingS
           social: { facebook: '', instagram: '', whatsapp: '' },
         },
       };
+    case 'custom':
+      return {
+        ...base,
+        content: {
+          title: lt('Custom Section', 'قسم مخصص'),
+          layout: 'stack',
+        },
+        components: [
+          createDefaultComponent('heading', 0),
+          createDefaultComponent('paragraph', 1),
+          createDefaultComponent('button', 2),
+        ],
+      };
     default:
       return base;
   }
@@ -401,7 +416,15 @@ export function normalizeLandingPage(page: Partial<LandingPage> & { id?: string 
     slug: page.slug ?? base.slug,
     type: page.type ?? base.type,
     status: page.status ?? base.status,
-    sections: Array.isArray(page.sections) && page.sections.length > 0 ? page.sections : base.sections,
+    sections: (Array.isArray(page.sections) && page.sections.length > 0 ? page.sections : base.sections).map(section => {
+      if (section.type !== 'custom') return section;
+      return {
+        ...section,
+        components: Array.isArray(section.components) && section.components.length > 0
+          ? section.components
+          : createDefaultSection('custom', section.order).components ?? [],
+      };
+    }),
     theme: page.theme && typeof page.theme === 'object' ? { ...base.theme, ...page.theme } : base.theme,
     seo: page.seo && typeof page.seo === 'object' ? { ...base.seo, ...page.seo } : base.seo,
     branding: page.branding && typeof page.branding === 'object' ? page.branding : base.branding,

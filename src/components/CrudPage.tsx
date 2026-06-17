@@ -29,6 +29,7 @@ interface CrudPageProps<T extends { id: number | string }> {
   canDelete?: boolean;
   actions?: React.ReactNode;
   readOnly?: boolean;
+  rowKey?: (item: T) => string | number;
 }
 
 export default function CrudPage<T extends { id: number | string }>({
@@ -45,6 +46,7 @@ export default function CrudPage<T extends { id: number | string }>({
   canDelete = true,
   actions,
   readOnly = false,
+  rowKey,
 }: CrudPageProps<T>) {
   const { t } = useLocale();
   const [search, setSearch] = useState('');
@@ -171,7 +173,7 @@ export default function CrudPage<T extends { id: number | string }>({
                 </tr>
               ) : (
                 paged.map(item => (
-                  <tr key={String(item.id)} className="border-b border-border/50 transition-colors hover:bg-muted/30">
+                  <tr key={String(rowKey ? rowKey(item) : item.id)} className="border-b border-border/50 transition-colors hover:bg-muted/30">
                     {columns.map(col => (
                       <td key={col.key} className="px-4 py-3">
                         {col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '—')}

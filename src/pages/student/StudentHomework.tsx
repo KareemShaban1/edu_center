@@ -44,65 +44,6 @@ function HomeworkShowDialog({ item, onClose }: { item: HWRow; onClose: () => voi
   );
 }
 
-function HomeworkForm({
-  item,
-  options,
-  onClose,
-  onSave,
-  saving,
-}: {
-  item: HWRow | null;
-  options: Array<{ id: number; title: string }>;
-  onClose: () => void;
-  onSave: (payload: StudentHomeworkPayload, submissionId?: number | null) => Promise<void>;
-  saving: boolean;
-}) {
-  const { t } = useLocale();
-  const [form, setForm] = useState({
-    homework_id: item?.homework_id || options[0]?.id || 0,
-    status: (item?.status || 'submitted') as StudentHomeworkPayload['status'],
-    student_notes: item?.student_notes || '',
-    response: item?.response || '',
-    degree: item?.grade && item.grade !== '—' ? item.grade : '',
-  });
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.homework_id) {
-      toast({ title: 'Validation error', description: 'Homework is required.', variant: 'destructive' });
-      return;
-    }
-    onSave({
-      homework_id: form.homework_id,
-      status: form.status,
-      student_notes: form.student_notes || undefined,
-      response: form.response || undefined,
-      degree: form.degree || undefined,
-    }, item?.submission_id ?? null).then(onClose).catch((error: unknown) => {
-      toast({ title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save', variant: 'destructive' });
-    });
-  };
-  return (
-    <FormDialog open onClose={onClose} title={item ? `${t('crud.edit')} ${t('nav.homework')}` : `${t('crud.addNew')} ${t('nav.homework')}`} onSubmit={submit} loading={saving}>
-      <FormField label={t('col.title')} id="hw-id" required>
-        <FormSelect id="hw-id" value={String(form.homework_id)} onChange={e => setForm(f => ({ ...f, homework_id: Number(e.target.value) }))}>
-          {options.map(opt => <option key={opt.id} value={opt.id}>{opt.title}</option>)}
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.status')} id="hw-status" required>
-        <FormSelect id="hw-status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as StudentHomeworkPayload['status'] }))}>
-          <option value="not_submitted">Not submitted</option>
-          <option value="submitted">Submitted</option>
-          <option value="late">Late</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.grade')} id="hw-degree"><FormInput id="hw-degree" value={form.degree} onChange={e => setForm(f => ({ ...f, degree: e.target.value }))} /></FormField>
-      <FormField label={t('col.notes')} id="hw-notes"><FormTextarea id="hw-notes" value={form.student_notes} onChange={e => setForm(f => ({ ...f, student_notes: e.target.value }))} /></FormField>
-      <FormField label="Response" id="hw-response"><FormTextarea id="hw-response" value={form.response} onChange={e => setForm(f => ({ ...f, response: e.target.value }))} /></FormField>
-    </FormDialog>
-  );
-}
 
 export default function StudentHomework() {
   const { t } = useLocale();
@@ -137,9 +78,6 @@ export default function StudentHomework() {
         columns={columns}
         data={rows}
         searchKeys={['title', 'subject', 'status']}
-        renderForm={(item, onClose) => (
-          <HomeworkForm item={item} options={homeworkOptions} onClose={onClose} onSave={async (payload, submissionId) => saveMutation.mutateAsync({ payload, submissionId })} saving={saveMutation.isPending} />
-        )}
         onDelete={item => {
           if (item.submission_id) {
             void deleteMutation.mutateAsync(item.submission_id);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenterViaMembership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,6 +13,7 @@ use Spatie\Translatable\HasTranslations;
 
 class Student extends Authenticatable implements HasMedia
 {
+    use BelongsToCenterViaMembership;
     use InteractsWithMedia;
 
     use SoftDeletes;
@@ -21,6 +23,8 @@ class Student extends Authenticatable implements HasMedia
     // use HasTranslations;
     // public $translatable = ['name'];
     protected $guarded = [];
+
+    protected $connection = 'center';
 
     public function getFilesAttribute()
     {

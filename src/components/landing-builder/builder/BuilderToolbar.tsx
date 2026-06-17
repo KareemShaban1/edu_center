@@ -104,7 +104,7 @@ export function BuilderToolbar(props: BuilderToolbarProps) {
       <Separator orientation="vertical" className="h-6" />
 
       <Button variant="outline" size="sm" onClick={onPreview}><Eye className="w-4 h-4 me-1" />{t('landing.preview')}</Button>
-      <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving}>
+      <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving || !isDirty}>
         <Save className="w-4 h-4 me-1" />{isSaving ? t('landing.saving') : t('landing.save')}
       </Button>
       {status === 'published' ? (

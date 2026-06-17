@@ -4,8 +4,7 @@ use App\Http\Controllers\Dashboards\ParentsDashboard\ParentDashboardController;
 use App\Models\Student;
 use Illuminate\Support\Facades\Route;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use App\Http\Middleware\InitializeCenterFromSubdomain;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,8 +26,7 @@ Route::group(
             'localizationRedirect',
             'localeViewPath',
             'auth:parent',
-            InitializeTenancyByDomainOrSubdomain::class,
-            PreventAccessFromCentralDomains::class,
+            InitializeCenterFromSubdomain::class,
         ]
     ],
     function () {

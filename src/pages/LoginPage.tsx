@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import type { TenantMembershipOption } from '@/types/models';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { GraduationCap, Shield, BookOpen, Users, Languages, Building2 } from 'lucide-react';
+import { GraduationCap, Shield, BookOpen, Languages, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
-import { getTenantLoginPath, normalizeTenantSlug } from '@/lib/tenant-routes';
+import { getTenantLoginPath, getParentLoginPath, getStudentLoginPath, normalizeTenantSlug } from '@/lib/tenant-routes';
 import { authApi } from '@/services/endpoints/auth';
 import { apiClient } from '@/services/api-client';
 import { getTenantDefaultsForGuard, isPlatformGuard } from '@/config/login-defaults';
@@ -29,8 +30,6 @@ const guardToRoleMap: Record<string, UserRole> = {
 const guardMeta: Record<string, { labelKey: string; icon: React.ElementType }> = {
   users: { labelKey: 'role.admin', icon: Shield },
   teacher: { labelKey: 'role.teacher', icon: BookOpen },
-  student: { labelKey: 'role.student', icon: GraduationCap },
-  parent: { labelKey: 'role.parent', icon: Users },
 };
 
 export default function LoginPage() {
@@ -48,15 +47,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState(initialDefaults.password);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingMemberships, setPendingMemberships] = useState<TenantMembershipOption[] | null>(null);
 
-  const { data: guards = ['users', 'teacher', 'parent', 'student'] } = useQuery({
+  const { data: guards = ['users', 'teacher'] } = useQuery({
     queryKey: ['auth-guards'],
     queryFn: () => authApi.getGuards(),
   });
 
   const tenantGuards = useMemo(() => {
-    const filtered = guards.filter(g => !isPlatformGuard(g));
-    return filtered.length > 0 ? filtered : ['users', 'teacher', 'parent', 'student'];
+    const filtered = guards.filter(g => !isPlatformGuard(g) && g !== 'parent' && g !== 'student');
+    return filtered.length > 0 ? filtered : ['users', 'teacher'];
   }, [guards]);
 
   useEffect(() => {
@@ -81,19 +81,29 @@ export default function LoginPage() {
     return <Navigate to={getTenantLoginPath()} replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const completeLogin = async (membershipId?: number) => {
     setError('');
     setLoading(true);
     try {
-      const user = await login(email, password, selectedGuard, tenantSlug);
+      const user = await login(email, password, selectedGuard, tenantSlug, membershipId);
+      setPendingMemberships(null);
       const normalizedRole = guardToRoleMap[user.role] || user.role;
       navigate(getDashboardPath(normalizedRole));
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'TENANT_SELECTION_REQUIRED') {
+        const extended = err as Error & { memberships?: TenantMembershipOption[] };
+        setPendingMemberships(extended.memberships ?? []);
+        return;
+      }
       setError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await completeLogin();
   };
 
   return (
@@ -259,6 +269,27 @@ export default function LoginPage() {
                 />
               </div>
 
+              {pendingMemberships && pendingMemberships.length > 0 && (
+                <div className="space-y-2 rounded-xl border p-3" style={{ borderColor: `${C.crimsonBright}33`, backgroundColor: C.bg }}>
+                  <p className="text-sm font-medium">
+                    {isAr ? 'اختر المركز التعليمي' : 'Select your education center'}
+                  </p>
+                  {pendingMemberships.map(m => (
+                    <button
+                      key={m.membership_id}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => completeLogin(m.membership_id)}
+                      className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition hover:opacity-90 disabled:opacity-50"
+                      style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.surface }}
+                    >
+                      <span className="font-medium">{m.tenant_name || m.tenant_slug || m.tenant_id}</span>
+                      <Building2 className="h-4 w-4 opacity-60" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {error && (
                 <p className="text-sm font-medium" style={{ color: C.crimsonBright }}>
                   {error}
@@ -287,6 +318,14 @@ export default function LoginPage() {
                 {isAr ? 'العودة للرئيسية' : 'Back to home'}
               </Link>
             </p>
+            <div className="mt-3 flex flex-col gap-1.5 text-center text-sm">
+              <Link to={getStudentLoginPath()} style={{ color: C.crimson }}>
+                {isAr ? 'تسجيل دخول الطالب' : 'Student portal login'}
+              </Link>
+              <Link to={getParentLoginPath()} style={{ color: C.crimson }}>
+                {isAr ? 'تسجيل دخول ولي الأمر' : 'Parent portal login'}
+              </Link>
+            </div>
           </div>
 
           <p className="mt-4 text-center text-xs" style={{ color: C.textSoft }}>

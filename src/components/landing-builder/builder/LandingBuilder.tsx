@@ -7,7 +7,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useLandingBuilder } from '@/hooks/use-landing-builder';
 import { adminLandingApi } from '@/services/endpoints/admin-landing';
 import { normalizeLandingPage } from '@/lib/landing/defaults';
-import type { LandingPage, SectionType } from '@/types/landing';
+import type { LandingPage, LandingSection, SectionType } from '@/types/landing';
 import { PREVIEW_WIDTHS } from '@/lib/landing/constants';
 import { getPublicLandingPath, resolvePublicLandingTenant } from '@/lib/tenant-routes';
 import { LandingPageRenderer } from '../LandingPageRenderer';
@@ -17,6 +17,7 @@ import { SectionList } from './SectionList';
 import { PropertiesPanel } from './PropertiesPanel';
 import { MediaManagerDialog } from './MediaManagerDialog';
 import { RevisionHistoryDialog } from './RevisionHistoryDialog';
+import { SectionPreviewDialog } from './SectionPreviewDialog';
 
 interface LandingBuilderProps {
   pageId: string;
@@ -56,6 +57,7 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
   const [revOpen, setRevOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [structureOpen, setStructureOpen] = useState(true);
+  const [previewSection, setPreviewSection] = useState<LandingSection | null>(null);
   const mediaSelectRef = useRef<((url: string) => void) | null>(null);
 
   const openMediaPicker = useCallback((apply: (url: string) => void) => {
@@ -76,13 +78,21 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
     onSettled: () => builder.setSaving(false),
   });
 
-  const handleSave = useCallback(() => saveMutation.mutate(), [saveMutation]);
+  const handleSave = useCallback(() => {
+    if (!builder.isDirty || saveMutation.isPending) return;
+    saveMutation.mutate();
+  }, [builder.isDirty, saveMutation]);
 
   useEffect(() => {
-    if (builder.isDirty) {
-      builder.scheduleAutoSave(async () => handleSave());
-    }
-  }, [builder.page, builder.isDirty, builder.scheduleAutoSave, handleSave]);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleSave]);
 
   const publishMutation = useMutation({
     mutationFn: () => adminLandingApi.publish(pageId),
@@ -195,6 +205,7 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
           onDuplicate={builder.duplicateSection}
           onRemove={builder.removeSection}
           onToggleVisible={id => builder.updateSection(id, { visible: !builder.page.sections.find(s => s.id === id)?.visible })}
+          onPreview={section => setPreviewSection(section)}
         />
 
         <div
@@ -221,8 +232,10 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
                 editMode
                 selectedSectionId={builder.selectedSectionId}
                 selectedTextKey={builder.selectedTextKey}
+                selectedComponentId={builder.selectedComponentId}
                 onSelectSection={builder.selectSection}
                 onSelectTextField={builder.selectTextField}
+                onSelectComponent={(_sectionId, componentId) => builder.selectComponent(componentId)}
                 onSectionContentChange={(id, content) => builder.updateSectionContent(id, content)}
               />
             </div>
@@ -234,6 +247,8 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
           section={builder.selectedSection}
           previewLocale={builder.previewLocale}
           selectedTextKey={builder.selectedTextKey}
+          selectedComponentId={builder.selectedComponentId}
+          onSelectComponent={builder.selectComponent}
           onSelectTextField={builder.selectTextField}
           onUpdateSection={(id, patch) => builder.updateSection(id, patch)}
           onUpdateSectionContent={builder.updateSectionContent}
@@ -244,6 +259,10 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
           onUpdateBranding={builder.updateBranding}
           onUpdateMeta={patch => builder.setPageMeta(patch)}
           onPickFromMedia={openMediaPicker}
+          onAddComponent={builder.addComponent}
+          onRemoveComponent={builder.removeComponent}
+          onMoveComponent={builder.moveComponent}
+          onUpdateComponentContent={builder.updateComponentContent}
         />
       </div>
 
@@ -284,6 +303,14 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
         revisions={revisions}
         loading={restoreMutation.isPending}
         onRestore={id => restoreMutation.mutateAsync(id)}
+      />
+
+      <SectionPreviewDialog
+        open={!!previewSection}
+        onOpenChange={open => { if (!open) setPreviewSection(null); }}
+        page={builder.page}
+        section={previewSection}
+        previewLocale={builder.previewLocale}
       />
     </div>
   );

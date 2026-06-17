@@ -20,6 +20,14 @@ export function isValidTenantSlug(slug: string | undefined): slug is string {
   return !reservedTenantSlugs.has(slug.toLowerCase());
 }
 
+export function getStudentLoginPath(): string {
+  return '/student/login';
+}
+
+export function getParentLoginPath(): string {
+  return '/parent/login';
+}
+
 export function getTenantLoginPath(tenantSlug?: string | null): string {
   const slug = tenantSlug || apiClient.getTenantContext().tenantSlug || defaultTenantSlug;
   return `/${slug}/login`;

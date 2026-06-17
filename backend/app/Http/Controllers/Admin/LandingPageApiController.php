@@ -6,8 +6,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Support\ApiBearerAuth;
-use App\Models\Platform\Tenant;
-use App\Models\Platform\TenantInfo;
+use App\Http\Support\ResolvesCenterApiContext;
+use App\Models\Platform\Center;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -20,10 +20,7 @@ use Illuminate\Support\Str;
 
 class LandingPageApiController extends Controller
 {
-    protected function centralConnection(): string
-    {
-        return config('tenancy.database.central_connection', config('database.default', 'mysql'));
-    }
+    use ResolvesCenterApiContext;
 
     protected function resolveAdminContext(Request $request): array
     {
@@ -37,27 +34,29 @@ class LandingPageApiController extends Controller
             return ['error' => response()->json(['message' => 'Forbidden'], 403)];
         }
 
-        $centralConnection = $this->centralConnection();
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
+        $centerId = $request->session()->get('api_center_id')
+            ?? $request->session()->get('api_tenant_id');
+        $centerSlug = $request->session()->get('api_center_slug')
+            ?? $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Center-Slug')
             ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('center_slug')
             ?? $request->query('tenant_slug');
 
         if ($bearer) {
-            $tenantId = $bearer['tenant_id'] ?: $tenantId;
-            $tenantSlug = $bearer['tenant_slug'] ?: $tenantSlug;
+            $centerId = $bearer['tenant_id'] ?: $centerId;
+            $centerSlug = $bearer['tenant_slug'] ?: $centerSlug;
         }
 
-        $tenant = $tenantId
-            ? Tenant::on($centralConnection)->find($tenantId)
-            : $this->resolveTenantBySlug($tenantSlug, $centralConnection);
+        $center = $centerId
+            ? Center::query()->find($centerId)
+            : $this->resolveCenterBySlug($centerSlug);
 
-        if (! $tenant) {
-            return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
+        if (! $center) {
+            return ['error' => response()->json(['message' => 'Center not found'], 422)];
         }
 
-        // Tenant DB must be selected before Auth touches the User model (tenant connection).
-        $this->ensureTenantInitialized($tenant);
+        $this->ensureCenterInitialized($center);
 
         $this->ensureWebAdminAuthenticated($request);
 
@@ -73,65 +72,42 @@ class LandingPageApiController extends Controller
             return ['error' => response()->json(['message' => 'Unauthenticated'], 401)];
         }
 
-        if (! Schema::connection('tenant')->hasTable('landing_pages')) {
+        if (! Schema::connection('center')->hasTable('landing_pages')) {
             return ['error' => response()->json(['message' => 'Landing pages not migrated. Run tenant migrations.'], 503)];
         }
 
         return [
             'error' => null,
-            'tenant' => $tenant,
-            'tenantDb' => DB::connection('tenant'),
+            'center' => $center,
+            'tenant' => $center,
+            'centerDb' => DB::connection('center'),
+            'tenantDb' => DB::connection('center'),
         ];
     }
 
     protected function resolvePublicContext(Request $request): array
     {
-        $centralConnection = $this->centralConnection();
-        $tenantSlug = $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $centerSlug = $request->header('X-Center-Slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('center_slug')
+            ?? $request->query('tenant_slug');
 
-        if (! $tenantSlug) {
-            return ['error' => response()->json(['message' => 'Tenant slug required'], 422)];
+        if (! $centerSlug) {
+            return ['error' => response()->json(['message' => 'Center slug required'], 422)];
         }
 
-        $tenant = $this->resolveTenantBySlug($tenantSlug, $centralConnection);
-        if (! $tenant) {
-            return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
+        $center = $this->resolveCenterBySlug($centerSlug);
+        if (! $center) {
+            return ['error' => response()->json(['message' => 'Center not found'], 422)];
         }
 
-        $this->ensureTenantInitialized($tenant);
+        $this->ensureCenterInitialized($center);
 
-        if (! Schema::connection('tenant')->hasTable('landing_pages')) {
+        if (! Schema::connection('center')->hasTable('landing_pages')) {
             return ['error' => response()->json(['page' => null])];
         }
 
-        return ['error' => null, 'tenantDb' => DB::connection('tenant')];
-    }
-
-    protected function resolveTenantBySlug(?string $tenantSlug, string $centralConnection): ?Tenant
-    {
-        if (! $tenantSlug) {
-            return null;
-        }
-        $tenantInfo = TenantInfo::on($centralConnection)->where('subdomain', $tenantSlug)->first();
-        if (! $tenantInfo) {
-            return null;
-        }
-
-        return Tenant::on($centralConnection)->find($tenantInfo->tenant_id);
-    }
-
-    protected function ensureTenantInitialized(?Tenant $tenant): void
-    {
-        if (! $tenant) {
-            return;
-        }
-        tenancy()->initialize($tenant);
-        $dbName = data_get($tenant->toArray(), 'tenancy_db_name');
-        if ($dbName) {
-            Config::set('database.connections.tenant.database', $dbName);
-            DB::purge('tenant');
-            DB::reconnect('tenant');
-        }
+        return ['error' => null, 'tenantDb' => DB::connection('center')];
     }
 
     /** Re-bind admin user after tenant DB switch (session cookie auth). */
@@ -302,7 +278,7 @@ class LandingPageApiController extends Controller
 
     protected function storeRevision($tenantDb, int $pageId, array $snapshot, ?string $label = null): void
     {
-        if (! Schema::connection('tenant')->hasTable('landing_page_revisions')) {
+        if (! Schema::connection('center')->hasTable('landing_page_revisions')) {
             return;
         }
         $tenantDb->table('landing_page_revisions')->insert([
@@ -360,7 +336,7 @@ class LandingPageApiController extends Controller
 
         $rows = $tenantDb->table('landing_pages')->orderByDesc('updated_at')->get();
         $analytics = [];
-        if (Schema::connection('tenant')->hasTable('landing_page_analytics')) {
+        if (Schema::connection('center')->hasTable('landing_page_analytics')) {
             $analytics = $tenantDb->table('landing_page_analytics')
                 ->pluck('visitors', 'landing_page_id')
                 ->all();
@@ -605,7 +581,7 @@ class LandingPageApiController extends Controller
         if ($ctx['error']) {
             return $ctx['error'];
         }
-        if (! Schema::connection('tenant')->hasTable('landing_page_revisions')) {
+        if (! Schema::connection('center')->hasTable('landing_page_revisions')) {
             return response()->json(['revisions' => []]);
         }
 
@@ -658,7 +634,7 @@ class LandingPageApiController extends Controller
         }
         $tenantDb = $ctx['tenantDb'];
 
-        if (! Schema::connection('tenant')->hasTable('landing_page_analytics')) {
+        if (! Schema::connection('center')->hasTable('landing_page_analytics')) {
             return response()->json(['analytics' => $this->emptyAnalytics($pageId)]);
         }
 
@@ -724,7 +700,7 @@ class LandingPageApiController extends Controller
         if ($ctx['error']) {
             return $ctx['error'];
         }
-        if (! Schema::connection('tenant')->hasTable('landing_media')) {
+        if (! Schema::connection('center')->hasTable('landing_media')) {
             return response()->json(['media' => []]);
         }
 
@@ -826,7 +802,7 @@ class LandingPageApiController extends Controller
             }
         }
 
-        if ($row->status === 'published' && Schema::connection('tenant')->hasTable('landing_page_analytics')) {
+        if ($row->status === 'published' && Schema::connection('center')->hasTable('landing_page_analytics')) {
             $analytics = $tenantDb->table('landing_page_analytics')->where('landing_page_id', $row->id)->first();
             if ($analytics) {
                 $tenantDb->table('landing_page_analytics')->where('landing_page_id', $row->id)->update([

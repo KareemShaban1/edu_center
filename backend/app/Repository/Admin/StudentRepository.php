@@ -7,6 +7,7 @@ use App\Models\Grade;
 use App\Models\Image;
 use App\Models\Parents;
 use App\Models\Student;
+use App\Centers\CenterMembershipService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -87,6 +88,8 @@ class StudentRepository implements StudentRepositoryInterface
             $student->gender = $request->gender;
             $student->is_active = $request->is_active ? 1 : 0;
             $student->save();
+
+            app(CenterMembershipService::class)->registerStudentProfile((int) $student->id);
 
             // insert img
             if ($request->hasfile('photos')) {

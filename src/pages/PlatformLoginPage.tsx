@@ -13,6 +13,7 @@ import {
   isPlatformGuard,
 } from '@/config/login-defaults';
 import { getTenantLoginPath } from '@/lib/tenant-routes';
+import { EgyptEducationScene } from '@/components/illustrations/EgyptEducationArt';
 
 const guardToRoleMap: Record<string, UserRole> = {
   super_admin: 'super_admin',
@@ -84,7 +85,17 @@ export default function PlatformLoginPage() {
         {locale === 'en' ? 'العربية' : 'English'}
       </button>
 
-      <div className="w-full max-w-md animate-fade-in">
+      <div className="mx-auto grid w-full max-w-5xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="hidden lg:block">
+          <EgyptEducationScene variant="platform" />
+          <p className="mt-6 text-sm text-muted-foreground">
+            {locale === 'ar'
+              ? 'إدارة مراكز تعليمية في مصر — منصة مركزية للمشغّلين.'
+              : 'Manage educational centers across Egypt — one platform for operators.'}
+          </p>
+        </div>
+
+        <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end animate-fade-in">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-exams">
             <Globe className="h-7 w-7 text-primary-foreground" />
@@ -173,6 +184,7 @@ export default function PlatformLoginPage() {
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">{t('app.demoMode')}</p>
+        </div>
       </div>
     </div>
   );

@@ -9,13 +9,19 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Database\QueryException;
-use App\Models\Platform\Tenant;
-use App\Models\Platform\TenantInfo;
-use App\Http\Controllers\Platform\PlatformTenantApiController;
+use App\Models\Platform\Center;
+use App\Http\Controllers\Platform\PlatformCenterApiController;
+use App\Http\Controllers\Platform\PlatformBrandingApiController;
 use App\Http\Controllers\Admin\DashboardApiController;
 use App\Http\Controllers\Admin\LandingPageApiController;
 use App\Http\Support\ApiBearerAuth;
+use App\Http\Support\AuthLoginHandler;
+use App\Http\Support\MultiCenterPortalService;
 use App\Http\Support\SectionWeekDays;
+use App\Centers\CenterMembershipService;
+use App\Models\Parents;
+use App\Models\Student;
+use App\Centers\CenterContextManager;
 use App\Models\Library;
 use App\Models\Announcement;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -56,32 +62,26 @@ Route::middleware([
 
     $tenantGuards = ['web', 'teacher', 'parent', 'student'];
 
-    $centralConnection = config('tenancy.database.central_connection', config('database.default', 'mysql'));
+    /** @var CenterContextManager $centerContext */
+    $centerContext = app(CenterContextManager::class);
+    $centralConnection = config('database.default', 'mysql');
 
-    $resolveTenantBySlug = function (?string $tenantSlug) use ($centralConnection): ?Tenant {
-        if (!$tenantSlug) {
-            return null;
-        }
+    $resolveTenantBySlug = fn (?string $slug): ?Center => $centerContext->resolveBySlug($slug);
 
-        $tenantInfo = TenantInfo::on($centralConnection)->where('subdomain', $tenantSlug)->first();
-        if (!$tenantInfo) {
-            return null;
-        }
-
-        return Tenant::on($centralConnection)->find($tenantInfo->tenant_id);
+    $ensureTenantInitialized = function (?Center $center) use ($centerContext): void {
+        $centerContext->initialize($center);
     };
 
-    $ensureTenantInitialized = function (?Tenant $tenant): void {
-        if ($tenant) {
-            tenancy()->initialize($tenant);
-            $dbName = data_get($tenant->toArray(), 'tenancy_db_name');
-            if ($dbName) {
-                Config::set('database.connections.tenant.database', $dbName);
-                DB::purge('tenant');
-                DB::reconnect('tenant');
-            }
-        }
-    };
+    Route::get('/config', function () {
+        return response()->json([
+            'storage_mode' => 'central_database',
+            'center_table' => 'centers',
+            // Backward-compatible aliases
+            'tenancy_mode' => 'central_shared',
+        ]);
+    });
+
+    Route::get('/branding', [PlatformBrandingApiController::class, 'show']);
 
     Route::get('/auth/guards', function () {
         return response()->json([
@@ -100,17 +100,17 @@ Route::middleware([
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
 
         $ensureTenantInitialized($tenant);
 
-        $tenantDb = DB::connection('tenant');
-        $studentsHasIsActive = Schema::connection('tenant')->hasColumn('students', 'is_active');
-        $teachersHasIsActive = Schema::connection('tenant')->hasColumn('teachers', 'is_active');
-        $parentsHasIsActive = Schema::connection('tenant')->hasColumn('parents', 'is_active');
+        $tenantDb = DB::connection('center');
+        $studentsHasIsActive = Schema::connection('center')->hasColumn('students', 'is_active');
+        $teachersHasIsActive = Schema::connection('center')->hasColumn('teachers', 'is_active');
+        $parentsHasIsActive = Schema::connection('center')->hasColumn('parents', 'is_active');
 
         $grades = $tenantDb->table('grades')
             ->select('id', 'grade_name as name', 'notes')
@@ -120,8 +120,8 @@ Route::middleware([
             ->select('id', 'class_name as name', 'grade_id', DB::raw('NULL as notes'))
             ->get();
 
-        $sectionHasTeacherId = Schema::connection('tenant')->hasColumn('sections', 'teacher_id');
-        $sectionHasWeekDays = Schema::connection('tenant')->hasColumn('sections', 'week_days');
+        $sectionHasTeacherId = Schema::connection('center')->hasColumn('sections', 'teacher_id');
+        $sectionHasWeekDays = Schema::connection('center')->hasColumn('sections', 'week_days');
         $sections = $tenantDb->table('sections')
             ->select(
                 'id',
@@ -143,12 +143,35 @@ Route::middleware([
                 ];
             });
 
-        $studentColumns = ['id', 'name', 'email', 'gender', 'grade_id', 'class_id', 'section_id', 'parent_id', 'created_at'];
+        $studentSelect = [
+            'students.id',
+            'students.name',
+            'students.email',
+            'students.gender',
+            'students.grade_id',
+            'students.class_id',
+            'students.section_id',
+            'students.parent_id',
+            'students.created_at',
+            'grades.grade_name as grade_name',
+            'classes.class_name as class_name',
+            'sections.section_name as section_name',
+        ];
         if ($studentsHasIsActive) {
-            $studentColumns[] = 'is_active';
+            $studentSelect[] = 'students.is_active';
         }
-        $students = $tenantDb->table('students')
-            ->select($studentColumns)
+
+        $studentsQuery = $tenantDb->table('students')
+            ->leftJoin('grades', 'students.grade_id', '=', 'grades.id')
+            ->leftJoin('classes', 'students.class_id', '=', 'classes.id')
+            ->leftJoin('sections', 'students.section_id', '=', 'sections.id');
+
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $studentsQuery->whereNull('students.deleted_at');
+        }
+
+        $students = $studentsQuery
+            ->select($studentSelect)
             ->get()
             ->map(function ($row) {
                 return [
@@ -160,6 +183,9 @@ Route::middleware([
                     'grade_id' => $row->grade_id,
                     'classroom_id' => $row->class_id,
                     'section_id' => $row->section_id,
+                    'grade_name' => $row->grade_name ?: '',
+                    'class_name' => $row->class_name ?: '',
+                    'section_name' => $row->section_name ?: '',
                     'parent_id' => $row->parent_id,
                     'created_at' => optional($row->created_at)->format('Y-m-d') ?? now()->toDateString(),
                 ];
@@ -186,7 +212,7 @@ Route::middleware([
                 ];
             });
 
-        if (Schema::connection('tenant')->hasTable('teacher_section') && Schema::connection('tenant')->hasTable('sections')) {
+        if (Schema::connection('center')->hasTable('teacher_section') && Schema::connection('center')->hasTable('sections')) {
             $teacherClassRows = $tenantDb->table('teacher_section')
                 ->join('sections', 'teacher_section.section_id', '=', 'sections.id')
                 ->select('teacher_section.teacher_id', 'sections.class_id')
@@ -246,8 +272,8 @@ Route::middleware([
             ->select('id', 'student_id', 'attendance_date as date', 'attendance_status as status')
             ->get();
 
-        $feesHasFeeType = Schema::connection('tenant')->hasColumn('fees', 'fee_type');
-        $feesHasLegacyType = Schema::connection('tenant')->hasColumn('fees', 'Fee_type');
+        $feesHasFeeType = Schema::connection('center')->hasColumn('fees', 'fee_type');
+        $feesHasLegacyType = Schema::connection('center')->hasColumn('fees', 'Fee_type');
         $feeTypeSelect = $feesHasFeeType
             ? 'fee_type as type'
             : ($feesHasLegacyType ? 'Fee_type as type' : DB::raw("'monthly' as type"));
@@ -332,7 +358,7 @@ Route::middleware([
             });
 
         $roles = collect();
-        if (Schema::connection('tenant')->hasTable('roles') && Schema::connection('tenant')->hasTable('model_has_roles')) {
+        if (Schema::connection('center')->hasTable('roles') && Schema::connection('center')->hasTable('model_has_roles')) {
             $roles = $tenantDb->table('roles')
                 ->leftJoin('model_has_roles', 'roles.id', '=', 'model_has_roles.role_id')
                 ->select('roles.id', 'roles.name', 'roles.guard_name', DB::raw('COUNT(model_has_roles.model_id) as users_count'))
@@ -352,8 +378,13 @@ Route::middleware([
         return response()->json([
             'tenant' => [
                 'id' => $tenant->id,
-                'slug' => $tenantSlug,
-                'database' => data_get($tenant->toArray(), 'tenancy_db_name'),
+                'slug' => $tenant->slug ?? $tenantSlug,
+                'name' => $tenant->name,
+            ],
+            'center' => [
+                'id' => $tenant->id,
+                'slug' => $tenant->slug ?? $tenantSlug,
+                'name' => $tenant->name,
             ],
             'grades' => $grades,
             'classes' => $classes,
@@ -389,7 +420,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -399,15 +430,15 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
@@ -415,7 +446,7 @@ Route::middleware([
         $sectionIds = $sectionIds->unique()->values();
 
         $classes = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('sections')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
             $classes = $tenantDb->table('sections')
                 ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
@@ -435,9 +466,9 @@ Route::middleware([
                 ->map(function ($row) use ($tenantDb) {
                     $studentsList = collect();
                     $studentsCount = 0;
-                    if (Schema::connection('tenant')->hasTable('students')) {
+                    if (Schema::connection('center')->hasTable('students')) {
                         $studentsQuery = $tenantDb->table('students')->where('section_id', $row->id)->select('id', 'name');
-                        if (Schema::connection('tenant')->hasColumn('students', 'deleted_at')) {
+                        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
                             $studentsQuery->whereNull('deleted_at');
                         }
                         $studentsList = $studentsQuery->orderBy('name')->get()->map(fn ($s) => [
@@ -461,7 +492,7 @@ Route::middleware([
         }
 
         $attendance = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('attendances') && Schema::connection('tenant')->hasTable('students')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('attendances') && Schema::connection('center')->hasTable('students')) {
             $attendance = $tenantDb->table('attendances')
                 ->join('students', 'attendances.student_id', '=', 'students.id')
                 ->whereIn('students.section_id', $sectionIds)
@@ -482,7 +513,7 @@ Route::middleware([
         }
 
         $quizzes = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('quiz_degrees')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('quiz_degrees')) {
             $quizzes = $tenantDb->table('quiz_degrees')
                 ->leftJoin('students', 'quiz_degrees.student_id', '=', 'students.id')
                 ->leftJoin('sections', 'quiz_degrees.section_id', '=', 'sections.id')
@@ -511,7 +542,7 @@ Route::middleware([
         }
 
         $exams = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('exam_degrees')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('exam_degrees')) {
             $exams = $tenantDb->table('exam_degrees')
                 ->leftJoin('students', 'exam_degrees.student_id', '=', 'students.id')
                 ->leftJoin('sections', 'exam_degrees.section_id', '=', 'sections.id')
@@ -540,7 +571,7 @@ Route::middleware([
         }
 
         $homework = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('homeworks')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('homeworks')) {
             $homework = $tenantDb->table('homeworks')
                 ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
@@ -562,7 +593,7 @@ Route::middleware([
         }
 
         $library = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('library')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('library')) {
             $library = $tenantDb->table('library')
                 ->leftJoin('grades', 'library.grade_id', '=', 'grades.id')
                 ->whereIn('library.section_id', $sectionIds)
@@ -604,7 +635,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -615,10 +646,10 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $teacherEmail = null;
-        if (Schema::connection('tenant')->hasTable('teachers')) {
+        if (Schema::connection('center')->hasTable('teachers')) {
             $teacherRow = $tenantDb->table('teachers')->where('id', $teacherId)->first();
             $teacherEmail = $teacherRow->email ?? null;
         }
@@ -628,12 +659,12 @@ Route::middleware([
         }
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
@@ -641,7 +672,7 @@ Route::middleware([
         $sectionIds = $sectionIds->unique()->values();
 
         $sections = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('sections')) {
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
             $sections = $tenantDb->table('sections')
                 ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
@@ -759,7 +790,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -770,9 +801,9 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
-        $teacherRow = Schema::connection('tenant')->hasTable('teachers')
+        $teacherRow = Schema::connection('center')->hasTable('teachers')
             ? $tenantDb->table('teachers')->where('id', $teacherId)->first()
             : null;
         $teacherEmail = $teacherRow?->email ?? null;
@@ -806,7 +837,7 @@ Route::middleware([
         ]);
 
         $section = null;
-        if (Schema::connection('tenant')->hasTable('sections')) {
+        if (Schema::connection('center')->hasTable('sections')) {
             $section = $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first();
         }
         if (!$section) {
@@ -816,12 +847,12 @@ Route::middleware([
         // Authorization: ensure section belongs to this teacher.
         $allowed = false;
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
@@ -866,10 +897,10 @@ Route::middleware([
             'location' => $payload['location'] ?? null,
             'notes' => $payload['notes'] ?? null,
         ];
-        if (Schema::connection('tenant')->hasColumn('meeting_series', 'teacher_id')) {
+        if (Schema::connection('center')->hasColumn('meeting_series', 'teacher_id')) {
             $seriesPayload['teacher_id'] = $teacherId;
         }
-        if (Schema::connection('tenant')->hasColumn('meeting_series', 'status')) {
+        if (Schema::connection('center')->hasColumn('meeting_series', 'status')) {
             $seriesPayload['status'] = 'started';
         }
         $series = \App\Models\MeetingSeries::create($seriesPayload);
@@ -902,7 +933,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -913,9 +944,9 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
-        $teacherRow = Schema::connection('tenant')->hasTable('teachers')
+        $teacherRow = Schema::connection('center')->hasTable('teachers')
             ? $tenantDb->table('teachers')->where('id', $teacherId)->first()
             : null;
         $teacherEmail = $teacherRow?->email ?? null;
@@ -948,7 +979,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -962,15 +993,15 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
@@ -1014,7 +1045,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1025,27 +1056,27 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
             return response()->json(['meetings' => [], 'series_options' => []]);
         }
 
-        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
 
         $rows = $tenantDb->table('meetings')
             ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
@@ -1109,7 +1140,7 @@ Route::middleware([
         })->values();
 
         $seriesOptions = collect();
-        if (Schema::connection('tenant')->hasTable('meeting_series')) {
+        if (Schema::connection('center')->hasTable('meeting_series')) {
             $seriesOptions = $tenantDb->table('meeting_series')
                 ->whereIn('section_id', $sectionIds)
                 ->orderBy('topic')
@@ -1138,7 +1169,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1149,27 +1180,27 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
 
         $existing = $tenantDb->table('meetings')->where('id', $id)->first();
         if (!$existing || !$sectionIds->contains((int) ($existing->section_id ?? 0))) {
@@ -1301,7 +1332,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1312,22 +1343,22 @@ Route::middleware([
         }
 
         $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $sectionIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = $sectionIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
             );
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('tenant')->hasTable('meetings') || $sectionIds->isEmpty()) {
+        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
@@ -1352,19 +1383,19 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
 
-        $tenantDb = DB::connection('tenant');
-        if (!Schema::connection('tenant')->hasTable('meeting_series')) {
+        $tenantDb = DB::connection('center');
+        if (!Schema::connection('center')->hasTable('meeting_series')) {
             return response()->json(['series' => [], 'teachers' => [], 'sections_by_teacher' => new \stdClass()]);
         }
 
         $teachers = collect();
-        if (Schema::connection('tenant')->hasTable('teachers')) {
+        if (Schema::connection('center')->hasTable('teachers')) {
             $teachers = $tenantDb->table('teachers')
                 ->orderBy('name')
                 ->get(['id', 'name', 'email'])
@@ -1379,12 +1410,12 @@ Route::middleware([
         $sectionsByTeacher = [];
         foreach ($teachers as $teacher) {
             $sectionIds = collect();
-            if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+            if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
                 $sectionIds = $sectionIds->merge(
                     $tenantDb->table('sections')->where('teacher_id', (int) $teacher['id'])->pluck('id')
                 );
             }
-            if (Schema::connection('tenant')->hasTable('teacher_section')) {
+            if (Schema::connection('center')->hasTable('teacher_section')) {
                 $sectionIds = $sectionIds->merge(
                     $tenantDb->table('teacher_section')->where('teacher_id', (int) $teacher['id'])->pluck('section_id')
                 );
@@ -1392,7 +1423,7 @@ Route::middleware([
             $sectionIds = $sectionIds->unique()->values();
 
             $sections = collect();
-            if ($sectionIds->isNotEmpty() && Schema::connection('tenant')->hasTable('sections')) {
+            if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
                 $sections = $tenantDb->table('sections')
                     ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
                     ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
@@ -1462,12 +1493,12 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
 
         $payload = $request->validate([
             'teacher_id' => ['required', 'integer'],
@@ -1491,7 +1522,7 @@ Route::middleware([
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $teacher = Schema::connection('tenant')->hasTable('teachers')
+        $teacher = Schema::connection('center')->hasTable('teachers')
             ? $tenantDb->table('teachers')->where('id', (int) $payload['teacher_id'])->first()
             : null;
         if (!$teacher || empty($teacher->email)) {
@@ -1499,7 +1530,7 @@ Route::middleware([
         }
         $teacherEmail = (string) $teacher->email;
 
-        $section = Schema::connection('tenant')->hasTable('sections')
+        $section = Schema::connection('center')->hasTable('sections')
             ? $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first()
             : null;
         if (!$section) {
@@ -1507,12 +1538,12 @@ Route::middleware([
         }
 
         $assignedIds = collect();
-        if (Schema::connection('tenant')->hasTable('sections') && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $assignedIds = $assignedIds->merge(
                 $tenantDb->table('sections')->where('teacher_id', (int) $payload['teacher_id'])->pluck('id')
             );
         }
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $assignedIds = $assignedIds->merge(
                 $tenantDb->table('teacher_section')->where('teacher_id', (int) $payload['teacher_id'])->pluck('section_id')
             );
@@ -1550,10 +1581,10 @@ Route::middleware([
             'location' => $payload['location'] ?? null,
             'notes' => $payload['notes'] ?? null,
         ];
-        if (Schema::connection('tenant')->hasColumn('meeting_series', 'teacher_id')) {
+        if (Schema::connection('center')->hasColumn('meeting_series', 'teacher_id')) {
             $seriesPayload['teacher_id'] = (int) $payload['teacher_id'];
         }
-        if (Schema::connection('tenant')->hasColumn('meeting_series', 'status')) {
+        if (Schema::connection('center')->hasColumn('meeting_series', 'status')) {
             $seriesPayload['status'] = 'started';
         }
         $series = \App\Models\MeetingSeries::create($seriesPayload);
@@ -1580,7 +1611,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1605,19 +1636,19 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('tenant')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('meetings')) {
             return response()->json(['meetings' => [], 'series_options' => []]);
         }
 
-        $tenantDb = DB::connection('tenant');
-        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+        $tenantDb = DB::connection('center');
+        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
 
         $rows = $tenantDb->table('meetings')
             ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
@@ -1680,7 +1711,7 @@ Route::middleware([
         })->values();
 
         $seriesOptions = collect();
-        if (Schema::connection('tenant')->hasTable('meeting_series')) {
+        if (Schema::connection('center')->hasTable('meeting_series')) {
             $seriesOptions = $tenantDb->table('meeting_series')
                 ->orderBy('topic')
                 ->get(['id', 'topic', 'section_id'])
@@ -1708,19 +1739,19 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('tenant')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('meetings')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $tenantDb = DB::connection('tenant');
-        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+        $tenantDb = DB::connection('center');
+        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
 
         $payload = $request->validate([
             'section_id' => ['required', 'integer'],
@@ -1857,19 +1888,19 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('tenant')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('meetings')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $tenantDb = DB::connection('tenant');
-        $hasSeriesCol = Schema::connection('tenant')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('tenant')->hasColumn('meetings', 'location');
+        $tenantDb = DB::connection('center');
+        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
+        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
 
         $existing = $tenantDb->table('meetings')->where('id', $id)->first();
         if (!$existing) {
@@ -1997,17 +2028,17 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('tenant')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('meetings')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $deleted = DB::connection('tenant')->table('meetings')->where('id', $id)->delete();
+        $deleted = DB::connection('center')->table('meetings')->where('id', $id)->delete();
         if (!$deleted) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -2015,7 +2046,27 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
+    Route::get('/parent/portal', function (Request $request) {
+        if ($request->session()->get('api_auth_guard') !== 'parent') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $email = $request->session()->get('api_profile_email');
+        $userType = $request->session()->get('api_profile_user_type', Parents::class);
+        if (! $email) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json(app(MultiCenterPortalService::class)->parentPortal($email, $userType));
+    });
+
     Route::get('/parent/bootstrap', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+        if ($request->session()->get('api_portal_mode')) {
+            $email = $request->session()->get('api_profile_email');
+            $userType = $request->session()->get('api_profile_user_type', Parents::class);
+            if ($email) {
+                return response()->json(app(MultiCenterPortalService::class)->parentPortal($email, $userType));
+            }
+        }
         $guard = $request->session()->get('api_auth_guard', 'parent');
         if ($guard !== 'parent') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -2025,7 +2076,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -2036,9 +2087,9 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $hasTable = function (string $table): bool {
-            return Schema::connection('tenant')->hasTable($table);
+            return Schema::connection('center')->hasTable($table);
         };
 
         $children = collect();
@@ -2243,7 +2294,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
         }
@@ -2253,7 +2304,7 @@ Route::middleware([
         if (!$studentId) {
             return ['error' => response()->json(['message' => 'Unauthenticated'], 401)];
         }
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $student = $tenantDb->table('students')->where('id', $studentId)->first();
         if (!$student) {
             return ['error' => response()->json(['message' => 'Student not found'], 404)];
@@ -2261,7 +2312,28 @@ Route::middleware([
         return ['error' => null, 'tenantDb' => $tenantDb, 'studentId' => (int) $studentId, 'student' => $student];
     };
 
+    Route::get('/student/portal', function (Request $request) {
+        if ($request->session()->get('api_auth_guard') !== 'student') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $email = $request->session()->get('api_profile_email');
+        $userType = $request->session()->get('api_profile_user_type', Student::class);
+        if (! $email) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json(app(MultiCenterPortalService::class)->studentPortal($email, $userType));
+    });
+
     Route::get('/student/bootstrap', function (Request $request) use ($resolveStudentContext) {
+        if ($request->session()->get('api_portal_mode')) {
+            $email = $request->session()->get('api_profile_email');
+            $userType = $request->session()->get('api_profile_user_type', Student::class);
+            if ($email) {
+                return response()->json(app(MultiCenterPortalService::class)->studentPortal($email, $userType));
+            }
+        }
+
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) {
             return $ctx['error'];
@@ -2274,7 +2346,7 @@ Route::middleware([
         $sectionId = (int) ($student->section_id ?? 0);
 
         $meetings = collect();
-        if (Schema::connection('tenant')->hasTable('meetings')) {
+        if (Schema::connection('center')->hasTable('meetings')) {
             $livekitUrl = (string) config('meetings.livekit.url');
             $meetings = $tenantDb->table('meetings')
                 ->where('grade_id', $gradeId)
@@ -2307,7 +2379,7 @@ Route::middleware([
         }
 
         $attendance = collect();
-        if (Schema::connection('tenant')->hasTable('attendances')) {
+        if (Schema::connection('center')->hasTable('attendances')) {
             $attendance = $tenantDb->table('attendances')
                 ->where('student_id', $studentId)
                 ->orderByDesc('attendance_date')
@@ -2326,7 +2398,7 @@ Route::middleware([
         }
 
         $grades = collect();
-        if (Schema::connection('tenant')->hasTable('exam_degrees')) {
+        if (Schema::connection('center')->hasTable('exam_degrees')) {
             $grades = $grades->merge(
                 $tenantDb->table('exam_degrees')
                     ->where('student_id', $studentId)
@@ -2346,7 +2418,7 @@ Route::middleware([
                     })
             );
         }
-        if (Schema::connection('tenant')->hasTable('quiz_degrees')) {
+        if (Schema::connection('center')->hasTable('quiz_degrees')) {
             $grades = $grades->merge(
                 $tenantDb->table('quiz_degrees')
                     ->where('student_id', $studentId)
@@ -2370,7 +2442,7 @@ Route::middleware([
 
         $homeworkOptions = collect();
         $homework = collect();
-        if (Schema::connection('tenant')->hasTable('homeworks')) {
+        if (Schema::connection('center')->hasTable('homeworks')) {
             $homeworks = $tenantDb->table('homeworks')
                 ->where('grade_id', $gradeId)
                 ->where('class_id', $classId)
@@ -2379,7 +2451,7 @@ Route::middleware([
                 ->limit(300)
                 ->get(['id', 'title', 'due_date']);
             $homeworkOptions = $homeworks->map(fn ($h) => ['id' => (int) $h->id, 'title' => $h->title])->values();
-            if (Schema::connection('tenant')->hasTable('student_homework')) {
+            if (Schema::connection('center')->hasTable('student_homework')) {
                 $submissions = $tenantDb->table('student_homework')->where('student_id', $studentId)->get()->keyBy('homework_id');
                 $homework = $homeworks->map(function ($row) use ($submissions) {
                     $submission = $submissions->get($row->id);
@@ -2413,7 +2485,7 @@ Route::middleware([
         }
 
         $library = collect();
-        if (Schema::connection('tenant')->hasTable('library')) {
+        if (Schema::connection('center')->hasTable('library')) {
             $library = $tenantDb->table('library')
                 ->where('grade_id', $gradeId)
                 ->where('class_id', $classId)
@@ -2462,7 +2534,7 @@ Route::middleware([
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
         if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
             return response()->json(['message' => 'LiveKit is not configured'], 422);
         }
@@ -2495,7 +2567,7 @@ Route::middleware([
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'date' => ['required', 'date'],
             'status' => ['required', 'in:present,absent,late'],
@@ -2519,7 +2591,7 @@ Route::middleware([
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
-        if (!Schema::connection('tenant')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'date' => ['required', 'date'],
             'status' => ['required', 'in:present,absent,late'],
@@ -2539,7 +2611,7 @@ Route::middleware([
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
-        if (!Schema::connection('tenant')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('attendances')) return response()->json(['message' => 'Module unavailable'], 422);
         $deleted = $tenantDb->table('attendances')->where('id', $id)->where('student_id', $ctx['studentId'])->delete();
         if (!$deleted) return response()->json(['message' => 'Not found'], 404);
         return response()->json(['ok' => true]);
@@ -2558,7 +2630,7 @@ Route::middleware([
             'notes' => ['nullable', 'string'],
         ]);
         $table = $payload['source'] === 'exam' ? 'exam_degrees' : 'quiz_degrees';
-        if (!Schema::connection('tenant')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
         $dateCol = $payload['source'] === 'exam' ? 'exam_date' : 'quiz_date';
         $tenantDb->table($table)->insert([
             'student_id' => $ctx['studentId'],
@@ -2586,7 +2658,7 @@ Route::middleware([
             'notes' => ['nullable', 'string'],
         ]);
         $table = $source === 'exam' ? 'exam_degrees' : 'quiz_degrees';
-        if (!Schema::connection('tenant')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
         $dateCol = $source === 'exam' ? 'exam_date' : 'quiz_date';
         $updated = $tenantDb->table($table)->where('id', $id)->where('student_id', $ctx['studentId'])->update([
             $dateCol => $payload['date'],
@@ -2604,7 +2676,7 @@ Route::middleware([
         $tenantDb = $ctx['tenantDb'];
         if (!in_array($source, ['exam', 'quiz'], true)) return response()->json(['message' => 'Invalid source'], 422);
         $table = $source === 'exam' ? 'exam_degrees' : 'quiz_degrees';
-        if (!Schema::connection('tenant')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable($table)) return response()->json(['message' => 'Module unavailable'], 422);
         $deleted = $tenantDb->table($table)->where('id', $id)->where('student_id', $ctx['studentId'])->delete();
         if (!$deleted) return response()->json(['message' => 'Not found'], 404);
         return response()->json(['ok' => true]);
@@ -2614,9 +2686,9 @@ Route::middleware([
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
-        if (!Schema::connection('tenant')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
-            'homework_id' => ['required', 'integer', 'exists:tenant.homeworks,id'],
+            'homework_id' => ['required', 'integer', 'exists:center.homeworks,id'],
             'status' => ['required', 'in:not_submitted,submitted,late,approved,rejected'],
             'student_notes' => ['nullable', 'string'],
             'response' => ['nullable', 'string'],
@@ -2641,9 +2713,9 @@ Route::middleware([
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
-        if (!Schema::connection('tenant')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
-            'homework_id' => ['required', 'integer', 'exists:tenant.homeworks,id'],
+            'homework_id' => ['required', 'integer', 'exists:center.homeworks,id'],
             'status' => ['required', 'in:not_submitted,submitted,late,approved,rejected'],
             'student_notes' => ['nullable', 'string'],
             'response' => ['nullable', 'string'],
@@ -2666,7 +2738,7 @@ Route::middleware([
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
-        if (!Schema::connection('tenant')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
         $deleted = $tenantDb->table('student_homework')->where('id', $id)->where('student_id', $ctx['studentId'])->delete();
         if (!$deleted) return response()->json(['message' => 'Not found'], 404);
         return response()->json(['ok' => true]);
@@ -2677,7 +2749,7 @@ Route::middleware([
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
@@ -2700,7 +2772,7 @@ Route::middleware([
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
@@ -2726,7 +2798,7 @@ Route::middleware([
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('tenant')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('library')) return response()->json(['message' => 'Module unavailable'], 422);
         $deleted = $tenantDb->table('library')
             ->where('id', $id)
             ->where('grade_id', (int) $student->grade_id)
@@ -2750,10 +2822,17 @@ Route::middleware([
         return ['error' => null, 'centralConnection' => $centralConnection, 'authUserId' => (int) $authUserId];
     };
 
-    Route::get('/platform/tenants', [PlatformTenantApiController::class, 'index']);
-    Route::post('/platform/tenants', [PlatformTenantApiController::class, 'store']);
-    Route::put('/platform/tenants/{id}', [PlatformTenantApiController::class, 'update']);
-    Route::delete('/platform/tenants/{id}', [PlatformTenantApiController::class, 'destroy']);
+    Route::get('/platform/centers', [PlatformCenterApiController::class, 'index']);
+    Route::post('/platform/centers', [PlatformCenterApiController::class, 'store']);
+    Route::put('/platform/centers/{id}', [PlatformCenterApiController::class, 'update']);
+    Route::delete('/platform/centers/{id}', [PlatformCenterApiController::class, 'destroy']);
+    Route::get('/platform/tenants', [PlatformCenterApiController::class, 'index']);
+    Route::post('/platform/tenants', [PlatformCenterApiController::class, 'store']);
+    Route::put('/platform/tenants/{id}', [PlatformCenterApiController::class, 'update']);
+    Route::delete('/platform/tenants/{id}', [PlatformCenterApiController::class, 'destroy']);
+
+    Route::get('/platform/branding', [PlatformBrandingApiController::class, 'show']);
+    Route::put('/platform/branding', [PlatformBrandingApiController::class, 'update']);
 
     Route::get('/platform/subscriptions', function (Request $request) use ($resolvePlatformContext) {
         $ctx = $resolvePlatformContext($request);
@@ -3023,7 +3102,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3040,14 +3119,14 @@ Route::middleware([
             'password' => ['required', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'string'],
-            'grade_id' => ['required', 'integer', 'min:1', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'min:1', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'min:1', 'exists:tenant.sections,id'],
-            'parent_id' => ['nullable', 'integer', 'exists:tenant.parents,id'],
+            'grade_id' => ['required', 'integer', 'min:1', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'min:1', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'min:1', 'exists:center.sections,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:center.parents,id'],
         ]);
 
         $academicYear = now()->year.'-'.(now()->year + 1);
-        $studentsHasIsActive = Schema::connection('tenant')->hasColumn('students', 'is_active');
+        $studentsHasIsActive = Schema::connection('center')->hasColumn('students', 'is_active');
         $insert = [
             'name' => $payload['name'],
             'email' => $payload['email'],
@@ -3065,9 +3144,11 @@ Route::middleware([
             $insert['is_active'] = (($payload['status'] ?? 'active') !== 'inactive');
         }
 
-        $id = DB::connection('tenant')->table('students')->insertGetId($insert);
+        $id = DB::connection('center')->table('students')->insertGetId($insert);
 
-        $student = DB::connection('tenant')->table('students')
+        app(CenterMembershipService::class)->assignMembership($tenant, (int) $id, Student::class);
+
+        $student = DB::connection('center')->table('students')
             ->where('id', $id)
             ->whereNull('deleted_at')
             ->first();
@@ -3098,7 +3179,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3109,7 +3190,7 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $studentExists = DB::connection('tenant')->table('students')
+        $studentExists = DB::connection('center')->table('students')
             ->where('id', $id)
             ->whereNull('deleted_at')
             ->exists();
@@ -3123,10 +3204,10 @@ Route::middleware([
             'password' => ['nullable', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'string'],
-            'grade_id' => ['required', 'integer', 'min:1', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'min:1', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'min:1', 'exists:tenant.sections,id'],
-            'parent_id' => ['nullable', 'integer', 'exists:tenant.parents,id'],
+            'grade_id' => ['required', 'integer', 'min:1', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'min:1', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'min:1', 'exists:center.sections,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:center.parents,id'],
         ]);
 
         $update = [
@@ -3139,18 +3220,18 @@ Route::middleware([
             'parent_id' => !empty($payload['parent_id']) ? $payload['parent_id'] : null,
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('students', 'is_active')) {
+        if (Schema::connection('center')->hasColumn('students', 'is_active')) {
             $update['is_active'] = (($payload['status'] ?? 'active') !== 'inactive');
         }
         if (!empty($payload['password'])) {
             $update['password'] = Hash::make($payload['password']);
         }
 
-        DB::connection('tenant')->table('students')
+        DB::connection('center')->table('students')
             ->where('id', $id)
             ->update($update);
 
-        $student = DB::connection('tenant')->table('students')
+        $student = DB::connection('center')->table('students')
             ->where('id', $id)
             ->whereNull('deleted_at')
             ->first();
@@ -3181,7 +3262,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3201,10 +3282,10 @@ Route::middleware([
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'in:active,inactive'],
             'class_ids' => ['nullable', 'array'],
-            'class_ids.*' => ['integer', 'exists:tenant.classes,id'],
+            'class_ids.*' => ['integer', 'exists:center.classes,id'],
         ]);
 
-        $teachersHasIsActive = Schema::connection('tenant')->hasColumn('teachers', 'is_active');
+        $teachersHasIsActive = Schema::connection('center')->hasColumn('teachers', 'is_active');
         $insert = [
             'name' => $payload['name'],
             'email' => $payload['email'],
@@ -3220,13 +3301,13 @@ Route::middleware([
             $insert['is_active'] = ($payload['status'] ?? 'active') === 'active';
         }
 
-        $teacherId = DB::connection('tenant')->table('teachers')->insertGetId($insert);
+        $teacherId = DB::connection('center')->table('teachers')->insertGetId($insert);
 
         $classIds = collect($payload['class_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
+        if (Schema::connection('center')->hasTable('teacher_section')) {
             $sectionIds = [];
-            if (!empty($classIds) && Schema::connection('tenant')->hasTable('sections')) {
-                $sectionIds = DB::connection('tenant')->table('sections')
+            if (!empty($classIds) && Schema::connection('center')->hasTable('sections')) {
+                $sectionIds = DB::connection('center')->table('sections')
                     ->whereIn('class_id', $classIds)
                     ->pluck('id')
                     ->map(fn ($id) => (int) $id)
@@ -3234,13 +3315,13 @@ Route::middleware([
                     ->all();
             }
             if (!empty($sectionIds)) {
-                DB::connection('tenant')->table('teacher_section')->insert(
+                DB::connection('center')->table('teacher_section')->insert(
                     collect($sectionIds)->map(fn ($sectionId) => ['teacher_id' => $teacherId, 'section_id' => $sectionId])->all()
                 );
             }
         }
 
-        $teacher = DB::connection('tenant')->table('teachers')->where('id', $teacherId)->first();
+        $teacher = DB::connection('center')->table('teachers')->where('id', $teacherId)->first();
 
         return response()->json([
             'teacher' => [
@@ -3267,7 +3348,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3278,7 +3359,7 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $teacherExists = DB::connection('tenant')->table('teachers')->where('id', $id)->exists();
+        $teacherExists = DB::connection('center')->table('teachers')->where('id', $id)->exists();
         if (!$teacherExists) {
             return response()->json(['message' => 'Teacher not found'], 404);
         }
@@ -3292,7 +3373,7 @@ Route::middleware([
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'in:active,inactive'],
             'class_ids' => ['nullable', 'array'],
-            'class_ids.*' => ['integer', 'exists:tenant.classes,id'],
+            'class_ids.*' => ['integer', 'exists:center.classes,id'],
         ]);
 
         $update = [
@@ -3303,34 +3384,34 @@ Route::middleware([
             'gender' => $payload['gender'],
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('teachers', 'is_active')) {
+        if (Schema::connection('center')->hasColumn('teachers', 'is_active')) {
             $update['is_active'] = ($payload['status'] ?? 'active') === 'active';
         }
         if (!empty($payload['password'])) {
             $update['password'] = Hash::make($payload['password']);
         }
 
-        DB::connection('tenant')->table('teachers')->where('id', $id)->update($update);
+        DB::connection('center')->table('teachers')->where('id', $id)->update($update);
 
         $classIds = collect($payload['class_ids'] ?? [])->map(fn ($cid) => (int) $cid)->unique()->values()->all();
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
-            DB::connection('tenant')->table('teacher_section')->where('teacher_id', $id)->delete();
-            if (!empty($classIds) && Schema::connection('tenant')->hasTable('sections')) {
-                $sectionIds = DB::connection('tenant')->table('sections')
+        if (Schema::connection('center')->hasTable('teacher_section')) {
+            DB::connection('center')->table('teacher_section')->where('teacher_id', $id)->delete();
+            if (!empty($classIds) && Schema::connection('center')->hasTable('sections')) {
+                $sectionIds = DB::connection('center')->table('sections')
                     ->whereIn('class_id', $classIds)
                     ->pluck('id')
                     ->map(fn ($sid) => (int) $sid)
                     ->values()
                     ->all();
                 if (!empty($sectionIds)) {
-                    DB::connection('tenant')->table('teacher_section')->insert(
+                    DB::connection('center')->table('teacher_section')->insert(
                         collect($sectionIds)->map(fn ($sid) => ['teacher_id' => $id, 'section_id' => $sid])->all()
                     );
                 }
             }
         }
 
-        $teacher = DB::connection('tenant')->table('teachers')->where('id', $id)->first();
+        $teacher = DB::connection('center')->table('teachers')->where('id', $id)->first();
 
         return response()->json([
             'teacher' => [
@@ -3357,7 +3438,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3378,7 +3459,7 @@ Route::middleware([
             'address' => ['nullable', 'string', 'max:300'],
         ]);
 
-        $parentsHasIsActive = Schema::connection('tenant')->hasColumn('parents', 'is_active');
+        $parentsHasIsActive = Schema::connection('center')->hasColumn('parents', 'is_active');
         $insert = [
             'parent_name' => $payload['name'],
             'email' => $payload['email'],
@@ -3393,9 +3474,11 @@ Route::middleware([
             $insert['is_active'] = ($payload['status'] ?? 'active') === 'active';
         }
 
-        $id = DB::connection('tenant')->table('parents')->insertGetId($insert);
+        $id = DB::connection('center')->table('parents')->insertGetId($insert);
 
-        $parent = DB::connection('tenant')->table('parents')->where('id', $id)->first();
+        app(CenterMembershipService::class)->assignMembership($tenant, (int) $id, Parents::class);
+
+        $parent = DB::connection('center')->table('parents')->where('id', $id)->first();
 
         return response()->json([
             'parent' => [
@@ -3420,7 +3503,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3431,7 +3514,7 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $exists = DB::connection('tenant')->table('parents')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('parents')->where('id', $id)->exists();
         if (!$exists) {
             return response()->json(['message' => 'Parent not found'], 404);
         }
@@ -3454,16 +3537,16 @@ Route::middleware([
             'parent_address' => $payload['address'] ?? null,
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('parents', 'is_active')) {
+        if (Schema::connection('center')->hasColumn('parents', 'is_active')) {
             $update['is_active'] = ($payload['status'] ?? 'active') === 'active';
         }
         if (!empty($payload['password'])) {
             $update['password'] = Hash::make($payload['password']);
         }
 
-        DB::connection('tenant')->table('parents')->where('id', $id)->update($update);
+        DB::connection('center')->table('parents')->where('id', $id)->update($update);
 
-        $parent = DB::connection('tenant')->table('parents')->where('id', $id)->first();
+        $parent = DB::connection('center')->table('parents')->where('id', $id)->first();
 
         return response()->json([
             'parent' => [
@@ -3484,7 +3567,7 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3494,7 +3577,7 @@ Route::middleware([
             'notes' => ['nullable', 'string'],
         ]);
 
-        $id = DB::connection('tenant')->table('grades')->insertGetId([
+        $id = DB::connection('center')->table('grades')->insertGetId([
             'grade_name' => $payload['name'],
             'notes' => $payload['notes'] ?? null,
             'created_at' => now(),
@@ -3510,12 +3593,12 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('grades')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('grades')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Grade not found'], 404);
 
         $payload = $request->validate([
@@ -3523,7 +3606,7 @@ Route::middleware([
             'notes' => ['nullable', 'string'],
         ]);
 
-        DB::connection('tenant')->table('grades')->where('id', $id)->update([
+        DB::connection('center')->table('grades')->where('id', $id)->update([
             'grade_name' => $payload['name'],
             'notes' => $payload['notes'] ?? null,
             'updated_at' => now(),
@@ -3538,14 +3621,14 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -3555,11 +3638,11 @@ Route::middleware([
             'created_at' => now(),
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('classes', 'notes')) {
+        if (Schema::connection('center')->hasColumn('classes', 'notes')) {
             $insert['notes'] = $payload['notes'] ?? null;
         }
 
-        $id = DB::connection('tenant')->table('classes')->insertGetId($insert);
+        $id = DB::connection('center')->table('classes')->insertGetId($insert);
         return response()->json(['class' => ['id' => $id, 'name' => $payload['name'], 'grade_id' => $payload['grade_id'], 'notes' => $payload['notes'] ?? null]], 201);
     });
 
@@ -3569,17 +3652,17 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('classes')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('classes')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Class not found'], 404);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -3588,11 +3671,11 @@ Route::middleware([
             'grade_id' => $payload['grade_id'],
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('classes', 'notes')) {
+        if (Schema::connection('center')->hasColumn('classes', 'notes')) {
             $update['notes'] = $payload['notes'] ?? null;
         }
 
-        DB::connection('tenant')->table('classes')->where('id', $id)->update($update);
+        DB::connection('center')->table('classes')->where('id', $id)->update($update);
         return response()->json(['class' => ['id' => $id, 'name' => $payload['name'], 'grade_id' => $payload['grade_id'], 'notes' => $payload['notes'] ?? null]]);
     });
 
@@ -3602,17 +3685,17 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate(array_merge([
             'name' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'teacher_id' => ['nullable', 'integer', 'exists:tenant.teachers,id'],
-        ], Schema::connection('tenant')->hasColumn('sections', 'week_days') ? SectionWeekDays::validationRules() : []));
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'teacher_id' => ['nullable', 'integer', 'exists:center.teachers,id'],
+        ], Schema::connection('center')->hasColumn('sections', 'week_days') ? SectionWeekDays::validationRules() : []));
 
         $insert = [
             'section_name' => $payload['name'],
@@ -3622,18 +3705,18 @@ Route::middleware([
             'created_at' => now(),
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $insert['teacher_id'] = $payload['teacher_id'] ?? null;
         }
-        if (Schema::connection('tenant')->hasColumn('sections', 'week_days')) {
+        if (Schema::connection('center')->hasColumn('sections', 'week_days')) {
             $insert['week_days'] = SectionWeekDays::encode($payload['week_days'] ?? null);
         }
 
-        $id = DB::connection('tenant')->table('sections')->insertGetId($insert);
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
-            DB::connection('tenant')->table('teacher_section')->where('section_id', $id)->delete();
+        $id = DB::connection('center')->table('sections')->insertGetId($insert);
+        if (Schema::connection('center')->hasTable('teacher_section')) {
+            DB::connection('center')->table('teacher_section')->where('section_id', $id)->delete();
             if (!empty($payload['teacher_id'])) {
-                DB::connection('tenant')->table('teacher_section')->insert([
+                DB::connection('center')->table('teacher_section')->insert([
                     'teacher_id' => (int) $payload['teacher_id'],
                     'section_id' => (int) $id,
                 ]);
@@ -3657,20 +3740,20 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('sections')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('sections')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Section not found'], 404);
 
         $payload = $request->validate(array_merge([
             'name' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'teacher_id' => ['nullable', 'integer', 'exists:tenant.teachers,id'],
-        ], Schema::connection('tenant')->hasColumn('sections', 'week_days') ? SectionWeekDays::validationRules() : []));
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'teacher_id' => ['nullable', 'integer', 'exists:center.teachers,id'],
+        ], Schema::connection('center')->hasColumn('sections', 'week_days') ? SectionWeekDays::validationRules() : []));
 
         $update = [
             'section_name' => $payload['name'],
@@ -3678,18 +3761,18 @@ Route::middleware([
             'class_id' => $payload['class_id'],
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if (Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $update['teacher_id'] = $payload['teacher_id'] ?? null;
         }
-        if (Schema::connection('tenant')->hasColumn('sections', 'week_days')) {
+        if (Schema::connection('center')->hasColumn('sections', 'week_days')) {
             $update['week_days'] = SectionWeekDays::encode($payload['week_days'] ?? null);
         }
 
-        DB::connection('tenant')->table('sections')->where('id', $id)->update($update);
-        if (Schema::connection('tenant')->hasTable('teacher_section')) {
-            DB::connection('tenant')->table('teacher_section')->where('section_id', $id)->delete();
+        DB::connection('center')->table('sections')->where('id', $id)->update($update);
+        if (Schema::connection('center')->hasTable('teacher_section')) {
+            DB::connection('center')->table('teacher_section')->where('section_id', $id)->delete();
             if (!empty($payload['teacher_id'])) {
-                DB::connection('tenant')->table('teacher_section')->insert([
+                DB::connection('center')->table('teacher_section')->insert([
                     'teacher_id' => (int) $payload['teacher_id'],
                     'section_id' => (int) $id,
                 ]);
@@ -3711,17 +3794,17 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        $id = DB::connection('tenant')->table('units')->insertGetId([
+        $id = DB::connection('center')->table('units')->insertGetId([
             'name' => $payload['name'],
             'class_id' => $payload['class_id'],
             'notes' => $payload['notes'] ?? '',
@@ -3736,20 +3819,20 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('units')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('units')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Unit not found'], 404);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        DB::connection('tenant')->table('units')->where('id', $id)->update([
+        DB::connection('center')->table('units')->where('id', $id)->update([
             'name' => $payload['name'],
             'class_id' => $payload['class_id'],
             'notes' => $payload['notes'] ?? '',
@@ -3763,17 +3846,17 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'unit_id' => ['required', 'integer', 'exists:tenant.units,id'],
+            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        $id = DB::connection('tenant')->table('lessons')->insertGetId([
+        $id = DB::connection('center')->table('lessons')->insertGetId([
             'name' => $payload['name'],
             'unit_id' => $payload['unit_id'],
             'notes' => $payload['notes'] ?? '',
@@ -3788,20 +3871,20 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('lessons')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('lessons')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Lesson not found'], 404);
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'unit_id' => ['required', 'integer', 'exists:tenant.units,id'],
+            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        DB::connection('tenant')->table('lessons')->where('id', $id)->update([
+        DB::connection('center')->table('lessons')->where('id', $id)->update([
             'name' => $payload['name'],
             'unit_id' => $payload['unit_id'],
             'notes' => $payload['notes'] ?? '',
@@ -3815,7 +3898,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3823,14 +3906,14 @@ Route::middleware([
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'start_date' => ['required', 'date'],
             'due_date' => ['required', 'date'],
         ]);
 
-        $id = DB::connection('tenant')->table('homeworks')->insertGetId([
+        $id = DB::connection('center')->table('homeworks')->insertGetId([
             'title' => $payload['title'],
             'content' => $payload['content'] ?? '',
             'grade_id' => $payload['grade_id'],
@@ -3859,25 +3942,25 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('homeworks')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('homeworks')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Homework not found'], 404);
 
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['nullable', 'string'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'start_date' => ['required', 'date'],
             'due_date' => ['required', 'date'],
         ]);
 
-        DB::connection('tenant')->table('homeworks')->where('id', $id)->update([
+        DB::connection('center')->table('homeworks')->where('id', $id)->update([
             'title' => $payload['title'],
             'content' => $payload['content'] ?? '',
             'grade_id' => $payload['grade_id'],
@@ -3905,7 +3988,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3913,9 +3996,9 @@ Route::middleware([
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'description' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'string', 'max:20'],
             'month' => ['required', 'string', 'max:20'],
@@ -3934,13 +4017,13 @@ Route::middleware([
             'created_at' => now(),
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('fees', 'fee_type')) {
+        if (Schema::connection('center')->hasColumn('fees', 'fee_type')) {
             $insert['fee_type'] = $payload['type'];
-        } elseif (Schema::connection('tenant')->hasColumn('fees', 'Fee_type')) {
+        } elseif (Schema::connection('center')->hasColumn('fees', 'Fee_type')) {
             $insert['Fee_type'] = $payload['type'];
         }
 
-        $id = DB::connection('tenant')->table('fees')->insertGetId($insert);
+        $id = DB::connection('center')->table('fees')->insertGetId($insert);
 
         return response()->json(['fee' => [
             'id' => $id,
@@ -3961,20 +4044,20 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $exists = DB::connection('tenant')->table('fees')->where('id', $id)->exists();
+        $exists = DB::connection('center')->table('fees')->where('id', $id)->exists();
         if (!$exists) return response()->json(['message' => 'Fee not found'], 404);
 
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'classroom_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'classroom_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'description' => ['nullable', 'string', 'max:255'],
             'year' => ['nullable', 'string', 'max:20'],
             'month' => ['required', 'string', 'max:20'],
@@ -3992,13 +4075,13 @@ Route::middleware([
             'month' => $payload['month'],
             'updated_at' => now(),
         ];
-        if (Schema::connection('tenant')->hasColumn('fees', 'fee_type')) {
+        if (Schema::connection('center')->hasColumn('fees', 'fee_type')) {
             $update['fee_type'] = $payload['type'];
-        } elseif (Schema::connection('tenant')->hasColumn('fees', 'Fee_type')) {
+        } elseif (Schema::connection('center')->hasColumn('fees', 'Fee_type')) {
             $update['Fee_type'] = $payload['type'];
         }
 
-        DB::connection('tenant')->table('fees')->where('id', $id)->update($update);
+        DB::connection('center')->table('fees')->where('id', $id)->update($update);
 
         return response()->json(['fee' => [
             'id' => $id,
@@ -4019,12 +4102,12 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        DB::connection('tenant')->table('fees')->where('id', $id)->delete();
+        DB::connection('center')->table('fees')->where('id', $id)->delete();
         return response()->json(['message' => 'Fee deleted']);
     });
 
@@ -4033,15 +4116,15 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
-        $hasPhone = Schema::connection('tenant')->hasColumn('users', 'phone');
-        $hasIsActive = Schema::connection('tenant')->hasColumn('users', 'is_active');
-        $hasRoles = Schema::connection('tenant')->hasTable('roles') && Schema::connection('tenant')->hasTable('model_has_roles');
+        $tenantDb = DB::connection('center');
+        $hasPhone = Schema::connection('center')->hasColumn('users', 'phone');
+        $hasIsActive = Schema::connection('center')->hasColumn('users', 'is_active');
+        $hasRoles = Schema::connection('center')->hasTable('roles') && Schema::connection('center')->hasTable('model_has_roles');
 
         $query = $tenantDb->table('users')->select('users.id', 'users.name', 'users.email', 'users.created_at');
         if ($hasPhone) $query->addSelect('users.phone');
@@ -4079,7 +4162,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4093,9 +4176,9 @@ Route::middleware([
             'status' => ['nullable', 'in:active,inactive'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
-        $hasPhone = Schema::connection('tenant')->hasColumn('users', 'phone');
-        $hasIsActive = Schema::connection('tenant')->hasColumn('users', 'is_active');
+        $tenantDb = DB::connection('center');
+        $hasPhone = Schema::connection('center')->hasColumn('users', 'phone');
+        $hasIsActive = Schema::connection('center')->hasColumn('users', 'is_active');
         if ($tenantDb->table('users')->where('email', $payload['email'])->exists()) {
             return response()->json(['message' => 'Email already exists'], 422);
         }
@@ -4113,8 +4196,8 @@ Route::middleware([
 
         if (
             !empty($payload['role'])
-            && Schema::connection('tenant')->hasTable('roles')
-            && Schema::connection('tenant')->hasTable('model_has_roles')
+            && Schema::connection('center')->hasTable('roles')
+            && Schema::connection('center')->hasTable('model_has_roles')
         ) {
             $role = $tenantDb->table('roles')->where('name', $payload['role'])->first();
             if ($role) {
@@ -4134,7 +4217,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4148,15 +4231,15 @@ Route::middleware([
             'status' => ['nullable', 'in:active,inactive'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $user = $tenantDb->table('users')->where('id', $id)->first();
         if (!$user) return response()->json(['message' => 'User not found'], 404);
         if ($tenantDb->table('users')->where('email', $payload['email'])->where('id', '!=', $id)->exists()) {
             return response()->json(['message' => 'Email already exists'], 422);
         }
 
-        $hasPhone = Schema::connection('tenant')->hasColumn('users', 'phone');
-        $hasIsActive = Schema::connection('tenant')->hasColumn('users', 'is_active');
+        $hasPhone = Schema::connection('center')->hasColumn('users', 'phone');
+        $hasIsActive = Schema::connection('center')->hasColumn('users', 'is_active');
         $update = [
             'name' => $payload['name'],
             'email' => $payload['email'],
@@ -4168,8 +4251,8 @@ Route::middleware([
         $tenantDb->table('users')->where('id', $id)->update($update);
 
         if (
-            Schema::connection('tenant')->hasTable('roles')
-            && Schema::connection('tenant')->hasTable('model_has_roles')
+            Schema::connection('center')->hasTable('roles')
+            && Schema::connection('center')->hasTable('model_has_roles')
         ) {
             $modelType = $tenantDb->table('model_has_roles')
                 ->where('model_id', $id)
@@ -4199,20 +4282,20 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
         if ((int) Auth::guard('web')->id() === $id) return response()->json(['message' => 'You cannot delete your own account'], 422);
 
-        $tenantDb = DB::connection('tenant');
-        if (Schema::connection('tenant')->hasTable('model_has_roles')) {
+        $tenantDb = DB::connection('center');
+        if (Schema::connection('center')->hasTable('model_has_roles')) {
             $tenantDb->table('model_has_roles')
                 ->where('model_id', $id)
                 ->where('model_type', 'like', '%User')
                 ->delete();
         }
-        if (Schema::connection('tenant')->hasTable('model_has_permissions')) {
+        if (Schema::connection('center')->hasTable('model_has_permissions')) {
             $tenantDb->table('model_has_permissions')
                 ->where('model_id', $id)
                 ->where('model_type', 'like', '%User')
@@ -4227,20 +4310,20 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        if (!Schema::connection('tenant')->hasTable('roles')) {
+        if (!Schema::connection('center')->hasTable('roles')) {
             return response()->json(['roles' => [], 'permissions' => []]);
         }
 
-        $tenantDb = DB::connection('tenant');
-        $hasRolePerms = Schema::connection('tenant')->hasTable('role_has_permissions');
-        $hasPerms = Schema::connection('tenant')->hasTable('permissions');
-        $hasModelRoles = Schema::connection('tenant')->hasTable('model_has_roles');
-        $hasRoleDescription = Schema::connection('tenant')->hasColumn('roles', 'description');
+        $tenantDb = DB::connection('center');
+        $hasRolePerms = Schema::connection('center')->hasTable('role_has_permissions');
+        $hasPerms = Schema::connection('center')->hasTable('permissions');
+        $hasModelRoles = Schema::connection('center')->hasTable('model_has_roles');
+        $hasRoleDescription = Schema::connection('center')->hasColumn('roles', 'description');
 
         $roleSelect = ['id', 'name', 'guard_name'];
         if ($hasRoleDescription) {
@@ -4291,12 +4374,12 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        if (!Schema::connection('tenant')->hasTable('roles')) {
+        if (!Schema::connection('center')->hasTable('roles')) {
             return response()->json(['message' => 'Roles table not found'], 422);
         }
 
@@ -4308,8 +4391,8 @@ Route::middleware([
             'permissions.*' => ['string', 'max:150'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
-        $hasRoleDescription = Schema::connection('tenant')->hasColumn('roles', 'description');
+        $tenantDb = DB::connection('center');
+        $hasRoleDescription = Schema::connection('center')->hasColumn('roles', 'description');
         $guardName = $payload['guard_name'] ?? 'web';
         if ($tenantDb->table('roles')->where('name', $payload['name'])->where('guard_name', $guardName)->exists()) {
             return response()->json(['message' => 'Role already exists'], 422);
@@ -4326,8 +4409,8 @@ Route::middleware([
 
         if (
             !empty($payload['permissions'])
-            && Schema::connection('tenant')->hasTable('permissions')
-            && Schema::connection('tenant')->hasTable('role_has_permissions')
+            && Schema::connection('center')->hasTable('permissions')
+            && Schema::connection('center')->hasTable('role_has_permissions')
         ) {
             $permIds = $tenantDb->table('permissions')->whereIn('name', $payload['permissions'])->pluck('id');
             foreach ($permIds as $permId) {
@@ -4346,12 +4429,12 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        if (!Schema::connection('tenant')->hasTable('roles')) {
+        if (!Schema::connection('center')->hasTable('roles')) {
             return response()->json(['message' => 'Roles table not found'], 422);
         }
 
@@ -4363,8 +4446,8 @@ Route::middleware([
             'permissions.*' => ['string', 'max:150'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
-        $hasRoleDescription = Schema::connection('tenant')->hasColumn('roles', 'description');
+        $tenantDb = DB::connection('center');
+        $hasRoleDescription = Schema::connection('center')->hasColumn('roles', 'description');
         $role = $tenantDb->table('roles')->where('id', $id)->first();
         if (!$role) return response()->json(['message' => 'Role not found'], 404);
         $guardName = $payload['guard_name'] ?? $role->guard_name ?? 'web';
@@ -4380,9 +4463,9 @@ Route::middleware([
         if ($hasRoleDescription) $update['description'] = $payload['description'] ?? null;
         $tenantDb->table('roles')->where('id', $id)->update($update);
 
-        if (Schema::connection('tenant')->hasTable('role_has_permissions')) {
+        if (Schema::connection('center')->hasTable('role_has_permissions')) {
             $tenantDb->table('role_has_permissions')->where('role_id', $id)->delete();
-            if (!empty($payload['permissions']) && Schema::connection('tenant')->hasTable('permissions')) {
+            if (!empty($payload['permissions']) && Schema::connection('center')->hasTable('permissions')) {
                 $permIds = $tenantDb->table('permissions')->whereIn('name', $payload['permissions'])->pluck('id');
                 foreach ($permIds as $permId) {
                     $tenantDb->table('role_has_permissions')->insert([
@@ -4401,19 +4484,19 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
-        if (!Schema::connection('tenant')->hasTable('roles')) {
+        if (!Schema::connection('center')->hasTable('roles')) {
             return response()->json(['message' => 'Roles table not found'], 422);
         }
 
-        $tenantDb = DB::connection('tenant');
-        if (Schema::connection('tenant')->hasTable('model_has_roles')) {
+        $tenantDb = DB::connection('center');
+        if (Schema::connection('center')->hasTable('model_has_roles')) {
             $tenantDb->table('model_has_roles')->where('role_id', $id)->delete();
         }
-        if (Schema::connection('tenant')->hasTable('role_has_permissions')) {
+        if (Schema::connection('center')->hasTable('role_has_permissions')) {
             $tenantDb->table('role_has_permissions')->where('role_id', $id)->delete();
         }
         $tenantDb->table('roles')->where('id', $id)->delete();
@@ -4425,13 +4508,13 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
         if (!$authUserId) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $items = $tenantDb->table('library')
             ->leftJoin('grades', 'library.grade_id', '=', 'grades.id')
             ->leftJoin('classes', 'library.class_id', '=', 'classes.id')
@@ -4493,7 +4576,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4501,9 +4584,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
@@ -4533,7 +4616,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4541,9 +4624,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
             'notes' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
@@ -4587,7 +4670,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4605,13 +4688,13 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
         if (!$authUserId) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $items = $tenantDb->table('announcements')
             ->leftJoin('grades', 'announcements.grade_id', '=', 'grades.id')
             ->leftJoin('classes', 'announcements.class_id', '=', 'classes.id')
@@ -4674,7 +4757,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4683,9 +4766,9 @@ Route::middleware([
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:quiz,exam,others'],
             'time' => ['nullable', 'date'],
             'files' => ['nullable', 'array'],
@@ -4716,7 +4799,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4725,9 +4808,9 @@ Route::middleware([
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'grade_id' => ['required', 'integer', 'exists:tenant.grades,id'],
-            'class_id' => ['required', 'integer', 'exists:tenant.classes,id'],
-            'section_id' => ['required', 'integer', 'exists:tenant.sections,id'],
+            'grade_id' => ['required', 'integer', 'exists:center.grades,id'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:quiz,exam,others'],
             'time' => ['nullable', 'date'],
             'files' => ['nullable', 'array'],
@@ -4772,7 +4855,7 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4790,15 +4873,15 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
         if (!$authUserId) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
-        $hasTable = fn (string $table) => Schema::connection('tenant')->hasTable($table);
-        $hasColumn = fn (string $table, string $column) => Schema::connection('tenant')->hasTable($table) && Schema::connection('tenant')->hasColumn($table, $column);
+        $tenantDb = DB::connection('center');
+        $hasTable = fn (string $table) => Schema::connection('center')->hasTable($table);
+        $hasColumn = fn (string $table, string $column) => Schema::connection('center')->hasTable($table) && Schema::connection('center')->hasColumn($table, $column);
 
         $studentsCount = $hasTable('students') ? (int) $tenantDb->table('students')->whereNull('deleted_at')->count() : 0;
         $teachersCount = $hasTable('teachers') ? (int) $tenantDb->table('teachers')->count() : 0;
@@ -4918,17 +5001,17 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
 
-        $feesHasFeeType = Schema::connection('tenant')->hasColumn('fees', 'fee_type');
-        $feesHasLegacyType = Schema::connection('tenant')->hasColumn('fees', 'Fee_type');
+        $feesHasFeeType = Schema::connection('center')->hasColumn('fees', 'fee_type');
+        $feesHasLegacyType = Schema::connection('center')->hasColumn('fees', 'Fee_type');
         $feeTypeSelect = $feesHasFeeType
             ? 'fee_type as type'
             : ($feesHasLegacyType ? 'Fee_type as type' : DB::raw("'monthly' as type"));
@@ -5008,7 +5091,7 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5016,16 +5099,16 @@ Route::middleware([
         $payload = $request->validate([
             'rows' => ['required', 'array', 'min:1'],
             'rows.*.id' => ['nullable', 'integer'],
-            'rows.*.student_id' => ['required', 'integer', 'exists:tenant.students,id'],
+            'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.payment_date' => ['nullable', 'date_format:Y-m-d'],
-            'rows.*.fee_id' => ['required', 'integer', 'exists:tenant.fees,id'],
+            'rows.*.fee_id' => ['required', 'integer', 'exists:center.fees,id'],
             'rows.*.payment_status' => ['required', 'in:paid,unpaid'],
             'rows.*.month' => ['required', 'string', 'max:20'],
             'rows.*.amount' => ['nullable', 'numeric', 'min:0'],
             'rows.*.notes' => ['nullable', 'string'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $students = $tenantDb->table('students')
             ->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())
             ->get(['id', 'grade_id', 'class_id', 'section_id'])
@@ -5096,12 +5179,12 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $days = DB::connection('tenant')->table('payments')
+        $days = DB::connection('center')->table('payments')
             ->where('section_id', $sectionId)
             ->select(
                 DB::raw('DATE(payment_date) as date'),
@@ -5131,16 +5214,16 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
         $students = $tenantDb->table('students')->where('section_id', $sectionId)->whereNull('deleted_at')->get(['id', 'name']);
-        $examHasAttendance = Schema::connection('tenant')->hasColumn('exam_degrees', 'attendance_status');
+        $examHasAttendance = Schema::connection('center')->hasColumn('exam_degrees', 'attendance_status');
         $examCols = ['student_id', 'degree', 'notes'];
         if ($examHasAttendance) $examCols[] = 'attendance_status';
         $records = $tenantDb->table('exam_degrees')->where('section_id', $sectionId)->whereDate('exam_date', $date)->get($examCols)->keyBy('student_id');
@@ -5168,11 +5251,11 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
-        $days = DB::connection('tenant')->table('exam_degrees')
+        $days = DB::connection('center')->table('exam_degrees')
             ->where('section_id', $sectionId)
             ->select(DB::raw('DATE(exam_date) as date'), DB::raw('COUNT(*) as students_count'))
             ->groupBy(DB::raw('DATE(exam_date)'))
@@ -5189,19 +5272,19 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
         $payload = $request->validate([
             'rows' => ['required', 'array', 'min:1'],
-            'rows.*.student_id' => ['required', 'integer', 'exists:tenant.students,id'],
+            'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
             'rows.*.degree' => ['nullable', 'string', 'max:10'],
             'rows.*.notes' => ['nullable', 'string'],
         ]);
-        $tenantDb = DB::connection('tenant');
-        $examHasAttendance = Schema::connection('tenant')->hasColumn('exam_degrees', 'attendance_status');
+        $tenantDb = DB::connection('center');
+        $examHasAttendance = Schema::connection('center')->hasColumn('exam_degrees', 'attendance_status');
         $students = $tenantDb->table('students')->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())->get(['id', 'grade_id', 'class_id', 'section_id'])->keyBy('id');
         foreach ($payload['rows'] as $row) {
             $s = $students->get($row['student_id']);
@@ -5236,16 +5319,16 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
         $students = $tenantDb->table('students')->where('section_id', $sectionId)->whereNull('deleted_at')->get(['id', 'name']);
-        $quizHasAttendance = Schema::connection('tenant')->hasColumn('quiz_degrees', 'attendance_status');
+        $quizHasAttendance = Schema::connection('center')->hasColumn('quiz_degrees', 'attendance_status');
         $quizCols = ['student_id', 'degree', 'notes'];
         if ($quizHasAttendance) $quizCols[] = 'attendance_status';
         $records = $tenantDb->table('quiz_degrees')->where('section_id', $sectionId)->whereDate('quiz_date', $date)->get($quizCols)->keyBy('student_id');
@@ -5273,11 +5356,11 @@ Route::middleware([
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
-        $days = DB::connection('tenant')->table('quiz_degrees')
+        $days = DB::connection('center')->table('quiz_degrees')
             ->where('section_id', $sectionId)
             ->select(DB::raw('DATE(quiz_date) as date'), DB::raw('COUNT(*) as students_count'))
             ->groupBy(DB::raw('DATE(quiz_date)'))
@@ -5294,19 +5377,19 @@ Route::middleware([
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
         $payload = $request->validate([
             'rows' => ['required', 'array', 'min:1'],
-            'rows.*.student_id' => ['required', 'integer', 'exists:tenant.students,id'],
+            'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
             'rows.*.degree' => ['nullable', 'string', 'max:10'],
             'rows.*.notes' => ['nullable', 'string'],
         ]);
-        $tenantDb = DB::connection('tenant');
-        $quizHasAttendance = Schema::connection('tenant')->hasColumn('quiz_degrees', 'attendance_status');
+        $tenantDb = DB::connection('center');
+        $quizHasAttendance = Schema::connection('center')->hasColumn('quiz_degrees', 'attendance_status');
         $students = $tenantDb->table('students')->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())->get(['id', 'grade_id', 'class_id', 'section_id'])->keyBy('id');
         foreach ($payload['rows'] as $row) {
             $s = $students->get($row['student_id']);
@@ -5345,12 +5428,12 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
 
@@ -5401,12 +5484,12 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
 
@@ -5453,19 +5536,19 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate([
             'rows' => ['required', 'array', 'min:1'],
-            'rows.*.student_id' => ['required', 'integer', 'exists:tenant.students,id'],
+            'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
             'rows.*.notes' => ['nullable', 'string'],
         ]);
 
-        $tenantDb = DB::connection('tenant');
+        $tenantDb = DB::connection('center');
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
 
@@ -5512,74 +5595,20 @@ Route::middleware([
         return response()->json(['message' => 'Attendance saved']);
     });
 
-    Route::post('/login', function (Request $request) use ($guardMap, $roleMap, $tenantGuards, $resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
-        $payload = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-            'guard' => ['nullable', 'string'],
-            'tenant_slug' => ['nullable', 'string'],
-            'tenantSlug' => ['nullable', 'string'],
-        ]);
+    Route::post('/login', function (Request $request) use ($guardMap, $roleMap, $tenantGuards) {
+        return app(AuthLoginHandler::class)->login($request, $guardMap, $roleMap, $tenantGuards);
+    });
 
-        $guard = $payload['guard'] ?? 'users';
-        $authGuard = $guardMap[$guard] ?? 'web';
-        $tenant = null;
+    Route::get('/auth/memberships', function (Request $request) use ($guardMap) {
+        return app(AuthLoginHandler::class)->listMemberships($request, $guardMap);
+    });
 
-        if (in_array($authGuard, $tenantGuards, true)) {
-            $tenantSlug = $payload['tenant_slug'] ?? $payload['tenantSlug'] ?? $request->header('X-Tenant-Slug');
-            $tenant = $resolveTenantBySlug($tenantSlug);
-            if (!$tenant) {
-                return response()->json([
-                    'message' => 'Invalid tenant slug. Please enter a valid tenant code.',
-                ], 422);
-            }
-            $ensureTenantInitialized($tenant);
+    Route::post('/auth/switch-tenant', function (Request $request) use ($guardMap, $roleMap) {
+        return app(AuthLoginHandler::class)->switchCenter($request, $guardMap, $roleMap);
+    });
 
-            if (!DB::connection('tenant')->getDatabaseName()) {
-                return response()->json([
-                    'message' => 'Tenant database was not initialized for this request.',
-                ], 500);
-            }
-        }
-
-        if (!Auth::guard($authGuard)->attempt([
-            'email' => $payload['email'],
-            'password' => $payload['password'],
-        ])) {
-            return response()->json([
-                'message' => 'Invalid credentials',
-            ], 401);
-        }
-
-        $request->session()->regenerate();
-        $request->session()->put('api_auth_guard', $authGuard);
-        $request->session()->put('api_tenant_id', $tenant?->id);
-        $request->session()->put('api_tenant_slug', $payload['tenant_slug'] ?? $payload['tenantSlug'] ?? null);
-
-        $user = Auth::guard($authGuard)->user();
-        $request->session()->put('api_auth_user_id', $user->id);
-
-        $tenantSlugValue = $payload['tenant_slug'] ?? $payload['tenantSlug'] ?? null;
-        $apiToken = ApiBearerAuth::issue($authGuard, (int) $user->id, $tenant?->id, $tenantSlugValue);
-
-            $tenantName = $tenant
-                ? optional(TenantInfo::on($centralConnection)->where('tenant_id', $tenant->id)->first())->name
-                : null;
-
-        return response()->json([
-            'token' => $apiToken,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name ?? $user->parent_name ?? 'User',
-                'email' => $user->email,
-                'role' => $roleMap[$authGuard] ?? 'admin',
-                'locale' => app()->getLocale(),
-                'created_at' => optional($user->created_at)->toDateString() ?? now()->toDateString(),
-                'tenant_id' => $tenant?->id,
-                'tenant_slug' => $payload['tenant_slug'] ?? $payload['tenantSlug'] ?? null,
-                'tenant_name' => $tenantName,
-            ],
-        ]);
+    Route::post('/auth/switch-center', function (Request $request) use ($guardMap, $roleMap) {
+        return app(AuthLoginHandler::class)->switchCenter($request, $guardMap, $roleMap);
     });
 
     Route::post('/logout', function (Request $request) use ($tenantGuards, $ensureTenantInitialized, $centralConnection) {
@@ -5589,7 +5618,7 @@ Route::middleware([
         $tenantId = $request->session()->get('api_tenant_id');
 
         if (in_array($guard, $tenantGuards, true) && $tenantId) {
-            $tenant = Tenant::on($centralConnection)->find($tenantId);
+            $tenant = Center::query()->find($tenantId);
             if ($tenant) {
                 $ensureTenantInitialized($tenant);
             }
@@ -5604,19 +5633,71 @@ Route::middleware([
 
     Route::get('/user', function (Request $request) use ($tenantGuards, $roleMap, $resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = null;
         $bearer = ApiBearerAuth::resolve($request);
 
         if ($bearer) {
             $guard = $bearer['guard'];
+            if (! empty($bearer['portal'])) {
+                $request->session()->put('api_portal_mode', true);
+                $request->session()->put('api_auth_guard', $bearer['guard']);
+                if (! empty($bearer['profile_email'])) {
+                    $request->session()->put('api_profile_email', $bearer['profile_email']);
+                }
+                if (! empty($bearer['user_type'])) {
+                    $request->session()->put('api_profile_user_type', $bearer['user_type']);
+                }
+            } elseif (! empty($bearer['profile_email'])) {
+                $request->session()->put('api_profile_email', $bearer['profile_email']);
+                if (! empty($bearer['user_type'])) {
+                    $request->session()->put('api_profile_user_type', $bearer['user_type']);
+                }
+            }
+        }
+
+        if ($request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false)) {
+            $email = $request->session()->get('api_profile_email') ?: ($bearer['profile_email'] ?? null);
+            $userType = $request->session()->get('api_profile_user_type') ?: ($bearer['user_type'] ?? null);
+            if (! $email || ! $userType) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
+
+            $identityName = $email;
+            $profiles = DB::connection('center')->table(
+                $userType === Student::class ? 'students' : 'parents'
+            )->where('email', $email)->first();
+            if ($profiles) {
+                $identityName = $userType === Student::class
+                    ? (string) ($profiles->name ?? $email)
+                    : (string) ($profiles->parent_name ?? $email);
+            }
+
+            return response()->json([
+                'user' => [
+                    'id' => 0,
+                    'name' => $identityName,
+                    'email' => $email,
+                    'role' => $roleMap[$guard] ?? $guard,
+                    'locale' => app()->getLocale(),
+                    'created_at' => now()->toDateString(),
+                    'portal_mode' => true,
+                    'tenant_id' => null,
+                    'tenant_slug' => null,
+                    'tenant_name' => null,
+                ],
+            ]);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = null;
+
+        if ($bearer) {
             $tenantId = $bearer['tenant_id'] ?: $tenantId;
             $tenantSlug = $bearer['tenant_slug'] ?: $tenantSlug;
         }
 
         if (in_array($guard, $tenantGuards, true) && ($tenantId || $tenantSlug)) {
-            $tenant = $tenantId ? Tenant::on($centralConnection)->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+            $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
             if ($tenant) {
                 $ensureTenantInitialized($tenant);
             }
@@ -5635,7 +5716,7 @@ Route::middleware([
         $user = Auth::guard($guard)->user();
 
         $tenantName = $tenant
-            ? optional(TenantInfo::on($centralConnection)->where('tenant_id', $tenant->id)->first())->name
+            ? optional($tenant)->name
             : null;
 
         return response()->json([

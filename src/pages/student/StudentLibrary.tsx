@@ -31,40 +31,6 @@ function LibraryShowDialog({ item, onClose }: { item: LibRow; onClose: () => voi
   );
 }
 
-function LibraryForm({ item, onClose, onSave, saving }: { item: LibRow | null; onClose: () => void; onSave: (payload: StudentLibraryPayload, id?: number) => Promise<void>; saving: boolean; }) {
-  const { t } = useLocale();
-  const [form, setForm] = useState({
-    title: item?.title || '',
-    type: (item?.type || 'textbook') as StudentLibraryPayload['type'],
-    notes: item?.notes || '',
-  });
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title.trim()) {
-      toast({ title: 'Validation error', description: 'Title is required.', variant: 'destructive' });
-      return;
-    }
-    onSave({ title: form.title.trim(), type: form.type, notes: form.notes || undefined }, item?.id).then(onClose).catch((error: unknown) => {
-      toast({ title: 'Save failed', description: error instanceof Error ? error.message : 'Failed to save', variant: 'destructive' });
-    });
-  };
-  return (
-    <FormDialog open onClose={onClose} title={item ? `${t('crud.edit')} ${t('nav.library')}` : `${t('crud.addNew')} ${t('nav.library')}`} onSubmit={submit} loading={saving}>
-      <FormField label={t('col.title')} id="lib-title" required><FormInput id="lib-title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required /></FormField>
-      <FormField label={t('col.type')} id="lib-type" required>
-        <FormSelect id="lib-type" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as StudentLibraryPayload['type'] }))}>
-          <option value="textbook">Textbook</option>
-          <option value="manual">Manual</option>
-          <option value="workbook">Workbook</option>
-          <option value="reference">Reference</option>
-          <option value="resource">Resource</option>
-        </FormSelect>
-      </FormField>
-      <FormField label={t('col.notes')} id="lib-notes"><FormTextarea id="lib-notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></FormField>
-    </FormDialog>
-  );
-}
-
 export default function StudentLibrary() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
@@ -96,9 +62,6 @@ export default function StudentLibrary() {
         columns={columns}
         data={rows}
         searchKeys={['title', 'type', 'notes']}
-        renderForm={(item, onClose) => (
-          <LibraryForm item={item} onClose={onClose} onSave={async (payload, id) => saveMutation.mutateAsync({ payload, id })} saving={saveMutation.isPending} />
-        )}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}
       />
       {showItem && <LibraryShowDialog item={showItem} onClose={() => setShowItem(null)} />}

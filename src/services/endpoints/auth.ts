@@ -1,6 +1,6 @@
 import { apiClient, USE_MOCK } from '../api-client';
 import { mockUser } from '../mock-data';
-import type { User } from '@/types/models';
+import type { User, TenantMembershipOption, ApiError } from '@/types/models';
 
 const AUTH_GUARDS_ENDPOINT = import.meta.env.VITE_AUTH_GUARDS_ENDPOINT || '/auth/guards';
 const AUTH_LOGIN_ENDPOINT = import.meta.env.VITE_AUTH_LOGIN_ENDPOINT || '/login';
@@ -14,12 +14,19 @@ export interface LoginPayload {
   role?: string;
   tenantSlug?: string;
   tenantId?: number;
+  membershipId?: number;
+  portal?: boolean;
 }
 
 export interface LoginResponse {
   user: User;
   token: string;
+  memberships?: TenantMembershipOption[];
 }
+
+export type LoginResult =
+  | { type: 'success'; response: LoginResponse }
+  | { type: 'tenant_selection'; memberships: TenantMembershipOption[]; user: Pick<User, 'name' | 'email' | 'role'> };
 
 const guardToRole: Record<string, User['role']> = {
   users: 'admin',
@@ -70,6 +77,8 @@ function normalizeUser(raw: unknown): User {
     tenant_id: tenantId,
     tenant_slug: readString(source.tenant_slug ?? source.tenantSlug) || null,
     tenant_name: readString(source.tenant_name ?? source.tenantName) || null,
+    portal_mode: Boolean(source.portal_mode ?? source.portalMode),
+    center_count: toNumber(source.center_count ?? source.centerCount) ?? undefined,
     avatar: readString(source.avatar) || undefined,
   };
 }
@@ -85,9 +94,14 @@ function extractAuthEnvelope(raw: unknown): LoginResponse {
     readString(data.access_token) ||
     '';
 
+  const memberships = Array.isArray(body.memberships)
+    ? (body.memberships as TenantMembershipOption[])
+    : undefined;
+
   return {
     user: normalizeUser(user),
     token,
+    memberships,
   };
 }
 
@@ -107,7 +121,12 @@ export const authApi = {
     return payload.map(g => String(g));
   },
 
-  async login(payload: LoginPayload): Promise<LoginResponse> {
+  async loginPortal(payload: LoginPayload): Promise<LoginResponse> {
+    apiClient.setTenantContext(null);
+    return this.login({ ...payload, portal: true }) as Promise<LoginResponse>;
+  },
+
+  async login(payload: LoginPayload): Promise<LoginResult> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 800));
       const role = guardToRole[payload.guard || payload.role || 'users'] || 'admin';
@@ -118,20 +137,46 @@ export const authApi = {
         tenant_id: role === 'super_admin' ? null : (payload.tenantId || 1),
         tenant_name: role === 'super_admin' ? 'Platform' : 'Default School',
       };
-      return { user, token: 'mock-jwt-token-xyz' };
+      return { type: 'success', response: { user, token: 'mock-jwt-token-xyz' } };
     }
 
-    const raw = await apiClient.post<unknown>(AUTH_LOGIN_ENDPOINT, {
-      ...payload,
-      guard: payload.guard,
-      tenant_slug: payload.tenantSlug,
-      tenant_id: payload.tenantId,
-    }, false);
-    const parsed = extractAuthEnvelope(raw);
-    if (!parsed.token) {
-      throw { message: 'Login response missing token', status: 500 };
+    try {
+      const raw = await apiClient.post<unknown>(AUTH_LOGIN_ENDPOINT, {
+        ...payload,
+        guard: payload.guard,
+        portal: payload.portal ?? false,
+        tenant_slug: payload.tenantSlug,
+        tenant_id: payload.tenantId,
+        membership_id: payload.membershipId,
+      }, false);
+      const parsed = extractAuthEnvelope(raw);
+      if (!parsed.token) {
+        throw { message: 'Login response missing token', status: 500 };
+      }
+      return { type: 'success', response: parsed };
+    } catch (err: unknown) {
+      const apiErr = err as ApiError;
+      if (apiErr.status === 409 && apiErr.requires_tenant_selection && apiErr.memberships?.length) {
+        return {
+          type: 'tenant_selection',
+          memberships: apiErr.memberships,
+          user: {
+            name: apiErr.user?.name || payload.email,
+            email: apiErr.user?.email || payload.email,
+            role: apiErr.user?.role || guardToRole[payload.guard || 'parent'] || 'parent',
+          },
+        };
+      }
+      throw err;
     }
-    return parsed;
+  },
+
+  async switchTenant(membershipId: number, guard?: string): Promise<LoginResponse> {
+    const raw = await apiClient.post<unknown>('/auth/switch-tenant', {
+      membership_id: membershipId,
+      guard,
+    }, false);
+    return extractAuthEnvelope(raw);
   },
 
   async logout(): Promise<void> {

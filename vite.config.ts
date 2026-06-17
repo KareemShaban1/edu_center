@@ -74,13 +74,13 @@ export default defineConfig(({ mode }) => ({
     reactRefreshGetRefreshRegShim(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["pwa-192.png", "pwa-512.png", "apple-touch-icon.png"],
+      includeAssets: ["pwa-192.png", "pwa-512.png", "apple-touch-icon.png", "favicon-32.png", "brand/app-icon.svg"],
       manifest: {
         name: "EduCenter",
         short_name: "EduCenter",
         description: "Education center management platform",
-        theme_color: "#2563eb",
-        background_color: "#ffffff",
+        theme_color: "#ba181b",
+        background_color: "#faf9f9",
         display: "standalone",
         orientation: "portrait-primary",
         scope: "/",

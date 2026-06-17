@@ -22,7 +22,6 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         \App\Http\Middleware\ForceUrlForTenant::class,
-
     ];
 
     /**
@@ -72,6 +71,7 @@ class Kernel extends HttpKernel
         'localeSessionRedirect'   => \Mcamara\LaravelLocalization\Middleware\LocaleSessionRedirect::class,
         'localeCookieRedirect'    => \Mcamara\LaravelLocalization\Middleware\LocaleCookieRedirect::class,
         'localeViewPath'          => \Mcamara\LaravelLocalization\Middleware\LaravelLocalizationViewPath::class,
+        'center.subdomain'        => \App\Http\Middleware\InitializeCenterFromSubdomain::class,
 
     ];
 }

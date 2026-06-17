@@ -60,7 +60,8 @@ export type SectionType =
   | 'sponsors'
   | 'blog'
   | 'newsletter'
-  | 'footer';
+  | 'footer'
+  | 'custom';
 
 export type ComponentType =
   | 'button'

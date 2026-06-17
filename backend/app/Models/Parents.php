@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenterViaMembership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Translatable\HasTranslations;
@@ -9,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Parents extends Authenticatable
 {
+    use BelongsToCenterViaMembership;
     // use HasTranslations;
     use Notifiable;
 
@@ -29,6 +31,7 @@ class Parents extends Authenticatable
     protected $table = 'parents';
     protected $guarded = [];
 
+    protected $connection = 'center';
 
     public function receivesBroadcastNotificationsOn()
     {

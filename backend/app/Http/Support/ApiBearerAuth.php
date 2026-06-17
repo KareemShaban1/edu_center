@@ -10,8 +10,14 @@ use Illuminate\Support\Facades\Crypt;
 class ApiBearerAuth
 {
     /** @param int|string|null $tenantId Stancl tenants use UUID strings. */
-    public static function issue(string $guard, int $userId, int|string|null $tenantId, ?string $tenantSlug): string
-    {
+    public static function issue(
+        string $guard,
+        int $userId,
+        int|string|null $tenantId,
+        ?string $tenantSlug,
+        ?string $profileEmail = null,
+        ?string $userType = null,
+    ): string {
         $ttl = (int) config('session.lifetime', 120);
 
         $payload = [
@@ -19,6 +25,8 @@ class ApiBearerAuth
             'user_id' => $userId,
             'tenant_id' => $tenantId !== null && $tenantId !== '' ? (string) $tenantId : null,
             'tenant_slug' => $tenantSlug,
+            'profile_email' => $profileEmail,
+            'user_type' => $userType,
             'exp' => now()->addMinutes($ttl > 0 ? $ttl : 120)->getTimestamp(),
         ];
 
@@ -30,7 +38,7 @@ class ApiBearerAuth
         // Stateless encrypted tokens expire automatically; session logout still applies.
     }
 
-    /** @return array{guard: string, user_id: int, tenant_id: ?string, tenant_slug: ?string}|null */
+    /** @return array{guard: string, user_id: int, tenant_id: ?string, tenant_slug: ?string, portal?: bool, profile_email?: string, user_type?: string}|null */
     public static function resolve(Request $request): ?array
     {
         $token = $request->bearerToken();
@@ -44,11 +52,27 @@ class ApiBearerAuth
             return null;
         }
 
-        if (! is_array($decoded) || empty($decoded['user_id'])) {
+        if (! is_array($decoded)) {
             return null;
         }
 
         if ((int) ($decoded['exp'] ?? 0) < time()) {
+            return null;
+        }
+
+        if (! empty($decoded['portal'])) {
+            return [
+                'guard' => (string) ($decoded['guard'] ?? 'parent'),
+                'user_id' => 0,
+                'tenant_id' => null,
+                'tenant_slug' => null,
+                'portal' => true,
+                'profile_email' => (string) ($decoded['profile_email'] ?? ''),
+                'user_type' => isset($decoded['user_type']) ? (string) $decoded['user_type'] : null,
+            ];
+        }
+
+        if (empty($decoded['user_id'])) {
             return null;
         }
 
@@ -59,6 +83,23 @@ class ApiBearerAuth
             'user_id' => (int) $decoded['user_id'],
             'tenant_id' => $tenantId !== null && $tenantId !== '' ? (string) $tenantId : null,
             'tenant_slug' => isset($decoded['tenant_slug']) ? (string) $decoded['tenant_slug'] : null,
+            'profile_email' => isset($decoded['profile_email']) ? (string) $decoded['profile_email'] : null,
+            'user_type' => isset($decoded['user_type']) ? (string) $decoded['user_type'] : null,
         ];
+    }
+
+    public static function issuePortal(string $guard, string $profileEmail, string $userType): string
+    {
+        $ttl = (int) config('session.lifetime', 120);
+
+        $payload = [
+            'portal' => true,
+            'guard' => $guard,
+            'profile_email' => $profileEmail,
+            'user_type' => $userType,
+            'exp' => now()->addMinutes($ttl > 0 ? $ttl : 120)->getTimestamp(),
+        ];
+
+        return Crypt::encryptString(json_encode($payload, JSON_THROW_ON_ERROR));
     }
 }

@@ -26,6 +26,7 @@ export function StudentsFeatureIllustration({ className }: { className?: string 
       {[0, 1, 2].map(i => (
         <g key={i}>
           <circle cx={80 + i * 120} cy="72" r="28" fill={B.crimsonBright} fillOpacity={0.15 + i * 0.05} stroke={B.crimson} strokeOpacity="0.2" strokeWidth="1" />
+          <rect x={68 + i * 120} y="98" width="24" height="16" rx="3" fill="#0d9488" fillOpacity="0.25" stroke="#115e59" strokeOpacity="0.3" strokeWidth="0.75" />
           <rect x={52 + i * 120} y="112" width="56" height="8" rx="3" fill={B.crimson} fillOpacity="0.35" />
           <rect x={44 + i * 120} y="128" width="72" height="6" rx="2" fill={B.crimson} fillOpacity="0.18" />
         </g>
@@ -99,11 +100,18 @@ export function FeesFeatureIllustration({ className }: { className?: string }) {
   );
 }
 
+const ARABIC_SPINES = ['رياضيات', 'علوم', 'لغة', 'تاريخ'];
+
 export function LibraryFeatureIllustration({ className }: { className?: string }) {
   return (
     <Frame idPrefix="library" className={className}>
       {[0, 1, 2, 3].map(i => (
-        <rect key={i} x={40 + i * 88} y="48" width="64" height="88" rx="6" fill={B.crimsonBright} fillOpacity={0.1 + i * 0.05} stroke={B.crimson} strokeOpacity="0.15" strokeWidth="1" />
+        <g key={i}>
+          <rect x={40 + i * 88} y="48" width="64" height="88" rx="6" fill={i % 2 === 0 ? B.crimsonBright : '#0d9488'} fillOpacity={0.1 + i * 0.05} stroke={B.crimson} strokeOpacity="0.15" strokeWidth="1" />
+          <text x={72 + i * 88} y="92" textAnchor="middle" fill={B.crimsonDark} fontSize="9" fontWeight="600" transform={`rotate(-90 ${72 + i * 88} 92)`}>
+            {ARABIC_SPINES[i]}
+          </text>
+        </g>
       ))}
       <rect x="32" y="152" width="336" height="72" rx="12" fill={B.surface} stroke={B.crimsonBright} strokeOpacity="0.15" strokeWidth="1" />
       {[0, 1, 2].map(i => (

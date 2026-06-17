@@ -27,13 +27,13 @@ class MonthlyUnpaidStudentsService
         $monthLabel = $now->format('F Y');
         $monthTokens = $this->monthTokens($now);
 
-        if (! Schema::connection('tenant')->hasTable('fees')
-            || ! Schema::connection('tenant')->hasTable('students')) {
+        if (! Schema::connection('center')->hasTable('fees')
+            || ! Schema::connection('center')->hasTable('students')) {
             return $this->emptyResult($monthLabel);
         }
 
-        $hasPayments = Schema::connection('tenant')->hasTable('payments');
-        $studentsHasDeletedAt = Schema::connection('tenant')->hasColumn('students', 'deleted_at');
+        $hasPayments = Schema::connection('center')->hasTable('payments');
+        $studentsHasDeletedAt = Schema::connection('center')->hasColumn('students', 'deleted_at');
 
         $fees = $this->resolveMonthFees($tenantDb, $now, $monthTokens, $hasPayments);
         $academicMaps = $this->loadAcademicNameMaps($tenantDb);
@@ -140,7 +140,7 @@ class MonthlyUnpaidStudentsService
     private function resolveMonthFees(Connection $tenantDb, Carbon $now, array $monthTokens, bool $hasPayments): Collection
     {
         $feeColumns = ['id', 'title', 'amount', 'grade_id', 'class_id', 'section_id', 'month'];
-        if (Schema::connection('tenant')->hasColumn('fees', 'year')) {
+        if (Schema::connection('center')->hasColumn('fees', 'year')) {
             $feeColumns[] = 'year';
         }
 
@@ -205,13 +205,13 @@ class MonthlyUnpaidStudentsService
     private function loadAcademicNameMaps(Connection $tenantDb): array
     {
         return [
-            'grades' => Schema::connection('tenant')->hasTable('grades')
+            'grades' => Schema::connection('center')->hasTable('grades')
                 ? $tenantDb->table('grades')->pluck('grade_name', 'id')
                 : collect(),
-            'classes' => Schema::connection('tenant')->hasTable('classes')
+            'classes' => Schema::connection('center')->hasTable('classes')
                 ? $tenantDb->table('classes')->pluck('class_name', 'id')
                 : collect(),
-            'sections' => Schema::connection('tenant')->hasTable('sections')
+            'sections' => Schema::connection('center')->hasTable('sections')
                 ? $tenantDb->table('sections')->pluck('section_name', 'id')
                 : collect(),
         ];
@@ -354,7 +354,7 @@ class MonthlyUnpaidStudentsService
                     $inner->orWhereRaw('LOWER(TRIM(payments.month)) = ?', [strtolower($token)]);
                 }
 
-                if (Schema::connection('tenant')->hasColumn('fees', 'month')) {
+                if (Schema::connection('center')->hasColumn('fees', 'month')) {
                     foreach ($monthTokens as $token) {
                         $inner->orWhereRaw('LOWER(TRIM(fees.month)) = ?', [strtolower($token)]);
                     }

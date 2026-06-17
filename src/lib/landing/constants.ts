@@ -65,6 +65,7 @@ export const SECTION_CATALOG: { type: SectionType; labelKey: string; icon: strin
   { type: 'blog', labelKey: 'landing.section.blog', icon: 'Newspaper', category: 'content' },
   { type: 'newsletter', labelKey: 'landing.section.newsletter', icon: 'Send', category: 'conversion' },
   { type: 'footer', labelKey: 'landing.section.footer', icon: 'PanelBottom', category: 'core' },
+  { type: 'custom', labelKey: 'landing.section.custom', icon: 'Blocks', category: 'custom' },
 ];
 
 export const COMPONENT_CATALOG: { type: ComponentType; labelKey: string }[] = [

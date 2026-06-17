@@ -1,5 +1,11 @@
 import { apiClient, USE_MOCK } from '../api-client';
-import type { ActivityLog, Subscription, Tenant, User } from '@/types/models';
+import type { ActivityLog, Subscription, Tenant, TenantCreatePayload, TenantCreateResponse, User } from '@/types/models';
+import {
+  BRANDING_STORAGE_KEY,
+  DEFAULT_APP_BRANDING,
+  normalizeBranding,
+  type AppBranding,
+} from '@/lib/branding';
 
 let mockTenants: Tenant[] = [
   {
@@ -106,39 +112,52 @@ export const platformApi = {
     return apiClient.get<Tenant[]>('/platform/tenants', undefined, false);
   },
 
-  async saveTenant(payload: Partial<Tenant> & { id?: number }): Promise<Tenant> {
+  async saveTenant(payload: TenantCreatePayload): Promise<TenantCreateResponse> {
     if (USE_MOCK) {
       await sleep(200);
       if (payload.id) {
         mockTenants = mockTenants.map(t => (t.id === payload.id ? { ...t, ...payload } : t));
         return mockTenants.find(t => t.id === payload.id)!;
       }
-      const created: Tenant = {
-        id: Date.now(),
+      const slug = payload.slug || payload.name?.toLowerCase().replace(/\s+/g, '-') || 'tenant';
+      const created: TenantCreateResponse = {
+        id: slug,
         name: payload.name || 'New Tenant',
         domain: payload.domain || 'tenant.example.com',
-        slug: payload.slug || payload.name?.toLowerCase().replace(/\s+/g, '-') || 'tenant',
+        slug,
         status: (payload.status as Tenant['status']) || 'active',
         plan: payload.plan || 'Starter',
-        users_count: 0,
-        teachers_count: 0,
-        students_count: 0,
-        parents_count: 0,
+        users_count: payload.seed_default_accounts === false ? 0 : 1,
+        teachers_count: (payload.seed_default_accounts === false ? 0 : 1) + (payload.initial_users?.teachers?.length ?? 0),
+        students_count: payload.seed_default_accounts === false ? 0 : 1,
+        parents_count: payload.seed_default_accounts === false ? 0 : 1,
         database: payload.database || `tenant_${Date.now()}`,
         subscription_status: 'trial',
         created_at: new Date().toISOString().slice(0, 10),
+        default_accounts: payload.seed_default_accounts === false ? [] : [
+          { role: 'admin', name: 'Center Admin', email: `admin-${slug}@educenter.com`, password: 'password' },
+          { role: 'teacher', name: 'Default Teacher', email: `teacher-${slug}@educenter.com`, password: 'password' },
+          { role: 'parent', name: 'Default Parent', email: `parent-${slug}@educenter.com`, password: 'password' },
+          { role: 'student', name: 'Default Student', email: `student-${slug}@educenter.com`, password: 'password' },
+          ...(payload.initial_users?.teachers?.map(t => ({
+            role: 'teacher',
+            name: t.name,
+            email: t.email,
+            password: t.password || 'password',
+          })) ?? []),
+        ],
       };
       mockTenants = [created, ...mockTenants];
       return created;
     }
 
     if (payload.id) {
-      return apiClient.put<Tenant>(`/platform/tenants/${payload.id}`, payload, false);
+      return apiClient.put<TenantCreateResponse>(`/platform/tenants/${payload.id}`, payload, false);
     }
-    return apiClient.post<Tenant>('/platform/tenants', payload, false);
+    return apiClient.post<TenantCreateResponse>('/platform/tenants', payload, false);
   },
 
-  async deleteTenant(id: number): Promise<void> {
+  async deleteTenant(id: number | string): Promise<void> {
     if (USE_MOCK) {
       await sleep(200);
       mockTenants = mockTenants.filter(t => t.id !== id);
@@ -259,5 +278,28 @@ export const platformApi = {
       return [...mockLogs];
     }
     return apiClient.get<ActivityLog[]>('/platform/activity-logs', undefined, false);
+  },
+
+  async getBranding(): Promise<AppBranding> {
+    if (USE_MOCK) {
+      await sleep(150);
+      try {
+        const raw = localStorage.getItem(BRANDING_STORAGE_KEY);
+        return normalizeBranding(raw ? JSON.parse(raw) : DEFAULT_APP_BRANDING);
+      } catch {
+        return { ...DEFAULT_APP_BRANDING };
+      }
+    }
+    return apiClient.get<AppBranding>('/branding', undefined, false);
+  },
+
+  async saveBranding(payload: AppBranding): Promise<AppBranding> {
+    const normalized = normalizeBranding(payload);
+    if (USE_MOCK) {
+      await sleep(200);
+      localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(normalized));
+      return normalized;
+    }
+    return apiClient.put<AppBranding>('/platform/branding', normalized, false);
   },
 };

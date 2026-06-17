@@ -1,6 +1,7 @@
 import type { LandingPageTheme, LandingSection, LocalizedText, TextRole } from '@/types/landing';
 import { localized } from '@/lib/landing/defaults';
 import { resolveLandingAssetUrl } from '@/lib/landing/media-url';
+import { resolveSectionLayout } from '@/lib/landing/section-layouts';
 import { resolveTextStyle } from '@/lib/landing/typography';
 import { SectionImage } from '../SectionImage';
 import { useTypography } from '../TypographyContext';
@@ -270,16 +271,58 @@ export function HeroSection(props: SectionProps) {
   const { section, locale, theme, editMode, onContentChange } = props;
   const c = section.content;
   const stats = (c.stats as { value: string; label: LocalizedText }[]) ?? [];
-  return (
-    <SectionWrapper {...props}>
-      <div className="grid grid-cols-1 @lg:grid-cols-2 gap-8 @lg:gap-12 items-center">
-        <div className="space-y-4 @sm:space-y-6 order-2 @lg:order-1">
-          <span className="inline-block px-4 py-1 rounded-full" style={{ backgroundColor: `${theme.primaryColor}20` }}>
-            {locEdit(c, 'badge', locale, editMode, onContentChange, section, theme, 'label')}
-          </span>
-          {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1')}
-          {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
-          <div className="flex flex-col @sm:flex-row flex-wrap gap-3 @sm:gap-4">
+  const layout = resolveSectionLayout(section);
+
+  const badge = (
+    <span className="inline-block px-4 py-1 rounded-full" style={{ backgroundColor: `${theme.primaryColor}20` }}>
+      {locEdit(c, 'badge', locale, editMode, onContentChange, section, theme, 'label')}
+    </span>
+  );
+  const ctas = (
+    <div className="flex flex-col @sm:flex-row flex-wrap gap-3 @sm:gap-4">
+      <Button size="lg" className="w-full @sm:w-auto" style={{ backgroundColor: theme.primaryColor }}>
+        {locEdit(c, 'ctaPrimary', locale, editMode, onContentChange, section, theme, 'button')}
+      </Button>
+      <Button size="lg" variant="outline" className="w-full @sm:w-auto">
+        {locEdit(c, 'ctaSecondary', locale, editMode, onContentChange, section, theme, 'button')}
+      </Button>
+    </div>
+  );
+  const statsBlock = c.showStats && stats.length > 0 && (
+    <div className="grid grid-cols-2 @sm:grid-cols-3 gap-3 @sm:gap-4 pt-4 @sm:pt-6">
+      {stats.map((s, i) => (
+        <HeroStatCell
+          key={i}
+          stat={s}
+          index={i}
+          stats={stats}
+          locale={locale}
+          section={section}
+          theme={theme}
+          editMode={editMode}
+          onContentChange={onContentChange}
+        />
+      ))}
+    </div>
+  );
+  const imageBlock = (
+    <div className="aspect-[4/3] @sm:aspect-square rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden" style={{ borderRadius: theme.borderRadius }}>
+      {contentImageUrl(c) ? (
+        <SectionImage src={c.imageUrl as string} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <BookOpen className="w-24 h-24 opacity-20" style={{ color: theme.primaryColor }} />
+      )}
+    </div>
+  );
+
+  if (layout === 'centered') {
+    return (
+      <SectionWrapper {...props}>
+        <div className="max-w-3xl mx-auto text-center space-y-4 @sm:space-y-6">
+          {badge}
+          {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', 'text-center', false, 'h1')}
+          {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'text-center', true, 'p')}
+          <div className="flex flex-col @sm:flex-row flex-wrap justify-center gap-3 @sm:gap-4">
             <Button size="lg" className="w-full @sm:w-auto" style={{ backgroundColor: theme.primaryColor }}>
               {locEdit(c, 'ctaPrimary', locale, editMode, onContentChange, section, theme, 'button')}
             </Button>
@@ -287,31 +330,49 @@ export function HeroSection(props: SectionProps) {
               {locEdit(c, 'ctaSecondary', locale, editMode, onContentChange, section, theme, 'button')}
             </Button>
           </div>
-          {c.showStats && stats.length > 0 && (
-            <div className="grid grid-cols-2 @sm:grid-cols-3 gap-3 @sm:gap-4 pt-4 @sm:pt-6">
-              {stats.map((s, i) => (
-                <HeroStatCell
-                  key={i}
-                  stat={s}
-                  index={i}
-                  stats={stats}
-                  locale={locale}
-                  section={section}
-                  theme={theme}
-                  editMode={editMode}
-                  onContentChange={onContentChange}
-                />
-              ))}
-            </div>
-          )}
+          <div className="max-w-md mx-auto">{imageBlock}</div>
+          {statsBlock}
         </div>
-        <div className="aspect-[4/3] @sm:aspect-square rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden order-1 @lg:order-2" style={{ borderRadius: theme.borderRadius }}>
-          {contentImageUrl(c) ? (
-            <SectionImage src={c.imageUrl as string} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <BookOpen className="w-24 h-24 opacity-20" style={{ color: theme.primaryColor }} />
-          )}
+      </SectionWrapper>
+    );
+  }
+
+  if (layout === 'background') {
+    const bgUrl = contentImageUrl(c);
+    return (
+      <SectionWrapper {...props}>
+        <div
+          className="relative rounded-2xl overflow-hidden px-6 py-12 @sm:px-10 @sm:py-16"
+          style={{
+            borderRadius: theme.borderRadius,
+            backgroundImage: bgUrl ? `linear-gradient(rgba(15,23,42,0.72), rgba(15,23,42,0.72)), url(${bgUrl})` : `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="relative max-w-2xl space-y-4 @sm:space-y-6 text-white">
+            {badge}
+            {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1')}
+            {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'opacity-90', true, 'p')}
+            {ctas}
+            {statsBlock}
+          </div>
         </div>
+      </SectionWrapper>
+    );
+  }
+
+  return (
+    <SectionWrapper {...props}>
+      <div className="grid grid-cols-1 @lg:grid-cols-2 gap-8 @lg:gap-12 items-center">
+        <div className="space-y-4 @sm:space-y-6 order-2 @lg:order-1">
+          {badge}
+          {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1')}
+          {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
+          {ctas}
+          {statsBlock}
+        </div>
+        <div className="order-1 @lg:order-2">{imageBlock}</div>
       </div>
     </SectionWrapper>
   );
@@ -320,25 +381,35 @@ export function HeroSection(props: SectionProps) {
 export function ContentBlockSection(props: SectionProps & { contentKey?: string; titleKey?: string }) {
   const { section, locale, theme, editMode, onContentChange, titleKey = 'title', contentKey = 'body' } = props;
   const c = section.content;
-  const showSideImage = section.type === 'about_teacher' || section.type === 'about_center';
+  const layout = resolveSectionLayout(section);
+  const imageBlock = (
+    <div
+      className="aspect-[4/3] @sm:aspect-square rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+      style={{ borderRadius: theme.borderRadius }}
+    >
+      {contentImageUrl(c) ? (
+        <SectionImage src={c.imageUrl as string} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <BookOpen className="w-24 h-24 opacity-20" style={{ color: theme.primaryColor }} />
+      )}
+    </div>
+  );
+  const textBlock = (
+    <div className="space-y-4 @sm:space-y-6">
+      {locEdit(c, titleKey, locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h2')}
+      {locEdit(c, contentKey, locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
+    </div>
+  );
 
-  if (showSideImage) {
+  if (layout === 'split-right' || layout === 'split-left') {
     return (
       <SectionWrapper {...props}>
         <div className="grid grid-cols-1 @lg:grid-cols-2 gap-8 @lg:gap-12 items-center">
-          <div className="space-y-4 @sm:space-y-6 order-2 @lg:order-1">
-            {locEdit(c, titleKey, locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h2')}
-            {locEdit(c, contentKey, locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
+          <div className={cn('space-y-4 @sm:space-y-6', layout === 'split-right' ? 'order-2 @lg:order-1' : 'order-2 @lg:order-2')}>
+            {textBlock}
           </div>
-          <div
-            className="aspect-[4/3] @sm:aspect-square rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden order-1 @lg:order-2"
-            style={{ borderRadius: theme.borderRadius }}
-          >
-            {contentImageUrl(c) ? (
-              <SectionImage src={c.imageUrl as string} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <BookOpen className="w-24 h-24 opacity-20" style={{ color: theme.primaryColor }} />
-            )}
+          <div className={cn(layout === 'split-right' ? 'order-1 @lg:order-2' : 'order-1 @lg:order-1')}>
+            {imageBlock}
           </div>
         </div>
       </SectionWrapper>
@@ -348,8 +419,9 @@ export function ContentBlockSection(props: SectionProps & { contentKey?: string;
   return (
     <SectionWrapper {...props}>
       <div className="max-w-3xl mx-auto text-center space-y-4 @sm:space-y-6">
-        {locEdit(c, titleKey, locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h2')}
-        {locEdit(c, contentKey, locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
+        {contentImageUrl(c) && <div className="max-w-sm mx-auto">{imageBlock}</div>}
+        {locEdit(c, titleKey, locale, editMode, onContentChange, section, theme, 'heading', 'text-center', false, 'h2')}
+        {locEdit(c, contentKey, locale, editMode, onContentChange, section, theme, 'body', 'text-center', true, 'p')}
       </div>
     </SectionWrapper>
   );
@@ -359,23 +431,51 @@ export function FeaturesSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const items = (c.items as { icon?: string; title: LocalizedText; desc: LocalizedText }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  const renderItem = (item: typeof items[number], i: number, centered = true) => {
+    const Icon = ICON_MAP[item.icon ?? 'BookOpen'] ?? BookOpen;
+    return (
+      <div
+        key={i}
+        className={cn(
+          'p-6 rounded-xl border bg-white/50 space-y-4',
+          centered ? 'text-center' : 'flex gap-4 items-start',
+        )}
+        style={{ borderRadius: theme.borderRadius }}
+      >
+        <div
+          className={cn(
+            'w-12 h-12 rounded-lg flex items-center justify-center shrink-0',
+            centered && 'mx-auto',
+          )}
+          style={{ backgroundColor: `${theme.primaryColor}15` }}
+        >
+          <Icon className="w-6 h-6" style={{ color: theme.primaryColor }} />
+        </div>
+        <div className={cn(centered ? 'space-y-2' : 'min-w-0')}>
+          <h3 className="font-semibold text-lg">{item.title[locale]}</h3>
+          <p className="text-sm opacity-70">{item.desc[locale]}</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-6 @sm:gap-8">
-        {items.map((item, i) => {
-          const Icon = ICON_MAP[item.icon ?? 'BookOpen'] ?? BookOpen;
-          return (
-            <div key={i} className="p-6 rounded-xl border bg-white/50 text-center space-y-4" style={{ borderRadius: theme.borderRadius }}>
-              <div className="w-12 h-12 mx-auto rounded-lg flex items-center justify-center" style={{ backgroundColor: `${theme.primaryColor}15` }}>
-                <Icon className="w-6 h-6" style={{ color: theme.primaryColor }} />
-              </div>
-              <h3 className="font-semibold text-lg">{item.title[locale]}</h3>
-              <p className="text-sm opacity-70">{item.desc[locale]}</p>
-            </div>
-          );
-        })}
-      </div>
+      {layout === 'list' ? (
+        <div className="max-w-3xl mx-auto space-y-4">
+          {items.map((item, i) => renderItem(item, i, false))}
+        </div>
+      ) : (
+        <div className={cn(
+          'grid gap-6 @sm:gap-8',
+          layout === 'grid-2' ? 'grid-cols-1 @sm:grid-cols-2' : 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3',
+        )}>
+          {items.map((item, i) => renderItem(item, i))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
@@ -384,25 +484,47 @@ export function TestimonialsSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const items = (c.items as { name: string; role: LocalizedText; text: LocalizedText; rating?: number }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  const renderCard = (item: typeof items[number], i: number, featured = false) => (
+    <div
+      key={i}
+      className={cn(
+        'p-6 rounded-xl border bg-white shadow-sm space-y-4',
+        featured && 'p-8 @md:col-span-2',
+      )}
+      style={{ borderRadius: theme.borderRadius }}
+    >
+      <div className="flex gap-1">
+        {Array.from({ length: item.rating ?? 5 }).map((_, j) => (
+          <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
+        ))}
+      </div>
+      <p className={cn('italic opacity-80', featured && 'text-lg')}>{`"${item.text[locale]}"`}</p>
+      <div>
+        <div className="font-semibold">{item.name}</div>
+        <div className="text-sm opacity-60">{item.role[locale]}</div>
+      </div>
+    </div>
+  );
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-1 @md:grid-cols-2 gap-6 @sm:gap-8">
-        {items.map((item, i) => (
-          <div key={i} className="p-6 rounded-xl border bg-white shadow-sm space-y-4" style={{ borderRadius: theme.borderRadius }}>
-            <div className="flex gap-1">
-              {Array.from({ length: item.rating ?? 5 }).map((_, j) => (
-                <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            <p className="italic opacity-80">"{item.text[locale]}"</p>
-            <div>
-              <div className="font-semibold">{item.name}</div>
-              <div className="text-sm opacity-60">{item.role[locale]}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {layout === 'stacked' ? (
+        <div className="max-w-2xl mx-auto space-y-6">
+          {items.map((item, i) => renderCard(item, i))}
+        </div>
+      ) : layout === 'featured' && items.length > 0 ? (
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-6 @sm:gap-8">
+          {renderCard(items[0], 0, true)}
+          {items.slice(1).map((item, i) => renderCard(item, i + 1))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-6 @sm:gap-8">
+          {items.map((item, i) => renderCard(item, i))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
@@ -411,36 +533,50 @@ export function PricingSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const plans = (c.plans as { name: LocalizedText; price: string; period: LocalizedText; featured?: boolean; features: LocalizedText[] }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  const renderPlan = (plan: typeof plans[number], i: number) => (
+    <div
+      key={i}
+      className={cn(
+        'p-6 @sm:p-8 rounded-xl border space-y-6 shrink-0',
+        layout === 'horizontal' ? 'min-w-[280px] snap-center' : '',
+        plan.featured && layout !== 'horizontal' && 'ring-2 @md:scale-105 bg-white shadow-lg z-10',
+      )}
+      style={{ borderRadius: theme.borderRadius, ...(plan.featured ? { borderColor: theme.primaryColor } : {}) }}
+    >
+      <h3 className="text-lg @sm:text-xl font-bold">{plan.name[locale]}</h3>
+      <div>
+        <span className="text-3xl @sm:text-4xl font-bold" style={{ color: theme.primaryColor }}>{plan.price}</span>
+        <span className="opacity-60">{plan.period[locale]}</span>
+      </div>
+      <ul className="space-y-2">
+        {plan.features.map((f, j) => (
+          <li key={j} className="flex items-center gap-2 text-sm">
+            <CheckCircle className="w-4 h-4 shrink-0" style={{ color: theme.primaryColor }} />
+            {f[locale]}
+          </li>
+        ))}
+      </ul>
+      <Button className="w-full" style={{ backgroundColor: theme.primaryColor }}>{locale === 'ar' ? 'اختر الخطة' : 'Choose Plan'}</Button>
+    </div>
+  );
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-6 @sm:gap-8">
-        {plans.map((plan, i) => (
-          <div
-            key={i}
-            className={cn(
-              'p-6 @sm:p-8 rounded-xl border space-y-6',
-              plan.featured && 'ring-2 @md:scale-105 bg-white shadow-lg z-10',
-            )}
-            style={{ borderRadius: theme.borderRadius, ...(plan.featured ? { borderColor: theme.primaryColor } : {}) }}
-          >
-            <h3 className="text-lg @sm:text-xl font-bold">{plan.name[locale]}</h3>
-            <div>
-              <span className="text-3xl @sm:text-4xl font-bold" style={{ color: theme.primaryColor }}>{plan.price}</span>
-              <span className="opacity-60">{plan.period[locale]}</span>
-            </div>
-            <ul className="space-y-2">
-              {plan.features.map((f, j) => (
-                <li key={j} className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 shrink-0" style={{ color: theme.primaryColor }} />
-                  {f[locale]}
-                </li>
-              ))}
-            </ul>
-            <Button className="w-full" style={{ backgroundColor: theme.primaryColor }}>{locale === 'ar' ? 'اختر الخطة' : 'Choose Plan'}</Button>
-          </div>
-        ))}
-      </div>
+      {layout === 'horizontal' ? (
+        <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+          {plans.map((plan, i) => renderPlan(plan, i))}
+        </div>
+      ) : (
+        <div className={cn(
+          'grid gap-6 @sm:gap-8',
+          layout === 'cards-2' ? 'grid-cols-1 @sm:grid-cols-2 max-w-3xl mx-auto' : 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3',
+        )}>
+          {plans.map((plan, i) => renderPlan(plan, i))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
@@ -449,6 +585,24 @@ export function FaqSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const items = (c.items as { q: LocalizedText; a: LocalizedText }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  if (layout === 'two-column') {
+    return (
+      <SectionWrapper {...props}>
+        {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-6 @sm:gap-8">
+          {items.map((item, i) => (
+            <div key={i} className="rounded-xl border p-5 space-y-2 bg-white/60" style={{ borderRadius: theme.borderRadius }}>
+              <h3 className="font-semibold">{item.q[locale]}</h3>
+              <p className="text-sm opacity-80">{item.a[locale]}</p>
+            </div>
+          ))}
+        </div>
+      </SectionWrapper>
+    );
+  }
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
@@ -468,17 +622,35 @@ export function StatisticsSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const stats = (c.stats as { value: string; label: LocalizedText }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  const renderStat = (s: typeof stats[number], i: number, card = false) => (
+    <div
+      key={i}
+      className={cn('text-center', card && 'rounded-xl border bg-white/60 p-6 shadow-sm')}
+      style={card ? { borderRadius: theme.borderRadius } : undefined}
+    >
+      <div className="text-2xl @sm:text-4xl font-bold mb-1 @sm:mb-2" style={{ color: theme.primaryColor }}>{s.value}</div>
+      <div className="opacity-70">{s.label[locale]}</div>
+    </div>
+  );
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-4 @sm:gap-8">
-        {stats.map((s, i) => (
-          <div key={i} className="text-center">
-            <div className="text-2xl @sm:text-4xl font-bold mb-1 @sm:mb-2" style={{ color: theme.primaryColor }}>{s.value}</div>
-            <div className="opacity-70">{s.label[locale]}</div>
-          </div>
-        ))}
-      </div>
+      {layout === 'inline' ? (
+        <div className="flex flex-wrap justify-center gap-8 @sm:gap-12 rounded-2xl border bg-white/40 px-6 py-8" style={{ borderRadius: theme.borderRadius }}>
+          {stats.map((s, i) => renderStat(s, i))}
+        </div>
+      ) : layout === 'cards' ? (
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-4 @sm:gap-6">
+          {stats.map((s, i) => renderStat(s, i, true))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-4 @sm:gap-8">
+          {stats.map((s, i) => renderStat(s, i))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
@@ -597,17 +769,42 @@ export function GenericListSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const items = (c.items as LocalizedText[]) ?? (c.benefits as LocalizedText[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  const getLabel = (item: LocalizedText | string) =>
+    typeof item === 'object' && 'en' in item ? item[locale] : String(item);
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <ul className="max-w-xl mx-auto space-y-3">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 shrink-0" style={{ color: theme.primaryColor }} />
-            <span>{typeof item === 'object' && 'en' in item ? item[locale] : String(item)}</span>
-          </li>
-        ))}
-      </ul>
+      {layout === 'cards' ? (
+        <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-4">
+          {items.map((item, i) => (
+            <div key={i} className="rounded-xl border bg-white/60 p-5 flex items-start gap-3" style={{ borderRadius: theme.borderRadius }}>
+              <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: theme.primaryColor }} />
+              <span>{getLabel(item)}</span>
+            </div>
+          ))}
+        </div>
+      ) : layout === 'columns-2' ? (
+        <ul className="max-w-4xl mx-auto grid grid-cols-1 @md:grid-cols-2 gap-3">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 shrink-0" style={{ color: theme.primaryColor }} />
+              <span>{getLabel(item)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="max-w-xl mx-auto space-y-3">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 shrink-0" style={{ color: theme.primaryColor }} />
+              <span>{getLabel(item)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </SectionWrapper>
   );
 }
@@ -781,18 +978,35 @@ export function GallerySection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const images = ((c.images as string[]) ?? []).filter(Boolean);
+  const layout = resolveSectionLayout(section);
+  const placeholders = Array.from({ length: layout === 'grid-3' ? 6 : 4 });
+
+  const renderImage = (img: string | undefined, i: number, className?: string) => (
+    img ? (
+      <SectionImage key={i} src={img} alt="" className={cn('object-cover rounded-lg aspect-square', className)} style={{ borderRadius: theme.borderRadius }} />
+    ) : (
+      <div key={i} className={cn('aspect-square rounded-lg bg-slate-100', className)} style={{ borderRadius: theme.borderRadius }} />
+    )
+  );
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-4">
-        {images.length > 0 ? images.map((img, i) => (
-          <SectionImage key={i} src={img} alt="" className="aspect-square object-cover rounded-lg" style={{ borderRadius: theme.borderRadius }} />
-        )) : (
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-lg bg-slate-100" style={{ borderRadius: theme.borderRadius }} />
-          ))
-        )}
-      </div>
+      {layout === 'featured' && images.length > 0 ? (
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-4">
+          {renderImage(images[0], 0, 'col-span-2 row-span-2 aspect-auto min-h-[240px]')}
+          {images.slice(1, 5).map((img, i) => renderImage(img, i + 1))}
+        </div>
+      ) : (
+        <div className={cn(
+          'grid gap-4',
+          layout === 'grid-3' ? 'grid-cols-2 @md:grid-cols-3' : 'grid-cols-2 @md:grid-cols-4',
+        )}>
+          {images.length > 0
+            ? images.map((img, i) => renderImage(img, i))
+            : placeholders.map((_, i) => renderImage(undefined, i))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
@@ -870,10 +1084,38 @@ export function TeamSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
   const members = (c.members as { name: LocalizedText; role: LocalizedText; imageUrl?: string }[]) ?? [];
+  const layout = resolveSectionLayout(section);
+
+  if (layout === 'list') {
+    return (
+      <SectionWrapper {...props}>
+        {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
+        <div className="max-w-3xl mx-auto space-y-4">
+          {members.map((m, i) => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border bg-white/60 p-4" style={{ borderRadius: theme.borderRadius }}>
+              <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                {m.imageUrl && <SectionImage src={m.imageUrl} alt="" className="w-full h-full object-cover" />}
+              </div>
+              <div>
+                <div className="font-semibold">{m.name[locale]}</div>
+                <div className="text-sm opacity-60">{m.role[locale]}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionWrapper>
+    );
+  }
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-6 @sm:gap-8">
+      <div className={cn(
+        'grid gap-6 @sm:gap-8',
+        layout === 'grid-4'
+          ? 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-4'
+          : 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3',
+      )}>
         {members.map((m, i) => (
           <div key={i} className="text-center space-y-3">
             <div className="w-24 h-24 rounded-full mx-auto bg-slate-200 overflow-hidden">

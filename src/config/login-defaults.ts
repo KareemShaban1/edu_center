@@ -37,10 +37,10 @@ export function isPlatformGuard(guard: string): boolean {
   return guard === 'super_admin' || guard === 'platform_admin';
 }
 
-/** Central / platform guards (no tenant) */
+/** Central / platform guards (no tenant) — see backend/credentials */
 export const platformLoginDefaults: Record<string, PlatformGuardDefaults> = {
-  super_admin: { email: 'superadmin@educenter.com', password: 'password' },
-  platform_admin: { email: 'platform@educenter.com', password: 'password' },
+  super_admin: { email: 'admin@platform.com', password: 'password' },
+  platform_admin: { email: 'admin@platform.com', password: 'password' },
 };
 
 export function getPlatformDefaultsForGuard(guard: string): PlatformGuardDefaults {

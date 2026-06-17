@@ -1,0 +1,26 @@
+<svg viewBox="0 0 640 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Teacher giving a lesson">
+  <defs>
+    <linearGradient id="tbg" x1="0" y1="0" x2="640" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#faf9f9"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#tbg)"/>
+  <rect x="40" y="40" width="360" height="240" rx="16" fill="#115e59"/>
+  <text x="220" y="110" text-anchor="middle" fill="#ecfdf5" font-family="Arial, sans-serif" font-size="28" font-weight="700" direction="rtl">'D/13</text>
+  <path d="M80 160h280M80 190h220M80 220h260" stroke="#99f6e4" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+  <text x="220" y="185" text-anchor="middle" fill="#ffffff" font-family="serif" font-size="22">x� + 2x = 8</text>
+  <circle cx="480" cy="120" r="48" fill="#ba181b" fill-opacity="0.12" stroke="#ba181b" stroke-opacity="0.3" stroke-width="2"/>
+  <rect x="456" y="168" width="48" height="64" rx="12" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="440" y="240" width="80" height="12" rx="4" fill="#a4161a" fill-opacity="0.25"/>
+  <rect x="420" y="280" width="400" height="160" rx="16" fill="#ffffff" stroke="#ba181b" stroke-opacity="0.18" stroke-width="1.5"/>
+  <circle cx="480" cy="340" r="24" fill="#0d9488" fill-opacity="0.2"/>
+  <circle cx="560" cy="340" r="24" fill="#ba181b" fill-opacity="0.15"/>
+  <circle cx="640" cy="340" r="24" fill="#ba181b" fill-opacity="0.15" transform="translate(-40 0)"/>
+  <rect x="468" y="376" width="24" height="6" rx="2" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="548" y="376" width="24" height="6" rx="2" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="588" y="376" width="24" height="6" rx="2" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="40" y="320" width="160" height="120" rx="12" fill="#ba181b" fill-opacity="0.08" stroke="#ba181b" stroke-opacity="0.15"/>
+  <path d="M72 360h96v48h-96z" fill="#0d9488" fill-opacity="0.25" rx="4"/>
+  <path d="M80 372h12v24h-12zm20 0h12v24h-12zm20 0h12v24h-12z" fill="#ffffff" fill-opacity="0.5"/>
+</svg>

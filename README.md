@@ -1,4 +1,20 @@
-# Welcome to your Lovable project
+# EduCenter
+
+Multi-center education management platform (React SPA + Laravel API).
+
+## Documentation
+
+Full project documentation lives in **[`docs/README.md`](docs/README.md)**:
+
+- Business Requirements (BRD), SRS, PRD
+- User stories, architecture, database, API
+- UI/UX, development setup, security, deployment, testing
+
+Keep auto-generated sections in sync after code changes:
+
+```bash
+npm run docs:sync
+```
 
 ## Project info
 

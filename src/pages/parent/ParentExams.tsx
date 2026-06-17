@@ -1,9 +1,11 @@
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import type { CenterScopedRow } from '@/types/models';
 
-interface ParentExamRow {
+interface ParentExamRow extends CenterScopedRow {
   id: number;
   student_name: string;
   grade?: string;
@@ -18,7 +20,7 @@ export default function ParentExams() {
   const { data } = useParentBootstrap();
   const exams = (data?.exams || []) as ParentExamRow[];
   const columns: CrudColumn<ParentExamRow>[] = [
-    { key: 'id', label: t('col.id') },
+    { key: 'center_name', label: t('col.center'), render: e => <CenterLabel name={e.center_name} /> },
     { key: 'student_name', label: t('col.child'), sortable: true },
     { key: 'grade', label: t('col.grade') },
     { key: 'date', label: t('col.date'), sortable: true },
@@ -33,9 +35,9 @@ export default function ParentExams() {
       description={t('page.exams.desc')}
       columns={columns}
       data={exams}
-      searchKeys={['student_name', 'date']}
+      searchKeys={['student_name', 'date', 'center_name']}
+      rowKey={e => portalRowKey(e.center_id, e.id)}
       readOnly
     />
   );
 }
-

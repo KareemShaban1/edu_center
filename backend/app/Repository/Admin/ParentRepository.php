@@ -6,6 +6,7 @@ use App\Models\Gender;
 use App\Models\Grade;
 use App\Models\Image;
 use App\Models\Parents;
+use App\Centers\CenterMembershipService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -64,6 +65,8 @@ class ParentRepository implements ParentRepositoryInterface
             $validatedData['is_active'] = $request->is_active ? 1 : 0;
             $validatedData['password'] = Hash::make($request->password);
             $parent = Parents::create($validatedData);
+
+            app(CenterMembershipService::class)->registerParentProfile((int) $parent->id);
 
             // insert img
             if ($request->hasfile('photos')) {

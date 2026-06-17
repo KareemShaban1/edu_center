@@ -11,8 +11,10 @@ interface LandingPageRendererProps {
   editMode?: boolean;
   selectedSectionId?: string | null;
   selectedTextKey?: string | null;
+  selectedComponentId?: string | null;
   onSelectSection?: (id: string) => void;
   onSelectTextField?: (fieldKey: string) => void;
+  onSelectComponent?: (sectionId: string, componentId: string) => void;
   onSectionContentChange?: (sectionId: string, content: Record<string, unknown>) => void;
   className?: string;
 }
@@ -23,8 +25,10 @@ export function LandingPageRenderer({
   editMode,
   selectedSectionId,
   selectedTextKey,
+  selectedComponentId,
   onSelectSection,
   onSelectTextField,
+  onSelectComponent,
   onSectionContentChange,
   className,
 }: LandingPageRendererProps) {
@@ -98,8 +102,10 @@ export function LandingPageRenderer({
           editMode={editMode}
           isSelected={selectedSectionId === section.id}
           selectedTextKey={selectedTextKey}
+          selectedComponentId={selectedComponentId}
           onSelect={() => onSelectSection?.(section.id)}
           onSelectTextField={onSelectTextField}
+          onSelectComponent={componentId => onSelectComponent?.(section.id, componentId)}
           onContentChange={content => onSectionContentChange?.(section.id, content)}
         />
       ))}

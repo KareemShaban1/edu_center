@@ -1,0 +1,22 @@
+<svg viewBox="0 0 640 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Parent tracking student progress">
+  <rect width="640" height="480" fill="#faf9f9"/>
+  <rect x="48" y="48" width="544" height="384" rx="20" fill="#ffffff" stroke="#ba181b" stroke-opacity="0.15" stroke-width="1.5"/>
+  <circle cx="160" cy="140" r="40" fill="#ba181b" fill-opacity="0.15"/>
+  <circle cx="240" cy="160" r="28" fill="#0d9488" fill-opacity="0.2"/>
+  <rect x="120" y="200" width="80" height="10" rx="4" fill="#a4161a" fill-opacity="0.3"/>
+  <rect x="200" y="208" width="56" height="8" rx="3" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="320" y="96" width="240" height="280" rx="16" fill="#f3f1f1" stroke="#ba181b" stroke-opacity="0.12"/>
+  <text x="440" y="136" text-anchor="middle" fill="#161a1d" font-family="Arial, sans-serif" font-size="18" font-weight="700" direction="rtl">*B1J1 'D7'D(</text>
+  <rect x="344" y="156" width="192" height="48" rx="10" fill="#ffffff" stroke="#0d9488" stroke-opacity="0.3"/>
+  <text x="440" y="186" text-anchor="middle" fill="#0f766e" font-family="Arial, sans-serif" font-size="14" direction="rtl">'D-6H1: iej</text>
+  <rect x="344" y="216" width="192" height="48" rx="10" fill="#ffffff" stroke="#ba181b" stroke-opacity="0.2"/>
+  <text x="440" y="246" text-anchor="middle" fill="#a4161a" font-family="Arial, sans-serif" font-size="14" direction="rtl">'D1J'6J'*: ib</text>
+  <rect x="344" y="276" width="192" height="48" rx="10" fill="#ffffff" stroke="#ba181b" stroke-opacity="0.2"/>
+  <text x="440" y="306" text-anchor="middle" fill="#a4161a" font-family="Arial, sans-serif" font-size="14" direction="rtl">'D13HE: E/AH9)</text>
+  <rect x="344" y="336" width="192" height="28" rx="8" fill="#ba181b" fill-opacity="0.2"/>
+  <text x="440" y="356" text-anchor="middle" fill="#660708" font-family="Arial, sans-serif" font-size="13" font-weight="600" direction="rtl">E1C2 'DB'G1)</text>
+  <rect x="80" y="280" width="200" height="120" rx="12" fill="#ba181b" fill-opacity="0.08"/>
+  <text x="180" y="320" text-anchor="middle" fill="#161a1d" font-family="Arial, sans-serif" font-size="14" direction="rtl">4A'AJ) C'ED)</text>
+  <rect x="104" y="336" width="152" height="8" rx="3" fill="#a4161a" fill-opacity="0.2"/>
+  <rect x="104" y="352" width="120" height="8" rx="3" fill="#a4161a" fill-opacity="0.15"/>
+</svg>

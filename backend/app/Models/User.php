@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
+    use BelongsToCenter;
     use Notifiable;
     use HasRoles;
     
-    protected $connection = 'tenant';
+    protected $connection = 'center';
 
 
     /**

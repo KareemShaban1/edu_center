@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Support\MonthlyUnpaidStudentsService;
 use App\Http\Support\ResolvesTenantApiContext;
-use App\Models\Platform\TenantInfo;
+use App\Models\Platform\Center;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -69,23 +69,22 @@ class DashboardApiController extends Controller
 
     private function superAdminDashboard(): JsonResponse
     {
-        $centralConnection = $this->centralConnection();
-        $tenantInfos = TenantInfo::on($centralConnection);
-        $totalTenants = (clone $tenantInfos)->count();
-        $activeTenants = (clone $tenantInfos)->where('status', 1)->count();
-        $adminsCount = Schema::connection($centralConnection)->hasTable('admins')
-            ? DB::connection($centralConnection)->table('admins')->count()
+        $centers = Center::query();
+        $totalCenters = (clone $centers)->count();
+        $activeCenters = (clone $centers)->where('status', 1)->count();
+        $adminsCount = Schema::hasTable('admins')
+            ? DB::table('admins')->count()
             : 0;
 
-        $recentTenants = (clone $tenantInfos)
+        $recentCenters = (clone $centers)
             ->orderByDesc('created_at')
             ->limit(5)
-            ->get(['tenant_id', 'name', 'subdomain', 'status', 'created_at'])
+            ->get(['id', 'name', 'slug', 'status', 'created_at'])
             ->map(function ($row) {
                 return [
-                    'id' => $row->tenant_id,
+                    'id' => $row->id,
                     'title' => $row->name,
-                    'subtitle' => $row->subdomain,
+                    'subtitle' => $row->slug,
                     'status' => ((int) $row->status) === 1 ? 'active' : (((int) $row->status) === 2 ? 'suspended' : 'inactive'),
                     'meta' => optional($row->created_at)->format('Y-m-d') ?? now()->toDateString(),
                 ];
@@ -94,25 +93,25 @@ class DashboardApiController extends Controller
 
         return response()->json([
             'stats' => [
-                ['id' => 'tenants', 'title' => 'Total Tenants', 'value' => (string) $totalTenants, 'icon' => 'globe'],
-                ['id' => 'active_tenants', 'title' => 'Active Tenants', 'value' => (string) $activeTenants, 'icon' => 'users'],
+                ['id' => 'centers', 'title' => 'Total Centers', 'value' => (string) $totalCenters, 'icon' => 'globe'],
+                ['id' => 'active_centers', 'title' => 'Active Centers', 'value' => (string) $activeCenters, 'icon' => 'users'],
                 ['id' => 'platform_admins', 'title' => 'Platform Admins', 'value' => (string) $adminsCount, 'icon' => 'shield'],
-                ['id' => 'subscriptions', 'title' => 'Subscriptions', 'value' => (string) $totalTenants, 'icon' => 'credit-card'],
+                ['id' => 'subscriptions', 'title' => 'Subscriptions', 'value' => (string) $totalCenters, 'icon' => 'credit-card'],
             ],
             'sections' => [
                 [
-                    'key' => 'recent_tenants',
-                    'title' => 'Recent Tenants',
-                    'items' => $recentTenants,
+                    'key' => 'recent_centers',
+                    'title' => 'Recent Centers',
+                    'items' => $recentCenters,
                 ],
                 [
                     'key' => 'activity',
                     'title' => 'Recent Activity',
-                    'items' => $recentTenants->map(function ($tenant) {
+                    'items' => $recentCenters->map(function ($center) {
                         return [
-                            'id' => $tenant['id'],
-                            'title' => 'Tenant '.$tenant['title'].' is '.$tenant['status'],
-                            'meta' => $tenant['meta'],
+                            'id' => $center['id'],
+                            'title' => 'Center '.$center['title'].' is '.$center['status'],
+                            'meta' => $center['meta'],
                         ];
                     })->values(),
                 ],
@@ -127,10 +126,10 @@ class DashboardApiController extends Controller
         $reference = $this->resolveReferenceMonth($unpaidFilters['month'] ?? null, $unpaidFilters['year'] ?? null);
         $monthLabel = $reference->locale($locale)->translatedFormat('F Y');
 
-        $studentsTable = Schema::connection('tenant')->hasTable('students');
-        $teachersTable = Schema::connection('tenant')->hasTable('teachers');
-        $attendanceTable = Schema::connection('tenant')->hasTable('attendances');
-        $announcementsTable = Schema::connection('tenant')->hasTable('announcements');
+        $studentsTable = Schema::connection('center')->hasTable('students');
+        $teachersTable = Schema::connection('center')->hasTable('teachers');
+        $attendanceTable = Schema::connection('center')->hasTable('attendances');
+        $announcementsTable = Schema::connection('center')->hasTable('announcements');
 
         $studentsCount = $studentsTable ? $tenantDb->table('students')->count() : 0;
         $teachersCount = $teachersTable ? $tenantDb->table('teachers')->count() : 0;
@@ -260,14 +259,14 @@ class DashboardApiController extends Controller
 
     private function teacherDashboard($tenantDb, mixed $teacherId): JsonResponse
     {
-        $studentsTable = Schema::connection('tenant')->hasTable('students');
-        $attendanceTable = Schema::connection('tenant')->hasTable('attendances');
-        $homeworksTable = Schema::connection('tenant')->hasTable('homeworks');
-        $sectionQuery = Schema::connection('tenant')->hasTable('sections')
+        $studentsTable = Schema::connection('center')->hasTable('students');
+        $attendanceTable = Schema::connection('center')->hasTable('attendances');
+        $homeworksTable = Schema::connection('center')->hasTable('homeworks');
+        $sectionQuery = Schema::connection('center')->hasTable('sections')
             ? $tenantDb->table('sections')
             : null;
 
-        if ($sectionQuery && Schema::connection('tenant')->hasColumn('sections', 'teacher_id')) {
+        if ($sectionQuery && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
             $classCount = (clone $sectionQuery)->where('teacher_id', $teacherId)->count();
             $scheduleItems = (clone $sectionQuery)
                 ->where('teacher_id', $teacherId)
@@ -276,7 +275,7 @@ class DashboardApiController extends Controller
                 ->map(fn ($row) => ['id' => $row->id, 'title' => $row->section_name, 'meta' => '-'])
                 ->values();
         } else {
-            $classCount = Schema::connection('tenant')->hasTable('classes') ? $tenantDb->table('classes')->count() : 0;
+            $classCount = Schema::connection('center')->hasTable('classes') ? $tenantDb->table('classes')->count() : 0;
             $scheduleItems = collect();
         }
 
@@ -316,9 +315,9 @@ class DashboardApiController extends Controller
 
     private function studentDashboard($tenantDb, mixed $studentId): JsonResponse
     {
-        $studentsTable = Schema::connection('tenant')->hasTable('students');
-        $attendanceTable = Schema::connection('tenant')->hasTable('attendances');
-        $homeworksTable = Schema::connection('tenant')->hasTable('homeworks');
+        $studentsTable = Schema::connection('center')->hasTable('students');
+        $attendanceTable = Schema::connection('center')->hasTable('attendances');
+        $homeworksTable = Schema::connection('center')->hasTable('homeworks');
 
         $studentRow = $studentsTable ? $tenantDb->table('students')->where('id', $studentId)->first() : null;
         $attendanceRate = $attendanceTable && $studentId
@@ -370,9 +369,9 @@ class DashboardApiController extends Controller
 
     private function parentDashboard($tenantDb, mixed $parentId): JsonResponse
     {
-        $studentsTable = Schema::connection('tenant')->hasTable('students');
-        $attendanceTable = Schema::connection('tenant')->hasTable('attendances');
-        $feesTable = Schema::connection('tenant')->hasTable('fees');
+        $studentsTable = Schema::connection('center')->hasTable('students');
+        $attendanceTable = Schema::connection('center')->hasTable('attendances');
+        $feesTable = Schema::connection('center')->hasTable('fees');
 
         $children = $studentsTable
             ? $tenantDb->table('students')->where('parent_id', $parentId)->limit(5)->get(['id', 'name', 'grade_id', 'class_id'])

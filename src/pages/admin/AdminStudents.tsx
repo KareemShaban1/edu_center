@@ -28,7 +28,7 @@ function StudentForm({
   parents: Array<{ id: number; name: string }>;
   grades: Array<{ id: number; name: string }>;
   classes: Array<{ id: number; name: string; grade_id: number }>;
-  sections: Array<{ id: number; name: string; class_id: number; grade_id: number }>;
+  sections: Array<{ id: number; name: string; class_id: number; grade_id: number; class_name: string; grade_name: string; section_name: string }>;
 }) {
   const { t } = useLocale();
   const [form, setForm] = useState({
@@ -145,7 +145,7 @@ function StudentForm({
       <div className="grid grid-cols-3 gap-4">
         <FormField label={t('col.grade')} id="student-grade">
           <FormSelect title={t('col.grade')} id="student-grade" value={form.grade_id} onChange={e => handleGradeChange(Number(e.target.value))}>
-            <option value={0}>{t('col.grade')}</option>
+            <option value={0} disabled>{t('col.grade')}</option>
             {grades.map(g => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
@@ -159,7 +159,7 @@ function StudentForm({
             disabled={!form.grade_id}
             onChange={e => handleClassChange(Number(e.target.value))}
           >
-            <option value={0}>{form.grade_id ? t('col.class') : 'Select grade first'}</option>
+            <option value={0} disabled>{form.grade_id ? t('col.class') : 'Select grade first'}</option>
             {classesByGrade.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -173,7 +173,7 @@ function StudentForm({
             disabled={!form.classroom_id}
             onChange={e => setForm(f => ({ ...f, section_id: Number(e.target.value) }))}
           >
-            <option value={0}>{form.classroom_id ? t('col.section') : 'Select class first'}</option>
+            <option value={0} disabled>{form.classroom_id ? t('col.section') : 'Select class first'}</option>
             {sectionsByClass.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -240,11 +240,14 @@ export default function AdminStudents() {
     name: c.name,
     grade_id: Number(c.grade_id),
   }));
-  const sections = ((bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number; grade_id: number }>).map(s => ({
+  const sections = ((bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number; grade_id: number; class_name: string; grade_name: string; section_name: string }>).map(s => ({
     id: Number(s.id),
     name: s.name,
     class_id: Number(s.class_id),
     grade_id: Number(s.grade_id),
+    grade_name: s.grade_name,
+    class_name: s.class_name,
+    section_name: s.section_name,
   }));
   const parents = ((bootstrap?.parents || []) as Array<{ id: number; name: string }>).map(p => ({ id: Number(p.id), name: p.name }));
   const saveMutation = useMutation({
@@ -260,11 +263,12 @@ export default function AdminStudents() {
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'name', label: t('col.name'), sortable: true },
     { key: 'email', label: t('col.email') },
-    { key: 'gender', label: t('col.gender'), render: s => <span className="capitalize">{s.gender}</span> },
+    { key: 'gender', label: t('col.gender'), render: s => <span className="capitalize"> {t(`gender.${s.gender}`)}</span> },
     { key: 'status', label: t('col.status'), render: s => <StatusBadge status={s.status} /> },
-    { key: 'grade_id', label: t('col.grade'), render: s => `Grade ${s.grade_id}` },
-    { key: 'classroom_id', label: t('col.class'), render: s => `Class ${s.classroom_id}` },
-    { key: 'parent_id', label: t('col.parent'), render: s => {
+    { key: 'grade_name', label: t('col.grade'), render: s => `${s.grade_name}` },
+    { key: 'class_name', label: t('col.class'), render: s => `${s.class_name}` },
+    { key: 'section_name', label: t('col.section'), render: s => `${s.section_name}` },
+    { key: 'parent_name', label: t('col.parent'), render: s => {
       const parent = parents.find(p => p.id === s.parent_id);
       return parent ? parent.name : '—';
     }},

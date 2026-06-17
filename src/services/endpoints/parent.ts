@@ -1,21 +1,22 @@
 import { apiClient, USE_MOCK } from '../api-client';
+import type { CenterScopedRow } from '@/types/models';
 
 export interface ParentBootstrapPayload {
-  children: Array<{
+  children: Array<CenterScopedRow & {
     id: number;
     name: string;
     grade: string;
     class: string;
     section: string;
   }>;
-  attendance: Array<{
+  attendance: Array<CenterScopedRow & {
     id: number;
     student_id: number;
     student_name: string;
     date: string;
     status: 'present' | 'absent' | 'late';
   }>;
-  fees: Array<{
+  fees: Array<CenterScopedRow & {
     id: number;
     student_id: number;
     student_name: string;
@@ -25,7 +26,7 @@ export interface ParentBootstrapPayload {
     due_date: string;
     month?: string;
   }>;
-  quizzes: Array<{
+  quizzes: Array<CenterScopedRow & {
     id: number;
     student_id: number;
     student_name: string;
@@ -35,7 +36,7 @@ export interface ParentBootstrapPayload {
     notes?: string;
     grade?: string;
   }>;
-  exams: Array<{
+  exams: Array<CenterScopedRow & {
     id: number;
     student_id: number;
     student_name: string;
@@ -45,7 +46,7 @@ export interface ParentBootstrapPayload {
     notes?: string;
     grade?: string;
   }>;
-  reports: Array<{
+  reports: Array<CenterScopedRow & {
     student_id: number;
     student_name: string;
     grade: string;
@@ -55,6 +56,7 @@ export interface ParentBootstrapPayload {
     paid_amount: number;
     pending_amount: number;
   }>;
+  centers?: Array<{ center_id: string; center_name: string; center_slug?: string }>;
 }
 
 export const parentApi = {
@@ -65,4 +67,3 @@ export const parentApi = {
     return apiClient.get<ParentBootstrapPayload>('/parent/bootstrap', undefined, false);
   },
 };
-

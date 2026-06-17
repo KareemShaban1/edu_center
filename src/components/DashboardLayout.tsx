@@ -28,6 +28,7 @@ import {
   BookMarked,
   ClipboardCheck,
   CircleDollarSign,
+  Palette,
   FolderOpen,
   Video,
   PieChart,
@@ -102,6 +103,8 @@ const platformNavBlocks: NavBlock[] = [
     },
   },
   { type: 'link', item: { labelKey: 'nav.activityLogs', path: '/platform/logs', icon: Activity } },
+  { type: 'link', item: { labelKey: 'nav.appearance', path: '/platform/settings', icon: Palette } },
+  { type: 'link', item: { labelKey: 'nav.documentation', path: '/platform/documentation', icon: BookOpen } },
 ];
 
 const adminNavBlocks: NavBlock[] = [

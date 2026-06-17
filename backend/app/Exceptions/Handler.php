@@ -3,7 +3,6 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Stancl\Tenancy\Exceptions\TenantCouldNotBeIdentifiedOnDomainException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -51,9 +50,6 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
-        if ($exception instanceof TenantCouldNotBeIdentifiedOnDomainException) {
-            return response()->view('errors.404');
-        }
         return parent::render($request, $exception);
     }
 }

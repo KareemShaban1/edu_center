@@ -108,14 +108,14 @@ export function PlatformLandingPage() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <button
+            {/* <button
               type="button"
               onClick={() => setLocale(isAr ? 'en' : 'ar')}
               className="hidden rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 sm:flex"
               aria-label={isAr ? 'Switch to English' : 'التبديل للعربية'}
             >
               <Languages className="h-4 w-4" />
-            </button>
+            </button> */}
             <motion.button
               type="button"
               onClick={() => navigate(getTenantLoginPath())}

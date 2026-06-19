@@ -38,6 +38,7 @@ import AdminPaymentForm from "@/pages/admin/AdminPaymentForm";
 import AdminPaymentHistory from "@/pages/admin/AdminPaymentHistory";
 import AdminLibrary from "@/pages/admin/AdminLibrary";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUnits from "@/pages/admin/AdminUnits";
@@ -140,6 +141,7 @@ const App = () => (
               <Route path="/admin/payments/section/:sectionId/date/:date" element={<ProtectedRoute allowedRoles={['admin']}><AdminPaymentForm /></ProtectedRoute>} />
               <Route path="/admin/library" element={<ProtectedRoute allowedRoles={['admin']}><AdminLibrary /></ProtectedRoute>} />
               <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnnouncements /></ProtectedRoute>} />
+              <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
               <Route path="/admin/units" element={<ProtectedRoute allowedRoles={['admin']}><AdminUnits /></ProtectedRoute>} />

@@ -109,6 +109,7 @@ export default defineConfig(({ mode }) => ({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/, /^\/storage/],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        importScripts: ["/push-handler.js"],
       },
       devOptions: {
         enabled: mode === "development",

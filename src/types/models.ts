@@ -308,11 +308,18 @@ export interface Notification {
   type: string;
   data: {
     title: string;
-    message: string;
+    body?: string;
+    message?: string;
     url?: string;
+    type?: string;
   };
   read_at: string | null;
   created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  unread_count: number;
 }
 
 export interface WhatsAppTemplate {

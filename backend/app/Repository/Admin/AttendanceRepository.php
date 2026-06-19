@@ -98,39 +98,11 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             ->where('attendance_date', date('Y-m-d'))
             ->first();
 
-        $student->notify(new StudentAttendanceNotification($studentAttendance));
-        $parent->notify(new ParentAttendanceNotification($studentAttendance));
-
-       // Send push notification if subscription exists
-       if ($parent->push_subscription) {
-        $statusText = $studentAttendance->attendance_status === 'present' ? 'present' : 'absent';
-        
-        $payload = [
-            'notification' => [
-                'title' => 'Attendance Update',
-                'body'  => "Your child {$student->name} is marked {$statusText} today",
-                'icon'  => '/images/notification.png',
-
-            ],
-            'data' => [
-                'student_id' => $student->id,
-                'attendance_id' => $studentAttendance->id,
-                'type' => 'attendance_update',
-                'unread_count' => $parent->unreadNotifications()->count(),
-
-            ]
-        ];
-        
-
-        try {
-            $subscription = json_decode($parent->push_subscription, true);
-            \App\Services\PushService::sendNotification($subscription, $payload);
-        } catch (\Exception $e) {
-            Log::error("Push notification failed for parent {$parent->id}: " . $e->getMessage());
-            // Optional: Clear invalid subscription
-            // $parent->update(['push_subscription' => null]);
+        $dispatcher = app(\App\Services\NotificationDispatchService::class);
+        $dispatcher->dispatch($student, new StudentAttendanceNotification($studentAttendance), true);
+        if ($parent) {
+            $dispatcher->dispatch($parent, new ParentAttendanceNotification($studentAttendance), true);
         }
-    }
 
         return  redirect()->back()->with('toast_success', 'notification send successfully');
     }

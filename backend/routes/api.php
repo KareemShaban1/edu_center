@@ -14,6 +14,11 @@ use App\Http\Controllers\Platform\PlatformCenterApiController;
 use App\Http\Controllers\Platform\PlatformBrandingApiController;
 use App\Http\Controllers\Admin\DashboardApiController;
 use App\Http\Controllers\Admin\LandingPageApiController;
+use App\Http\Controllers\Api\NotificationApiController;
+use App\Services\NotificationDispatchService;
+use App\Notifications\AnnouncementNotification;
+use App\Notifications\ParentAttendanceNotification;
+use App\Notifications\StudentAttendanceNotification;
 use App\Http\Support\ApiBearerAuth;
 use App\Http\Support\AuthLoginHandler;
 use App\Http\Support\MultiCenterPortalService;
@@ -3092,6 +3097,13 @@ Route::middleware([
 
     Route::get('/dashboard', [DashboardApiController::class, 'show']);
 
+    Route::get('/notifications/vapid-key', [NotificationApiController::class, 'vapidKey']);
+    Route::get('/notifications', [NotificationApiController::class, 'index']);
+    Route::post('/notifications/subscribe', [NotificationApiController::class, 'subscribe']);
+    Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
+    Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead']);
+    Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
+
     Route::post('/admin/students', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
@@ -4791,6 +4803,19 @@ Route::middleware([
             }
         }
 
+        $dispatcher = app(NotificationDispatchService::class);
+        $announceNotification = new AnnouncementNotification(
+            (string) $announcement->title,
+            (string) $announcement->body,
+            '/student/announcements',
+        );
+        foreach ($dispatcher->resolveRecipients([
+            'audience' => 'both',
+            'section_id' => (int) $announcement->section_id,
+        ]) as $entry) {
+            $dispatcher->dispatch($entry['model'], $announceNotification, true);
+        }
+
         return response()->json(['id' => (int) $announcement->id], 201);
     });
 
@@ -5589,6 +5614,31 @@ Route::middleware([
             } else {
                 $data['created_at'] = now();
                 $tenantDb->table('attendances')->insert($data);
+            }
+        }
+
+        $autoNotify = $request->boolean('notify', true);
+        if ($autoNotify) {
+            $dispatcher = app(NotificationDispatchService::class);
+            foreach ($payload['rows'] as $row) {
+                $student = \App\Models\Student::query()->find($row['student_id']);
+                if (! $student) {
+                    continue;
+                }
+                $attendance = \App\Models\Attendance::query()
+                    ->where('student_id', $row['student_id'])
+                    ->whereDate('attendance_date', $date)
+                    ->first();
+                if (! $attendance) {
+                    continue;
+                }
+
+                $dispatcher->dispatch($student, new StudentAttendanceNotification($attendance), true);
+
+                $parent = $student->parents;
+                if ($parent) {
+                    $dispatcher->dispatch($parent, new ParentAttendanceNotification($attendance), true);
+                }
             }
         }
 

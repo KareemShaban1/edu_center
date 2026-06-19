@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
+import { NotificationBell } from '@/components/NotificationBell';
 
 type NavIcon = React.ElementType;
 
@@ -194,6 +195,7 @@ const adminNavBlocks: NavBlock[] = [
       items: [
         { labelKey: 'nav.library', path: '/admin/library', icon: Library },
         { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
+        { labelKey: 'nav.notifications', path: '/admin/notifications', icon: Bell },
         { labelKey: 'nav.landingBuilder', path: '/admin/landing', icon: Layout },
       ],
     },
@@ -264,52 +266,23 @@ const teacherNavBlocks: NavBlock[] = [
 
 const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/student', icon: LayoutDashboard } },
-  {
-    type: 'group',
-    group: {
-      id: 'student-learning',
-      labelKey: 'nav.group.learning',
-      icon: BookOpen,
-      items: [
-        { labelKey: 'nav.myMeetings', path: '/student/meetings', icon: BookOpen },
-        { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck },
-        { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList },
-        { labelKey: 'nav.homework', path: '/student/homework', icon: FileText },
-        { labelKey: 'nav.library', path: '/student/library', icon: Library },
-      ],
-    },
-  },
+  { type: 'link', item: { labelKey: 'nav.myMeetings', path: '/student/meetings', icon: BookOpen } },
+  { type: 'link', item: { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck } },
+  { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
+  { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
+  { type: 'link', item: { labelKey: 'nav.library', path: '/student/library', icon: Library } },
 ];
 
 const parentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/parent', icon: LayoutDashboard } },
-  {
-    type: 'group',
-    group: {
-      id: 'parent-family',
-      labelKey: 'nav.group.family',
-      icon: Users,
-      items: [
-        { labelKey: 'nav.children', path: '/parent/children', icon: Users },
-        { labelKey: 'nav.attendance', path: '/parent/attendance', icon: CalendarCheck },
-        { labelKey: 'nav.fees_short', path: '/parent/fees', icon: DollarSign },
-      ],
-    },
-  },
-  {
-    type: 'group',
-    group: {
-      id: 'parent-academic',
-      labelKey: 'nav.group.assessment',
-      icon: ClipboardList,
-      items: [
-        { labelKey: 'nav.exams', path: '/parent/exams', icon: ClipboardList },
-        { labelKey: 'nav.quizzes', path: '/parent/quizzes', icon: ClipboardList },
-      ],
-    },
-  },
+  { type: 'link', item: { labelKey: 'nav.children', path: '/parent/children', icon: Users } },
+  { type: 'link', item: { labelKey: 'nav.attendance', path: '/parent/attendance', icon: CalendarCheck } },
+  { type: 'link', item: { labelKey: 'nav.fees_short', path: '/parent/fees', icon: DollarSign } },
+  { type: 'link', item: { labelKey: 'nav.exams', path: '/parent/exams', icon: ClipboardList } },
+  { type: 'link', item: { labelKey: 'nav.quizzes', path: '/parent/quizzes', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.reports', path: '/parent/reports', icon: FileText } },
 ];
+
 
 const roleNavBlocks: Record<UserRole, NavBlock[]> = {
   admin: adminNavBlocks,
@@ -483,7 +456,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
 
           <div className="hidden lg:block">
-            <h2 className="text-sm font-medium text-muted-foreground">
+            <h2 className="text-xl font-medium text-muted-foreground">
               {currentNavLabel ? t(currentNavLabel) : t('nav.dashboard')}
             </h2>
           </div>
@@ -501,10 +474,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="hidden text-muted-foreground sm:inline">{locale === 'en' ? 'العربية' : 'English'}</span>
             </button>
 
-            <button type="button" className="relative rounded-lg p-2 hover:bg-muted" aria-label="Notifications">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-1.5 h-2 w-2 rounded-full bg-destructive ltr:right-1.5 rtl:left-1.5" />
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                 {user.name.charAt(0)}

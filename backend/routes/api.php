@@ -3101,8 +3101,18 @@ Route::middleware([
     Route::get('/notifications', [NotificationApiController::class, 'index']);
     Route::post('/notifications/subscribe', [NotificationApiController::class, 'subscribe']);
     Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
-    Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead']);
+    Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
     Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
+
+    // Locale-prefixed aliases (when StripApiLocalePrefix is not active / route cache)
+    Route::prefix('{locale}')->where(['locale' => 'en|ar'])->group(function () {
+        Route::get('/notifications/vapid-key', [NotificationApiController::class, 'vapidKey']);
+        Route::get('/notifications', [NotificationApiController::class, 'index']);
+        Route::post('/notifications/subscribe', [NotificationApiController::class, 'subscribe']);
+        Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
+        Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
+        Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
+    });
 
     Route::post('/admin/students', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');

@@ -41,9 +41,10 @@ class NotificationDispatchService
             'title' => $data['title'] ?? 'Notification',
             'body' => $data['body'] ?? $data['message'] ?? '',
             'icon' => $data['icon'] ?? config('services.webpush.icon', '/pwa-192.png'),
-            'badge' => $data['badge'] ?? config('services.webpush.badge', '/pwa-192.png'),
+            'badge' => $data['badge'] ?? config('services.webpush.badge', '/pwa-badge.png'),
             'url' => $data['url'] ?? '/',
             'type' => $data['type'] ?? 'general',
+            'unread_count' => $notifiable->unreadNotifications()->count(),
         ];
 
         try {

@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => ({
     reactRefreshGetRefreshRegShim(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["pwa-192.png", "pwa-512.png", "apple-touch-icon.png", "favicon-32.png", "brand/app-icon.svg"],
+      includeAssets: ["pwa-192.png", "pwa-512.png", "pwa-badge.png", "apple-touch-icon.png", "favicon-32.png", "brand/app-icon.svg"],
       manifest: {
         name: "EduCenter",
         short_name: "EduCenter",

@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { notificationsApi } from '@/services/endpoints/notifications';
+import { syncAppBadge } from '@/lib/pwa-app-badge';
 import type { Notification } from '@/types/models';
 
 export function useNotifications(enabled = true) {
@@ -24,6 +26,14 @@ export function useNotifications(enabled = true) {
 
   const notifications: Notification[] = query.data?.notifications ?? [];
   const unreadCount = query.data?.unread_count ?? 0;
+
+  useEffect(() => {
+    if (!enabled) {
+      void syncAppBadge(0);
+      return;
+    }
+    void syncAppBadge(unreadCount);
+  }, [enabled, unreadCount]);
 
   return {
     notifications,

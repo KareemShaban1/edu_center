@@ -42,7 +42,7 @@ return [
         'subject' => env('APP_URL'),
     ],
     'icon' => env('WEBPUSH_ICON', '/pwa-192.png'),
-    'badge' => env('WEBPUSH_BADGE', '/pwa-192.png'),
+    'badge' => env('WEBPUSH_BADGE', '/pwa-badge.png'),
 ],
 
 ];

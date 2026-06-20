@@ -116,7 +116,7 @@ class NotificationApiController extends Controller
         return response()->json([
             'publicKey' => config('services.webpush.vapid.public_key'),
             'icon' => config('services.webpush.icon', '/pwa-192.png'),
-            'badge' => config('services.webpush.badge', '/pwa-192.png'),
+            'badge' => config('services.webpush.badge', '/pwa-badge.png'),
         ]);
     }
 

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\ApiBearerAuth;
+use App\Http\Support\PortalNotificationService;
 use App\Http\Support\ResolvesCenterApiContext;
+use App\Models\Parents;
+use App\Models\Student;
 use App\Services\NotificationDispatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,10 +31,21 @@ class NotificationApiController extends Controller
 
     public function __construct(
         private readonly NotificationDispatchService $dispatcher,
+        private readonly PortalNotificationService $portalNotifications,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
+        if ($portal = $this->resolvePortalIdentity($request)) {
+            $limit = min((int) $request->query('limit', 20), 50);
+
+            return response()->json($this->portalNotifications->list(
+                $portal['email'],
+                $portal['user_type'],
+                $limit,
+            ));
+        }
+
         $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
         if ($context['error']) {
             return $context['error'];
@@ -59,6 +74,14 @@ class NotificationApiController extends Controller
 
     public function markRead(Request $request, string $id): JsonResponse
     {
+        if ($portal = $this->resolvePortalIdentity($request)) {
+            if (! $this->portalNotifications->markRead($portal['email'], $portal['user_type'], $id)) {
+                return response()->json(['message' => 'Not found'], 404);
+            }
+
+            return response()->json(['ok' => true]);
+        }
+
         $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
         if ($context['error']) {
             return $context['error'];
@@ -72,6 +95,12 @@ class NotificationApiController extends Controller
 
     public function markAllRead(Request $request): JsonResponse
     {
+        if ($portal = $this->resolvePortalIdentity($request)) {
+            $this->portalNotifications->markAllRead($portal['email'], $portal['user_type']);
+
+            return response()->json(['ok' => true]);
+        }
+
         $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
         if ($context['error']) {
             return $context['error'];
@@ -91,11 +120,6 @@ class NotificationApiController extends Controller
 
     public function subscribe(Request $request): JsonResponse
     {
-        $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
-        if ($context['error']) {
-            return $context['error'];
-        }
-
         $payload = $request->validate([
             'subscription' => ['required', 'array'],
             'subscription.endpoint' => ['required', 'string'],
@@ -103,6 +127,21 @@ class NotificationApiController extends Controller
             'subscription.keys.p256dh' => ['required', 'string'],
             'subscription.keys.auth' => ['required', 'string'],
         ]);
+
+        if ($portal = $this->resolvePortalIdentity($request)) {
+            $updated = $this->portalNotifications->savePushSubscription(
+                $portal['email'],
+                $portal['user_type'],
+                $payload['subscription'],
+            );
+
+            return response()->json(['success' => true, 'profiles_updated' => $updated]);
+        }
+
+        $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
+        if ($context['error']) {
+            return $context['error'];
+        }
 
         $user = $context['authUser'];
         $user->update([
@@ -162,5 +201,21 @@ class NotificationApiController extends Controller
             'message' => 'Notifications sent',
             'sent' => $counts,
         ]);
+    }
+
+    /** @return array{email: string, user_type: string}|null */
+    private function resolvePortalIdentity(Request $request): ?array
+    {
+        $bearer = ApiBearerAuth::resolve($request);
+
+        if ($request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false)) {
+            $email = $request->session()->get('api_profile_email') ?: ($bearer['profile_email'] ?? null);
+            $userType = $request->session()->get('api_profile_user_type') ?: ($bearer['user_type'] ?? null);
+            if ($email && $userType) {
+                return ['email' => (string) $email, 'user_type' => (string) $userType];
+            }
+        }
+
+        return null;
     }
 }

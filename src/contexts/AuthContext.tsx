@@ -37,10 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return;
     }
+
+    const storedUser = localStorage.getItem('auth_user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser) as User);
+      } catch {
+        localStorage.removeItem('auth_user');
+      }
+    }
+
     if (token) {
       authApi.getUser()
         .then(u => {
           setUser(u);
+          localStorage.setItem('auth_user', JSON.stringify(u));
           apiClient.setTenantContext({
             tenantId: u.tenant_id ?? undefined,
             tenantSlug: u.tenant_slug ?? undefined,

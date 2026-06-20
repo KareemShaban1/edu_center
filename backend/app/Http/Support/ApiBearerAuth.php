@@ -18,7 +18,7 @@ class ApiBearerAuth
         ?string $profileEmail = null,
         ?string $userType = null,
     ): string {
-        $ttl = (int) config('session.lifetime', 120);
+        $ttlMinutes = (int) env('API_TOKEN_TTL_MINUTES', config('session.lifetime', 120));
 
         $payload = [
             'guard' => $guard,
@@ -27,7 +27,7 @@ class ApiBearerAuth
             'tenant_slug' => $tenantSlug,
             'profile_email' => $profileEmail,
             'user_type' => $userType,
-            'exp' => now()->addMinutes($ttl > 0 ? $ttl : 120)->getTimestamp(),
+            'exp' => now()->addMinutes($ttlMinutes > 0 ? $ttlMinutes : 120)->getTimestamp(),
         ];
 
         return Crypt::encryptString(json_encode($payload, JSON_THROW_ON_ERROR));
@@ -90,14 +90,14 @@ class ApiBearerAuth
 
     public static function issuePortal(string $guard, string $profileEmail, string $userType): string
     {
-        $ttl = (int) config('session.lifetime', 120);
+        $ttlMinutes = (int) env('API_PORTAL_TOKEN_TTL_MINUTES', 60 * 24 * 7);
 
         $payload = [
             'portal' => true,
             'guard' => $guard,
             'profile_email' => $profileEmail,
             'user_type' => $userType,
-            'exp' => now()->addMinutes($ttl > 0 ? $ttl : 120)->getTimestamp(),
+            'exp' => now()->addMinutes($ttlMinutes > 0 ? $ttlMinutes : 10080)->getTimestamp(),
         ];
 
         return Crypt::encryptString(json_encode($payload, JSON_THROW_ON_ERROR));

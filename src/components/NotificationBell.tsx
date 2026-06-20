@@ -27,7 +27,7 @@ export function NotificationBell() {
   const { user } = useAuth();
   const { t } = useLocale();
   const navigate = useNavigate();
-  const notificationsEnabled = !!user && user.id !== 0 && !user.portal_mode;
+  const notificationsEnabled = !!user && (user.portal_mode || user.id !== 0);
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications(notificationsEnabled);
   const { enablePush, isPushSupported } = usePushNotifications();
 

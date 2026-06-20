@@ -46,6 +46,7 @@ Route::middleware([
     \App\Http\Middleware\EncryptCookies::class,
     \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     \Illuminate\Session\Middleware\StartSession::class,
+    \App\Http\Middleware\RestoreApiSessionFromBearer::class,
 ])->group(function () {
     $guardMap = [
         'users' => 'web',
@@ -2065,9 +2066,11 @@ Route::middleware([
     });
 
     Route::get('/parent/bootstrap', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
-        if ($request->session()->get('api_portal_mode')) {
-            $email = $request->session()->get('api_profile_email');
-            $userType = $request->session()->get('api_profile_user_type', Parents::class);
+        $bearer = ApiBearerAuth::resolve($request);
+        $portalMode = $request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false);
+        if ($portalMode) {
+            $email = $request->session()->get('api_profile_email') ?: ($bearer['profile_email'] ?? null);
+            $userType = $request->session()->get('api_profile_user_type', Parents::class) ?: ($bearer['user_type'] ?? Parents::class);
             if ($email) {
                 return response()->json(app(MultiCenterPortalService::class)->parentPortal($email, $userType));
             }
@@ -2331,9 +2334,11 @@ Route::middleware([
     });
 
     Route::get('/student/bootstrap', function (Request $request) use ($resolveStudentContext) {
-        if ($request->session()->get('api_portal_mode')) {
-            $email = $request->session()->get('api_profile_email');
-            $userType = $request->session()->get('api_profile_user_type', Student::class);
+        $bearer = ApiBearerAuth::resolve($request);
+        $portalMode = $request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false);
+        if ($portalMode) {
+            $email = $request->session()->get('api_profile_email') ?: ($bearer['profile_email'] ?? null);
+            $userType = $request->session()->get('api_profile_user_type', Student::class) ?: ($bearer['user_type'] ?? Student::class);
             if ($email) {
                 return response()->json(app(MultiCenterPortalService::class)->studentPortal($email, $userType));
             }

@@ -111,7 +111,10 @@ class ApiClient {
         user: body.user,
       };
       if (response.status === 401 && onSessionExpired && this.token) {
-        onSessionExpired();
+        const path = new URL(response.url).pathname;
+        if (path.endsWith('/user') || path.endsWith('/login')) {
+          onSessionExpired();
+        }
       }
       throw error;
     }

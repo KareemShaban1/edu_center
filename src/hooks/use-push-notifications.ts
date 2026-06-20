@@ -10,6 +10,7 @@ export function usePushNotifications() {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const subscribedRef = useRef(false);
+  const canSubscribe = isAuthenticated && user && PUSH_ROLES.has(user.role);
 
   const enablePush = useCallback(async () => {
     if (!isPushSupported()) return false;
@@ -21,7 +22,7 @@ export function usePushNotifications() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !user || !PUSH_ROLES.has(user.role)) return;
+    if (!canSubscribe) return;
 
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === 'PUSH_RECEIVED' || event.data?.type === 'NOTIFICATION_CLICK') {
@@ -42,7 +43,7 @@ export function usePushNotifications() {
     return () => {
       navigator.serviceWorker?.removeEventListener('message', onMessage);
     };
-  }, [isAuthenticated, user, enablePush, queryClient]);
+  }, [canSubscribe, enablePush, queryClient]);
 
   return { enablePush, isPushSupported: isPushSupported() };
 }

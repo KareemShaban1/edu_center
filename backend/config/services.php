@@ -41,6 +41,8 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
         'subject' => env('APP_URL'),
     ],
+    'icon' => env('WEBPUSH_ICON', '/pwa-192.png'),
+    'badge' => env('WEBPUSH_BADGE', '/pwa-192.png'),
 ],
 
 ];

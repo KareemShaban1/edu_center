@@ -11,10 +11,11 @@ self.addEventListener('push', function (event) {
   }
 
   const title = data.title || 'New Notification';
+  const defaultIcon = '/pwa-192.png';
   const options = {
     body: data.body || data.message || 'You have a new notification.',
-    icon: data.icon || '/pwa-192.png',
-    badge: data.badge || '/pwa-192.png',
+    icon: data.icon || defaultIcon,
+    badge: data.badge || data.icon || defaultIcon,
     tag: data.type || 'general',
     renotify: true,
     data: {

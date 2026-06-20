@@ -40,8 +40,8 @@ class NotificationDispatchService
         $payload = [
             'title' => $data['title'] ?? 'Notification',
             'body' => $data['body'] ?? $data['message'] ?? '',
-            'icon' => $data['icon'] ?? '/pwa-192.png',
-            'badge' => '/pwa-192.png',
+            'icon' => $data['icon'] ?? config('services.webpush.icon', '/pwa-192.png'),
+            'badge' => $data['badge'] ?? config('services.webpush.badge', '/pwa-192.png'),
             'url' => $data['url'] ?? '/',
             'type' => $data['type'] ?? 'general',
         ];

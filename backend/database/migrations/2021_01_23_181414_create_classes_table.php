@@ -10,7 +10,7 @@ class CreateClassesTable extends Migration
 	public function up()
 	{
 	Schema::create('classes', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
 		$table->id();
 		$table->string('class_name');
 		$table->foreignId('grade_id')->references('id')->on('grades')

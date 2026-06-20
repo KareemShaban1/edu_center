@@ -23,7 +23,7 @@ class CreateTestCenter extends Command
         }
 
         $center = Center::query()->updateOrCreate(
-            ['id' => 'demo'],
+            ['slug' => 'demo'],
             [
                 'name' => 'Demo Center',
                 'slug' => 'demo',

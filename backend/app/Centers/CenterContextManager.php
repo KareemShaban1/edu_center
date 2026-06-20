@@ -25,6 +25,25 @@ class CenterContextManager
         return Center::query()->where('slug', $slug)->first();
     }
 
+    public function resolve(mixed $centerId, ?string $slug = null): ?Center
+    {
+        if ($centerId !== null && $centerId !== '') {
+            if (is_numeric($centerId)) {
+                $center = Center::query()->find((int) $centerId);
+                if ($center) {
+                    return $center;
+                }
+            } else {
+                $center = $this->resolveBySlug((string) $centerId);
+                if ($center) {
+                    return $center;
+                }
+            }
+        }
+
+        return $this->resolveBySlug($slug);
+    }
+
     public function resolveFromRequest(Request $request): ?Center
     {
         $centerId = $request->session()->get('api_center_id')
@@ -39,11 +58,7 @@ class CenterContextManager
             ?? $request->query('center_slug')
             ?? $request->query('tenant_slug');
 
-        if ($centerId) {
-            return Center::query()->find($centerId);
-        }
-
-        return $this->resolveBySlug(is_string($slug) ? $slug : null);
+        return $this->resolve($centerId, is_string($slug) ? $slug : null);
     }
 
     public function initialize(?Center $center): void

@@ -127,7 +127,7 @@ class CenterMembershipService
         return $matched;
     }
 
-    public function resolveCenterIdForProfile(object $profile, string $role): ?string
+    public function resolveCenterIdForProfile(object $profile, string $role): ?int
     {
         $membershipQuery = CenterMembership::query()
             ->where('user_id', (int) $profile->id)
@@ -135,21 +135,21 @@ class CenterMembershipService
 
         $existingCenterId = $membershipQuery->value('center_id');
         if ($existingCenterId) {
-            return (string) $existingCenterId;
+            return (int) $existingCenterId;
         }
 
         if ($role === CenterMembership::ROLE_STUDENT) {
             if (! empty($profile->section_id)) {
                 $section = DB::connection('center')->table('sections')->where('id', $profile->section_id)->first();
                 if ($section?->center_id) {
-                    return (string) $section->center_id;
+                    return (int) $section->center_id;
                 }
             }
 
             if (! empty($profile->grade_id)) {
                 $grade = DB::connection('center')->table('grades')->where('id', $profile->grade_id)->first();
                 if ($grade?->center_id) {
-                    return (string) $grade->center_id;
+                    return (int) $grade->center_id;
                 }
             }
         }
@@ -163,7 +163,7 @@ class CenterMembershipService
             if ($student?->section_id) {
                 $section = DB::connection('center')->table('sections')->where('id', $student->section_id)->first();
                 if ($section?->center_id) {
-                    return (string) $section->center_id;
+                    return (int) $section->center_id;
                 }
             }
         }
@@ -173,7 +173,7 @@ class CenterMembershipService
         }
 
         if (Center::query()->count() === 1) {
-            return (string) Center::query()->value('id');
+            return (int) Center::query()->value('id');
         }
 
         return null;
@@ -204,7 +204,7 @@ class CenterMembershipService
         string $email,
         string $userType,
         ?string $centerSlug = null,
-        ?string $centerId = null
+        ?int $centerId = null
     ): ?CenterMembership {
         $profileIds = $this->profileIdsForEmail($email, $userType);
         if ($profileIds === []) {
@@ -286,6 +286,71 @@ class CenterMembershipService
         return $center
             ? $this->assignMembership($center, $parentId, Parents::class, CenterMembership::STATUS_ASSIGNED)
             : null;
+    }
+
+    public function unassignMembership(Center $center, int $userId, string $userType): ?CenterMembership
+    {
+        $membership = CenterMembership::query()
+            ->where('center_id', $center->id)
+            ->where('user_id', $userId)
+            ->where('user_type', $userType)
+            ->first();
+
+        if (! $membership) {
+            return null;
+        }
+
+        $membership->update(['status' => CenterMembership::STATUS_NOT_ASSIGNED]);
+
+        return $membership->fresh();
+    }
+
+    public function unassignStudentWithParent(Center $center, int $studentId): ?CenterMembership
+    {
+        $membership = $this->unassignMembership($center, $studentId, Student::class);
+
+        $parentId = DB::connection('mysql')->table('students')
+            ->where('id', $studentId)
+            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+            ->value('parent_id');
+
+        if ($parentId && ! $this->parentHasOtherAssignedStudentsInCenter($center, (int) $parentId, $studentId)) {
+            $this->unassignMembership($center, (int) $parentId, Parents::class);
+        }
+
+        return $membership;
+    }
+
+    protected function parentHasOtherAssignedStudentsInCenter(Center $center, int $parentId, int $excludeStudentId): bool
+    {
+        return DB::connection('mysql')->table('students')
+            ->where('parent_id', $parentId)
+            ->where('id', '!=', $excludeStudentId)
+            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+            ->whereIn('id', function ($query) use ($center) {
+                $query->from('center_memberships')
+                    ->select('user_id')
+                    ->where('center_id', $center->id)
+                    ->where('user_type', Student::class)
+                    ->where('status', CenterMembership::STATUS_ASSIGNED);
+            })
+            ->exists();
+    }
+
+    public function assignStudentWithParent(Center $center, int $studentId): CenterMembership
+    {
+        $membership = $this->assignMembership($center, $studentId, Student::class);
+
+        $parentId = DB::connection('mysql')->table('students')
+            ->where('id', $studentId)
+            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+            ->value('parent_id');
+
+        if ($parentId) {
+            $this->assignMembership($center, (int) $parentId, Parents::class);
+        }
+
+        return $membership;
     }
 
     /** @return list<int> */

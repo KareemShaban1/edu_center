@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');

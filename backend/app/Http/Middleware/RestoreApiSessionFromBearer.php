@@ -59,9 +59,7 @@ class RestoreApiSessionFromBearer
                 if ($userId > 0) {
                     $request->session()->put('api_auth_user_id', $userId);
 
-                    $center = $tenantId
-                        ? Center::query()->find($tenantId)
-                        : app(CenterContextManager::class)->resolveBySlug($tenantSlug);
+                    $center = app(CenterContextManager::class)->resolve($tenantId, is_string($tenantSlug) ? $tenantSlug : null);
 
                     if ($center) {
                         app(CenterContextManager::class)->initialize($center);

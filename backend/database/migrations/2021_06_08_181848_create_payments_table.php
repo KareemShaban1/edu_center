@@ -14,7 +14,7 @@ class CreatePaymentsTable extends Migration
     public function up()
     {
         Schema::create('payments', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->id();
             $table->date('payment_date');
             $table->foreignId('student_id')->references('id')->on('students')->onDelete('cascade');

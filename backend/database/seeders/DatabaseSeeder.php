@@ -17,7 +17,6 @@ class DatabaseSeeder extends Seeder
 
         $centers = [
             [
-                'id' => 'demo',
                 'name' => 'Demo Center',
                 'slug' => 'demo',
                 'domain' => 'demo',
@@ -33,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         foreach ($centers as $data) {
             $center = Center::query()->updateOrCreate(
-                ['id' => $data['id']],
+                ['slug' => $data['slug']],
                 [
                     'name' => $data['name'],
                     'slug' => $data['slug'],

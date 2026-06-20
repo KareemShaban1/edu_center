@@ -21,7 +21,7 @@ class BackfillCenterScopedData extends Command
 
         if (! $centerId) {
             if (Center::query()->count() === 1) {
-                $centerId = (string) Center::query()->value('id');
+                $centerId = (int) Center::query()->value('id');
             } else {
                 $this->error('Multiple centers exist. Pass --center=<id>.');
 

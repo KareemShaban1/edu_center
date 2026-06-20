@@ -46,6 +46,7 @@ Route::middleware([
     \App\Http\Middleware\EncryptCookies::class,
     \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     \Illuminate\Session\Middleware\StartSession::class,
+    \App\Http\Middleware\SyncLegacyCenterSession::class,
     \App\Http\Middleware\RestoreApiSessionFromBearer::class,
 ])->group(function () {
     $guardMap = [
@@ -74,6 +75,11 @@ Route::middleware([
 
     $resolveTenantBySlug = fn (?string $slug): ?Center => $centerContext->resolveBySlug($slug);
 
+    $resolveTenant = fn (mixed $tenantId, mixed $tenantSlug): ?Center => $centerContext->resolve(
+        $tenantId,
+        is_string($tenantSlug) ? $tenantSlug : null
+    );
+
     $ensureTenantInitialized = function (?Center $center) use ($centerContext): void {
         $centerContext->initialize($center);
     };
@@ -95,7 +101,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/admin/bootstrap', function (Request $request) use ($tenantGuards, $resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/bootstrap', function (Request $request) use ($tenantGuards, $resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug')
@@ -106,7 +112,7 @@ Route::middleware([
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -151,6 +157,7 @@ Route::middleware([
 
         $studentSelect = [
             'students.id',
+            'students.code',
             'students.name',
             'students.email',
             'students.gender',
@@ -182,6 +189,7 @@ Route::middleware([
             ->map(function ($row) {
                 return [
                     'id' => $row->id,
+                    'code' => $row->code ?? '',
                     'name' => $row->name,
                     'email' => $row->email,
                     'gender' => $row->gender,
@@ -416,7 +424,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/teacher/bootstrap', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/bootstrap', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -426,7 +434,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -631,7 +639,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -641,7 +649,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -786,7 +794,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -796,7 +804,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -929,7 +937,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/teacher/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/teacher/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -939,7 +947,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -975,7 +983,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::get('/teacher/meetings/{id}/livekit-token', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/meetings/{id}/livekit-token', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -985,7 +993,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1041,7 +1049,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/teacher/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1051,7 +1059,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1165,7 +1173,7 @@ Route::middleware([
         ]);
     });
 
-    Route::put('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1175,7 +1183,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1328,7 +1336,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1338,7 +1346,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1379,7 +1387,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::get('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1389,7 +1397,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1489,7 +1497,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1499,7 +1507,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1608,7 +1616,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/admin/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1617,7 +1625,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1632,7 +1640,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::get('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1642,7 +1650,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1735,7 +1743,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1745,7 +1753,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -1884,7 +1892,7 @@ Route::middleware([
         ]);
     });
 
-    Route::put('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1894,7 +1902,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -2024,7 +2032,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -2034,7 +2042,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -2065,7 +2073,7 @@ Route::middleware([
         return response()->json(app(MultiCenterPortalService::class)->parentPortal($email, $userType));
     });
 
-    Route::get('/parent/bootstrap', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/parent/bootstrap', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $bearer = ApiBearerAuth::resolve($request);
         $portalMode = $request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false);
         if ($portalMode) {
@@ -2084,7 +2092,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -2293,7 +2301,7 @@ Route::middleware([
         ]);
     });
 
-    $resolveStudentContext = function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    $resolveStudentContext = function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'student');
         if ($guard !== 'student') {
             return ['error' => response()->json(['message' => 'Forbidden'], 403)];
@@ -2302,7 +2310,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
         }
@@ -3119,7 +3127,7 @@ Route::middleware([
         Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
     });
 
-    Route::post('/admin/students', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/students/search-by-code', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3129,7 +3137,166 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (! $tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+
+        $ensureTenantInitialized($tenant);
+
+        if (! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $payload = $request->validate([
+            'code' => ['required', 'string', 'max:50'],
+        ]);
+
+        $query = DB::connection('mysql')->table('students')->where('code', $payload['code']);
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $query->whereNull('deleted_at');
+        }
+
+        $student = $query->first();
+        if (! $student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $isAssigned = \App\Models\Platform\CenterMembership::query()
+            ->where('center_id', $tenant->id)
+            ->where('user_id', $student->id)
+            ->where('user_type', \App\Models\Student::class)
+            ->where('status', \App\Models\Platform\CenterMembership::STATUS_ASSIGNED)
+            ->exists();
+
+        $parent = null;
+        if ($student->parent_id) {
+            $parentRow = DB::connection('mysql')->table('parents')->where('id', $student->parent_id)->first();
+            if ($parentRow) {
+                $parentAssigned = \App\Models\Platform\CenterMembership::query()
+                    ->where('center_id', $tenant->id)
+                    ->where('user_id', $parentRow->id)
+                    ->where('user_type', \App\Models\Parents::class)
+                    ->where('status', \App\Models\Platform\CenterMembership::STATUS_ASSIGNED)
+                    ->exists();
+
+                $parent = [
+                    'id' => $parentRow->id,
+                    'name' => $parentRow->parent_name,
+                    'email' => $parentRow->email,
+                    'is_assigned' => $parentAssigned,
+                ];
+            }
+        }
+
+        return response()->json([
+            'student' => [
+                'id' => $student->id,
+                'code' => $student->code,
+                'name' => $student->name,
+                'email' => $student->email,
+                'gender' => $student->gender,
+                'parent_id' => $student->parent_id,
+                'is_assigned' => $isAssigned,
+            ],
+            'parent' => $parent,
+        ]);
+    });
+
+    Route::post('/admin/students/{id}/assign-center', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (! $tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+
+        $ensureTenantInitialized($tenant);
+
+        if (! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $studentQuery = DB::connection('mysql')->table('students')->where('id', $id);
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $studentQuery->whereNull('deleted_at');
+        }
+
+        $student = $studentQuery->first();
+        if (! $student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        app(\App\Centers\CenterMembershipService::class)->assignStudentWithParent($tenant, $id);
+
+        return response()->json([
+            'message' => 'Student and parent assigned to center successfully.',
+            'student_id' => $id,
+            'center_id' => $tenant->id,
+        ]);
+    });
+
+    Route::post('/admin/students/{id}/unassign-center', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (! $tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+
+        $ensureTenantInitialized($tenant);
+
+        if (! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $studentQuery = DB::connection('mysql')->table('students')->where('id', $id);
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $studentQuery->whereNull('deleted_at');
+        }
+
+        if (! $studentQuery->exists()) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        $membership = app(\App\Centers\CenterMembershipService::class)->unassignStudentWithParent($tenant, $id);
+        if (! $membership) {
+            return response()->json(['message' => 'Student is not assigned to this center'], 422);
+        }
+
+        return response()->json([
+            'message' => 'Student unassigned from center. They can be reassigned later.',
+            'student_id' => $id,
+            'center_id' => $tenant->id,
+            'membership_status' => \App\Models\Platform\CenterMembership::STATUS_NOT_ASSIGNED,
+        ]);
+    });
+
+    Route::post('/admin/students', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3142,6 +3309,7 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:50', 'unique:tenant.students,code'],
             'email' => ['required', 'email', 'max:255', 'unique:tenant.students,email'],
             'password' => ['required', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
@@ -3156,6 +3324,7 @@ Route::middleware([
         $studentsHasIsActive = Schema::connection('center')->hasColumn('students', 'is_active');
         $insert = [
             'name' => $payload['name'],
+            'code' => $payload['code'],
             'email' => $payload['email'],
             'password' => Hash::make($payload['password']),
             'gender' => $payload['gender'],
@@ -3173,7 +3342,7 @@ Route::middleware([
 
         $id = DB::connection('center')->table('students')->insertGetId($insert);
 
-        app(CenterMembershipService::class)->assignMembership($tenant, (int) $id, Student::class);
+        app(\App\Centers\CenterMembershipService::class)->assignStudentWithParent($tenant, (int) $id);
 
         $student = DB::connection('center')->table('students')
             ->where('id', $id)
@@ -3183,6 +3352,7 @@ Route::middleware([
         return response()->json([
             'student' => [
                 'id' => $student->id,
+                'code' => $student->code,
                 'name' => $student->name,
                 'email' => $student->email,
                 'gender' => $student->gender,
@@ -3196,7 +3366,7 @@ Route::middleware([
         ], 201);
     });
 
-    Route::put('/admin/students/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/students/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3206,7 +3376,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3227,6 +3397,7 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:50', 'unique:tenant.students,code,'.$id],
             'email' => ['required', 'email', 'max:255', 'unique:tenant.students,email,'.$id],
             'password' => ['nullable', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
@@ -3239,6 +3410,7 @@ Route::middleware([
 
         $update = [
             'name' => $payload['name'],
+            'code' => $payload['code'],
             'email' => $payload['email'],
             'gender' => $payload['gender'],
             'grade_id' => $payload['grade_id'],
@@ -3258,6 +3430,8 @@ Route::middleware([
             ->where('id', $id)
             ->update($update);
 
+        app(\App\Centers\CenterMembershipService::class)->assignStudentWithParent($tenant, $id);
+
         $student = DB::connection('center')->table('students')
             ->where('id', $id)
             ->whereNull('deleted_at')
@@ -3266,6 +3440,7 @@ Route::middleware([
         return response()->json([
             'student' => [
                 'id' => $student->id,
+                'code' => $student->code,
                 'name' => $student->name,
                 'email' => $student->email,
                 'gender' => $student->gender,
@@ -3279,7 +3454,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/teachers', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/teachers', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3289,7 +3464,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3365,7 +3540,7 @@ Route::middleware([
         ], 201);
     });
 
-    Route::put('/admin/teachers/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/teachers/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3375,7 +3550,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3455,7 +3630,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/parents', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/parents', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3465,7 +3640,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3520,7 +3695,7 @@ Route::middleware([
         ], 201);
     });
 
-    Route::put('/admin/parents/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/parents/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -3530,7 +3705,7 @@ Route::middleware([
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) {
             return response()->json(['message' => 'Tenant not found'], 422);
         }
@@ -3588,13 +3763,13 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/grades', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/grades', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3614,13 +3789,13 @@ Route::middleware([
         return response()->json(['grade' => ['id' => $id, 'name' => $payload['name'], 'notes' => $payload['notes'] ?? null]], 201);
     });
 
-    Route::put('/admin/grades/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/grades/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3642,13 +3817,13 @@ Route::middleware([
         return response()->json(['grade' => ['id' => $id, 'name' => $payload['name'], 'notes' => $payload['notes'] ?? null]]);
     });
 
-    Route::post('/admin/classes', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/classes', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3673,13 +3848,13 @@ Route::middleware([
         return response()->json(['class' => ['id' => $id, 'name' => $payload['name'], 'grade_id' => $payload['grade_id'], 'notes' => $payload['notes'] ?? null]], 201);
     });
 
-    Route::put('/admin/classes/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/classes/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3706,13 +3881,13 @@ Route::middleware([
         return response()->json(['class' => ['id' => $id, 'name' => $payload['name'], 'grade_id' => $payload['grade_id'], 'notes' => $payload['notes'] ?? null]]);
     });
 
-    Route::post('/admin/sections', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/sections', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3761,13 +3936,13 @@ Route::middleware([
         ]], 201);
     });
 
-    Route::put('/admin/sections/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/sections/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3816,12 +3991,12 @@ Route::middleware([
         ]]);
     });
 
-    Route::post('/admin/units', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/units', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3841,12 +4016,12 @@ Route::middleware([
         return response()->json(['unit' => ['id' => $id, 'name' => $payload['name'], 'class_id' => $payload['class_id'], 'notes' => $payload['notes'] ?? '']], 201);
     });
 
-    Route::put('/admin/units/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/units/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3868,12 +4043,12 @@ Route::middleware([
         return response()->json(['unit' => ['id' => $id, 'name' => $payload['name'], 'class_id' => $payload['class_id'], 'notes' => $payload['notes'] ?? '']]);
     });
 
-    Route::post('/admin/lessons', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/lessons', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3893,12 +4068,12 @@ Route::middleware([
         return response()->json(['lesson' => ['id' => $id, 'name' => $payload['name'], 'unit_id' => $payload['unit_id'], 'notes' => $payload['notes'] ?? '']], 201);
     });
 
-    Route::put('/admin/lessons/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/lessons/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3920,12 +4095,12 @@ Route::middleware([
         return response()->json(['lesson' => ['id' => $id, 'name' => $payload['name'], 'unit_id' => $payload['unit_id'], 'notes' => $payload['notes'] ?? '']]);
     });
 
-    Route::post('/admin/homework', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/homework', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -3964,12 +4139,12 @@ Route::middleware([
         ]], 201);
     });
 
-    Route::put('/admin/homework/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/homework/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4010,12 +4185,12 @@ Route::middleware([
         ]]);
     });
 
-    Route::post('/admin/fees', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/fees', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4066,12 +4241,12 @@ Route::middleware([
         ]], 201);
     });
 
-    Route::put('/admin/fees/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/fees/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4124,12 +4299,12 @@ Route::middleware([
         ]]);
     });
 
-    Route::delete('/admin/fees/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/fees/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4138,12 +4313,12 @@ Route::middleware([
         return response()->json(['message' => 'Fee deleted']);
     });
 
-    Route::get('/admin/users', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/users', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4184,12 +4359,12 @@ Route::middleware([
         return response()->json(['users' => $users]);
     });
 
-    Route::post('/admin/users', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/users', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4239,12 +4414,12 @@ Route::middleware([
         return response()->json(['id' => (int) $userId], 201);
     });
 
-    Route::put('/admin/users/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/users/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4304,12 +4479,12 @@ Route::middleware([
         return response()->json(['message' => 'User updated']);
     });
 
-    Route::delete('/admin/users/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/users/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4332,12 +4507,12 @@ Route::middleware([
         return response()->json(['message' => 'User deleted']);
     });
 
-    Route::get('/admin/roles', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/roles', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4396,12 +4571,12 @@ Route::middleware([
         return response()->json(['roles' => $roles, 'permissions' => $allPermissions]);
     });
 
-    Route::post('/admin/roles', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/roles', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4451,12 +4626,12 @@ Route::middleware([
         return response()->json(['id' => (int) $roleId], 201);
     });
 
-    Route::put('/admin/roles/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/roles/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4506,12 +4681,12 @@ Route::middleware([
         return response()->json(['message' => 'Role updated']);
     });
 
-    Route::delete('/admin/roles/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/roles/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -4530,12 +4705,12 @@ Route::middleware([
         return response()->json(['message' => 'Role deleted']);
     });
 
-    Route::get('/admin/library', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/library', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4598,12 +4773,12 @@ Route::middleware([
         return response()->json(['library' => $items]);
     });
 
-    Route::post('/admin/library', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/library', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4638,12 +4813,12 @@ Route::middleware([
         return response()->json(['id' => (int) $library->id], 201);
     });
 
-    Route::post('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4692,12 +4867,12 @@ Route::middleware([
         return response()->json(['message' => 'Library item updated']);
     });
 
-    Route::delete('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4710,12 +4885,12 @@ Route::middleware([
         return response()->json(['message' => 'Library item deleted']);
     });
 
-    Route::get('/admin/announcements', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/announcements', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4779,12 +4954,12 @@ Route::middleware([
         return response()->json(['announcements' => $items]);
     });
 
-    Route::post('/admin/announcements', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/announcements', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4834,12 +5009,12 @@ Route::middleware([
         return response()->json(['id' => (int) $announcement->id], 201);
     });
 
-    Route::post('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4890,12 +5065,12 @@ Route::middleware([
         return response()->json(['message' => 'Announcement updated']);
     });
 
-    Route::delete('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -4908,12 +5083,12 @@ Route::middleware([
         return response()->json(['message' => 'Announcement deleted']);
     });
 
-    Route::get('/admin/reports', function (Request $request) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/reports', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
@@ -5035,13 +5210,13 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/admin/payments/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/payments/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5125,13 +5300,13 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/payments/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/payments/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5214,12 +5389,12 @@ Route::middleware([
         return response()->json(['message' => 'Payments saved']);
     });
 
-    Route::get('/admin/payments/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/payments/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5248,13 +5423,13 @@ Route::middleware([
         return response()->json(['days' => $days]);
     });
 
-    Route::get('/admin/exams/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/exams/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5286,12 +5461,12 @@ Route::middleware([
         return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'rows' => $rows]);
     });
 
-    Route::get('/admin/exams/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/exams/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5306,13 +5481,13 @@ Route::middleware([
         return response()->json(['days' => $days]);
     });
 
-    Route::post('/admin/exams/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/exams/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5353,13 +5528,13 @@ Route::middleware([
         return response()->json(['message' => 'Exam results saved']);
     });
 
-    Route::get('/admin/quizzes/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/quizzes/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5391,12 +5566,12 @@ Route::middleware([
         return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'rows' => $rows]);
     });
 
-    Route::get('/admin/quizzes/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/quizzes/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5411,13 +5586,13 @@ Route::middleware([
         return response()->json(['days' => $days]);
     });
 
-    Route::post('/admin/quizzes/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/quizzes/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return response()->json(['message' => 'Invalid date format'], 422);
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5458,7 +5633,7 @@ Route::middleware([
         return response()->json(['message' => 'Quiz results saved']);
     });
 
-    Route::get('/admin/attendance/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/attendance/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
@@ -5468,7 +5643,7 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5518,13 +5693,13 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/admin/attendance/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/attendance/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5566,7 +5741,7 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/admin/attendance/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/attendance/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
 
@@ -5576,7 +5751,7 @@ Route::middleware([
 
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
         if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
@@ -5676,14 +5851,15 @@ Route::middleware([
         return app(AuthLoginHandler::class)->switchCenter($request, $guardMap, $roleMap);
     });
 
-    Route::post('/logout', function (Request $request) use ($tenantGuards, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/logout', function (Request $request) use ($tenantGuards, $ensureTenantInitialized, $centralConnection, $resolveTenant) {
         ApiBearerAuth::revoke($request->bearerToken());
 
         $guard = $request->session()->get('api_auth_guard', 'web');
         $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug');
 
-        if (in_array($guard, $tenantGuards, true) && $tenantId) {
-            $tenant = Center::query()->find($tenantId);
+        if (in_array($guard, $tenantGuards, true)) {
+            $tenant = $resolveTenant($tenantId, $tenantSlug);
             if ($tenant) {
                 $ensureTenantInitialized($tenant);
             }
@@ -5696,7 +5872,7 @@ Route::middleware([
         return response()->json(['message' => 'Logged out']);
     });
 
-    Route::get('/user', function (Request $request) use ($tenantGuards, $roleMap, $resolveTenantBySlug, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/user', function (Request $request) use ($tenantGuards, $roleMap, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         $bearer = ApiBearerAuth::resolve($request);
 
@@ -5762,7 +5938,7 @@ Route::middleware([
         }
 
         if (in_array($guard, $tenantGuards, true) && ($tenantId || $tenantSlug)) {
-            $tenant = $tenantId ? Center::query()->find($tenantId) : $resolveTenantBySlug($tenantSlug);
+            $tenant = $resolveTenant($tenantId, $tenantSlug);
             if ($tenant) {
                 $ensureTenantInitialized($tenant);
             }

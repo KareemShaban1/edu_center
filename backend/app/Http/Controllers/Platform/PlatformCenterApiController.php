@@ -136,7 +136,6 @@ class PlatformCenterApiController extends Controller
         $subscriptionStatus = (($payload['status'] ?? 'active') === 'active') ? 'trial' : 'cancelled';
 
         $center = Center::query()->create([
-            'id' => $slug,
             'name' => $payload['name'],
             'slug' => $slug,
             'domain' => $payload['domain'] ?? ($slug.'.localhost'),

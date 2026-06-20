@@ -26,7 +26,7 @@ return new class extends Migration
         if (! Schema::hasTable('meeting_series')) {
             Schema::create('meeting_series', function (Blueprint $table) {
                 $table->id();
-                $table->string('center_id', 36)->nullable()->index();
+                $table->unsignedBigInteger('center_id')->nullable()->index();
                 $table->string('created_by');
                 $table->foreignId('grade_id')->constrained('grades')->onDelete('cascade');
                 $table->foreignId('class_id')->constrained('classes')->onDelete('cascade');

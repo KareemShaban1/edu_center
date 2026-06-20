@@ -18,6 +18,7 @@ class StudentsSeeder extends Seeder
 
         $students = new Student();
         $students->name = 'كريم شعبان';
+        $students->code = 'STU-000001';
         $students->email = 'student@educenter.com';
         $students->password = Hash::make('password');
         $students->gender = 'male';
@@ -35,6 +36,7 @@ class StudentsSeeder extends Seeder
         for ($i = 0; $i < 200; $i++) {
             $student = new Student();
             $student->name = $faker->name();
+            $student->code = 'STU-'.str_pad((string) ($i + 2), 6, '0', STR_PAD_LEFT);
             $student->email = $faker->unique()->safeEmail;
             $student->password = Hash::make('password');
             $student->gender = $faker->randomElement(['male', 'female']);

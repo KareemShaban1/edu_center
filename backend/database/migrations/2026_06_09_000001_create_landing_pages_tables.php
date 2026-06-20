@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('landing_pages', function (Blueprint $table) {
             $table->id();
-            $table->string('center_id', 36)->nullable()->index();
+            $table->unsignedBigInteger('center_id')->nullable()->index();
             $table->string('slug')->unique();
             $table->json('title');
             $table->string('type', 32)->default('custom');
@@ -34,7 +34,7 @@ return new class extends Migration
 
         Schema::create('landing_page_revisions', function (Blueprint $table) {
             $table->id();
-            $table->string('center_id', 36)->nullable()->index();
+            $table->unsignedBigInteger('center_id')->nullable()->index();
             $table->foreignId('landing_page_id')->constrained('landing_pages')->cascadeOnDelete();
             $table->json('snapshot');
             $table->string('label')->nullable();
@@ -43,7 +43,7 @@ return new class extends Migration
 
         Schema::create('landing_page_analytics', function (Blueprint $table) {
             $table->id();
-            $table->string('center_id', 36)->nullable()->index();
+            $table->unsignedBigInteger('center_id')->nullable()->index();
             $table->foreignId('landing_page_id')->constrained('landing_pages')->cascadeOnDelete();
             $table->unsignedBigInteger('visitors')->default(0);
             $table->unsignedBigInteger('unique_visitors')->default(0);
@@ -58,7 +58,7 @@ return new class extends Migration
 
         Schema::create('landing_media', function (Blueprint $table) {
             $table->id();
-            $table->string('center_id', 36)->nullable()->index();
+            $table->unsignedBigInteger('center_id')->nullable()->index();
             $table->string('name');
             $table->string('type', 16);
             $table->string('url');

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('student_homework', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->id();
             $table->foreignId('student_id')->references('id')->on('students')->onDelete('cascade');  
             $table->foreignId('homework_id')->references('id')->on('homeworks')->onDelete('cascade');  

@@ -10,7 +10,7 @@ final class CenterContext
 {
     private static ?Center $center = null;
 
-    private static ?string $centerId = null;
+    private static ?int $centerId = null;
 
     public static function set(?Center $center): void
     {
@@ -29,7 +29,7 @@ final class CenterContext
         return self::$center;
     }
 
-    public static function id(): ?string
+    public static function id(): ?int
     {
         return self::$centerId;
     }

@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('activity_logs', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->id();
             $table->string('action'); // e.g., 'created', 'updated', 'deleted'
             $table->string('model'); // The model name

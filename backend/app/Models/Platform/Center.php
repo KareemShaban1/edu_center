@@ -8,14 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Center extends Model
 {
-    public $incrementing = false;
-
-    protected $keyType = 'string';
-
     protected $table = 'centers';
 
     protected $fillable = [
-        'id',
         'name',
         'slug',
         'domain',

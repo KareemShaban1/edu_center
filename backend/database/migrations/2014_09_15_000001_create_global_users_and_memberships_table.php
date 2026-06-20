@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('center_memberships', function (Blueprint $table) {
             $table->id();
-            $table->string('center_id', 36);
+            $table->unsignedBigInteger('center_id');
             $table->unsignedBigInteger('user_id');
             $table->string('user_type');
             $table->string('status', 16)->default('assigned');

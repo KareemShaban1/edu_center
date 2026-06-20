@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('words', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->id();
             $table->foreignId('lesson_id')->constrained('lessons')->cascadeOnDelete();
             $table->string('word');

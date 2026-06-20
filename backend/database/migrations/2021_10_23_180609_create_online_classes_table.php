@@ -14,7 +14,7 @@ class CreateOnlineClassesTable extends Migration
     public function up()
     {
         Schema::create('online_classes', function (Blueprint $table) {
-            $table->string('center_id', 36)->nullable()->index();;
+            $table->unsignedBigInteger('center_id')->nullable()->index();;
             $table->id();
             $table->boolean('integration');
             $table->foreignId('grade_id')->references('id')->on('grades')->onDelete('cascade');

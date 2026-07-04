@@ -348,9 +348,41 @@ class CenterMembershipService
 
         if ($parentId) {
             $this->assignMembership($center, (int) $parentId, Parents::class);
+            $this->assignParentChildrenToCenter($center, (int) $parentId);
         }
 
         return $membership;
+    }
+
+    public function assignParentChildrenToCenter(Center $center, int $parentId): void
+    {
+        $parentIds = $this->resolveParentProfileIdsForCenter($parentId);
+        $query = DB::connection('mysql')->table('students')
+            ->whereIn('parent_id', $parentIds)
+            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'));
+
+        foreach ($query->pluck('id') as $childId) {
+            $this->assignMembership($center, (int) $childId, Student::class);
+        }
+    }
+
+    /** @return list<int> */
+    protected function resolveParentProfileIdsForCenter(int $parentId): array
+    {
+        $email = DB::connection('mysql')->table('parents')->where('id', $parentId)->value('email');
+        if (! is_string($email) || trim($email) === '') {
+            return [$parentId];
+        }
+
+        $ids = DB::connection('mysql')->table('parents')
+            ->where('email', $email)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $ids !== [] ? $ids : [$parentId];
     }
 
     /** @return list<int> */

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { TenantMembershipOption } from '@/types/models';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +40,8 @@ export default function LoginPage() {
   const { t, locale, setLocale, dir } = useLocale();
   const isAr = locale === 'ar';
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const guardFromUrl = searchParams.get('guard');
 
   const initialDefaults = getTenantDefaultsForGuard('users', tenantSlug ?? undefined);
   const [selectedGuard, setSelectedGuard] = useState<string>('users');
@@ -69,6 +71,11 @@ export default function LoginPage() {
       setSelectedGuard(tenantGuards[0]);
     }
   }, [tenantGuards, selectedGuard]);
+
+  useEffect(() => {
+    if (!guardFromUrl || !tenantGuards.includes(guardFromUrl)) return;
+    setSelectedGuard(guardFromUrl);
+  }, [guardFromUrl, tenantGuards]);
 
   useEffect(() => {
     if (!tenantSlug) return;
@@ -127,7 +134,7 @@ export default function LoginPage() {
         />
       </div>
 
-      <button
+      {/* <button
         type="button"
         onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
         className="fixed top-4 z-50 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition-colors ltr:right-4 rtl:left-4"
@@ -136,7 +143,7 @@ export default function LoginPage() {
       >
         <Languages className="h-4 w-4 opacity-60" />
         {locale === 'en' ? 'العربية' : 'English'}
-      </button>
+      </button> */}
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-12">
         <div className="hidden lg:block">

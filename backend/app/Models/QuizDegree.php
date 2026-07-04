@@ -16,6 +16,7 @@ class QuizDegree extends Model
         'section_id',
         'class_id',
         'grade_id',
+        'session_id',
         'quiz_date',
         'degree',
         'final_degree',
@@ -44,6 +45,11 @@ class QuizDegree extends Model
     public function section()
     {
         return $this->belongsTo(Section::class, 'section_id');
+    }
+
+    public function session()
+    {
+        return $this->belongsTo(Session::class, 'session_id');
     }
 
     public function notes()

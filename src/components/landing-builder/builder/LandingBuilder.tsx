@@ -59,6 +59,21 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
   const [structureOpen, setStructureOpen] = useState(true);
   const [previewSection, setPreviewSection] = useState<LandingSection | null>(null);
   const mediaSelectRef = useRef<((url: string) => void) | null>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  const skipInitialScrollRef = useRef(true);
+
+  useEffect(() => {
+    const id = builder.selectedSectionId;
+    if (!id || skipInitialScrollRef.current) {
+      skipInitialScrollRef.current = false;
+      return;
+    }
+    requestAnimationFrame(() => {
+      const root = previewScrollRef.current;
+      const el = root?.querySelector(`[data-section-id="${CSS.escape(id)}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [builder.selectedSectionId]);
 
   const openMediaPicker = useCallback((apply: (url: string) => void) => {
     mediaSelectRef.current = apply;
@@ -208,7 +223,31 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
           onPreview={section => setPreviewSection(section)}
         />
 
+<PropertiesPanel
+          page={builder.page}
+          section={builder.selectedSection}
+          previewLocale={builder.previewLocale}
+          selectedTextKey={builder.selectedTextKey}
+          selectedComponentId={builder.selectedComponentId}
+          onSelectComponent={builder.selectComponent}
+          onSelectTextField={builder.selectTextField}
+          onUpdateSection={(id, patch) => builder.updateSection(id, patch)}
+          onUpdateSectionContent={builder.updateSectionContent}
+          onUpdateSectionStyle={builder.updateSectionStyle}
+          onUpdateTextStyle={builder.updateTextStyle}
+          onUpdateTheme={builder.updateTheme}
+          onUpdateSeo={builder.updateSeo}
+          onUpdateBranding={builder.updateBranding}
+          onUpdateMeta={patch => builder.setPageMeta(patch)}
+          onPickFromMedia={openMediaPicker}
+          onAddComponent={builder.addComponent}
+          onRemoveComponent={builder.removeComponent}
+          onMoveComponent={builder.moveComponent}
+          onUpdateComponentContent={builder.updateComponentContent}
+        />
+
         <div
+          ref={previewScrollRef}
           className="flex-1 overflow-auto bg-slate-100 p-6"
           onDragOver={e => e.preventDefault()}
           onDrop={handleCanvasDrop}
@@ -242,28 +281,7 @@ function LandingBuilderEditor({ pageId, initialPage }: { pageId: string; initial
           </div>
         </div>
 
-        <PropertiesPanel
-          page={builder.page}
-          section={builder.selectedSection}
-          previewLocale={builder.previewLocale}
-          selectedTextKey={builder.selectedTextKey}
-          selectedComponentId={builder.selectedComponentId}
-          onSelectComponent={builder.selectComponent}
-          onSelectTextField={builder.selectTextField}
-          onUpdateSection={(id, patch) => builder.updateSection(id, patch)}
-          onUpdateSectionContent={builder.updateSectionContent}
-          onUpdateSectionStyle={builder.updateSectionStyle}
-          onUpdateTextStyle={builder.updateTextStyle}
-          onUpdateTheme={builder.updateTheme}
-          onUpdateSeo={builder.updateSeo}
-          onUpdateBranding={builder.updateBranding}
-          onUpdateMeta={patch => builder.setPageMeta(patch)}
-          onPickFromMedia={openMediaPicker}
-          onAddComponent={builder.addComponent}
-          onRemoveComponent={builder.removeComponent}
-          onMoveComponent={builder.moveComponent}
-          onUpdateComponentContent={builder.updateComponentContent}
-        />
+        
       </div>
 
       <MediaManagerDialog

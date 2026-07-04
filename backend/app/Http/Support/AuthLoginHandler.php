@@ -285,7 +285,7 @@ class AuthLoginHandler
         array $roleMap,
         ?Center $center,
         int $profileId,
-        ?string $centerId,
+        int|string|null $centerId,
         ?string $centerSlug,
         ?string $profileEmail,
         ?string $userType = null,

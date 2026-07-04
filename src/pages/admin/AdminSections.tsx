@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus,
   Edit,
@@ -13,6 +14,7 @@ import {
   UnfoldVertical,
   FoldVertical,
   UserRound,
+  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -403,6 +405,26 @@ export default function AdminSections() {
                                               variant="outline"
                                               size="sm"
                                               className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+                                              asChild
+                                            >
+                                              <Link
+                                                to={`/admin/sections/${section.id}/sessions`}
+                                                aria-label={t('page.sectionsAdmin.viewSessions')}
+                                              >
+                                                <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="hidden sm:inline">{t('page.sectionsAdmin.viewSessions')}</span>
+                                              </Link>
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>{t('page.sectionsAdmin.viewSessions')}</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
                                               onClick={() => setStudentsSection(section)}
                                               aria-label={t('page.sectionsAdmin.showStudents')}
                                             >
@@ -687,7 +709,7 @@ function SectionForm({
               <p className="text-sm text-muted-foreground italic">{t('page.sectionsAdmin.noWeekDays')}</p>
             ) : (
               weekDays.map((row, index) => (
-                <div key={index} className="flex flex-wrap items-center gap-2">
+                <div key={index} className="flex flex-wrap items-center gap-2 mb-4">
                   <Select
                     value={row.day}
                     onValueChange={v => updateWeekDay(index, { day: v })}

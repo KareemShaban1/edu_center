@@ -4,6 +4,8 @@ export interface TeacherBootstrapPayload {
   classes: Array<{
     id: number;
     name: string;
+    grade_id: number;
+    class_id: number;
     grade: string;
     class: string;
     section: string;
@@ -14,6 +16,12 @@ export interface TeacherBootstrapPayload {
   attendance: Array<{
     id: number;
     student_id: number;
+    grade_id: number;
+    class_id: number;
+    section_id: number;
+    grade: string;
+    class: string;
+    section: string;
     date: string;
     status: 'present' | 'absent' | 'late';
     student?: { name: string };
@@ -22,7 +30,12 @@ export interface TeacherBootstrapPayload {
     id: number;
     name: string;
     subject: string;
+    grade_id: number;
+    class_id: number;
+    section_id: number;
     grade: string;
+    class: string;
+    section: string;
     date: string;
     student_name?: string;
     degree?: number | null;
@@ -34,7 +47,12 @@ export interface TeacherBootstrapPayload {
     id: number;
     name: string;
     subject: string;
+    grade_id: number;
+    class_id: number;
+    section_id: number;
     grade: string;
+    class: string;
+    section: string;
     date: string;
     student_name?: string;
     degree?: number | null;
@@ -46,7 +64,12 @@ export interface TeacherBootstrapPayload {
     id: number;
     title: string;
     subject: string;
+    grade_id: number;
+    class_id: number;
+    section_id: number;
     grade: string;
+    class: string;
+    section: string;
     due_date: string;
     submissions: number;
   }>;
@@ -54,7 +77,13 @@ export interface TeacherBootstrapPayload {
     id: number;
     title: string;
     type: string;
+    grade_id: number;
+    class_id: number;
+    section_id: number;
     grade: string;
+    class: string;
+    section: string;
+    date: string;
     url?: string | null;
   }>;
 }

@@ -32,8 +32,8 @@ const superAdminDashboard: DashboardPayload = {
 const roleDashboards: Record<UserRole, DashboardPayload> = {
   admin: {
     stats: [
-      { id: 'students', title: 'Total Students', value: '1,234', variant: 'default', icon: 'graduation-cap', trend: { value: 5.2, label: 'vs last month' } },
-      { id: 'teachers', title: 'Teachers', value: '86', variant: 'default', icon: 'users', trend: { value: 2.1, label: 'vs last month' } },
+      { id: 'students', title: 'Total Students', value: '1,234', variant: 'students', icon: 'graduation-cap', trend: { value: 5.2, label: 'vs last month' } },
+      { id: 'teachers', title: 'Teachers', value: '86', variant: 'teachers', icon: 'users', trend: { value: 2.1, label: 'vs last month' } },
       { id: 'attendance', title: 'Attendance Rate', value: '94.7%', variant: 'attendance', icon: 'calendar-check', trend: { value: 1.3, label: 'vs last week' } },
       { id: 'unpaid_students', title: 'Unpaid This Month', value: '18', variant: 'alerts', icon: 'dollar-sign' },
       { id: 'unpaid_amount', title: 'Unpaid Amount', value: '4,500.00', variant: 'finance', icon: 'dollar-sign' },
@@ -75,28 +75,54 @@ const roleDashboards: Record<UserRole, DashboardPayload> = {
   },
   teacher: {
     stats: [
-      { id: 'classes', title: 'My Classes', value: '5', variant: 'default', icon: 'book-open' },
-      { id: 'students', title: 'Total Students', value: '148', variant: 'default', icon: 'users' },
+      { id: 'sections', title: 'My Classes', value: '5', variant: 'default', icon: 'book-open' },
+      { id: 'students', title: 'Total Students', value: '148', variant: 'students', icon: 'users' },
       { id: 'attendance', title: 'Avg Attendance', value: '92%', variant: 'attendance', icon: 'calendar-check' },
       { id: 'homework', title: 'Pending Homework', value: '3', variant: 'exams', icon: 'clipboard-list' },
+      { id: 'exams', title: 'Exams', value: '24', variant: 'default', icon: 'file-text' },
+      { id: 'quizzes', title: 'Quizzes', value: '18', variant: 'default', icon: 'trophy' },
     ],
     sections: [
       {
-        key: 'today_schedule',
-        title: "Today's Schedule",
+        key: 'my_classes',
+        title: 'My Classes',
         items: [
-          { id: 1, title: 'Math - Grade 3A', meta: '08:00' },
-          { id: 2, title: 'Science - Grade 2B', meta: '09:00' },
-          { id: 3, title: 'Math - Grade 1A', meta: '10:30' },
+          { id: 1, title: 'Grade 3 · Class A · Section A', subtitle: 'Section A', meta: '32' },
+          { id: 2, title: 'Grade 2 · Class B · Section B', subtitle: 'Section B', meta: '28' },
+          { id: 3, title: 'Grade 1 · Class A · Section C', subtitle: 'Section C', meta: '25' },
         ],
       },
       {
-        key: 'attendance',
-        title: 'Attendance',
+        key: 'recent_attendance',
+        title: 'Recent Attendance',
         items: [
-          { id: 1, title: 'Student 1', status: 'present' },
-          { id: 2, title: 'Student 2', status: 'late' },
-          { id: 3, title: 'Student 3', status: 'absent' },
+          { id: 1, title: 'Student 1', meta: 'Jun 18', status: 'present' },
+          { id: 2, title: 'Student 2', meta: 'Jun 18', status: 'late' },
+          { id: 3, title: 'Student 3', meta: 'Jun 17', status: 'absent' },
+        ],
+      },
+      {
+        key: 'upcoming_homework',
+        title: 'Upcoming Homework',
+        items: [
+          { id: 1, title: 'Math Chapter 5', subtitle: 'Grade 3 · Class A', meta: 'Due Jun 22' },
+          { id: 2, title: 'Science Lab Report', subtitle: 'Grade 2 · Class B', meta: 'Due Jun 24' },
+        ],
+      },
+      {
+        key: 'recent_exams',
+        title: 'Recent Exams',
+        items: [
+          { id: 1, title: 'Ahmed Hassan', subtitle: 'Grade 3 · Class A · Section A', meta: 'Score: 92 · Jun 15' },
+          { id: 2, title: 'Sara Ali', subtitle: 'Grade 2 · Class B · Section B', meta: 'Score: 88 · Jun 14' },
+        ],
+      },
+      {
+        key: 'recent_quizzes',
+        title: 'Recent Quizzes',
+        items: [
+          { id: 1, title: 'Omar Khaled', subtitle: 'Grade 3 · Class A · Section A', meta: 'Score: 9 · Jun 16' },
+          { id: 2, title: 'Layla Noor', subtitle: 'Grade 1 · Class A · Section C', meta: 'Score: 10 · Jun 16' },
         ],
       },
     ],

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -7,98 +9,36 @@ use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
-    /**
-     * This namespace is applied to your controller routes.
-     *
-     * In addition, it is set as the URL generator's root namespace.
-     *
-     * @var string
-     */
     protected $namespace = 'App\Http\Controllers';
 
-    /**
-     * The path to the "home" route for your application.
-     *
-     * @var string
-     */
+    public const HOME = '/admin';
+    public const STUDENT = '/student';
+    public const TEACHER = '/teacher';
+    public const PARENT = '/parent';
+    public const PLATFORM_ADMIN = '/platform';
 
-    public const HOME = '/dashboard';
-    public const STUDENT = '/student/dashboard';
-    public const TEACHER = '/teacher/dashboard';
-    public const PARENT = '/parent/dashboard';
-
-    public const PLATFORM_ADMIN = '/platform/dashboard';
-
-    /**
-     * Define your route model bindings, pattern filters, etc.
-     *
-     * @return void
-     */
-    public function boot()
+    public function boot(): void
     {
-        //
         parent::boot();
     }
 
-    /**
-     * Define the routes for the application.
-     *
-     * @return void
-     */
-    public function map()
+    public function map(): void
     {
         $this->mapApiRoutes();
         $this->mapWebRoutes();
-        $this->mapPlatformRoutes();
-
-        //
     }
 
-    /**
-     * Define the "web" routes for the application.
-     *
-     * These routes all receive session state, CSRF protection, etc.
-     *
-     * @return void
-     */
-    protected function mapWebRoutes()
+    protected function mapWebRoutes(): void
     {
         foreach (config('centers.central_domains', []) as $domain) {
             Route::domain($domain)
                 ->middleware('web')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/web.php'));
-
-            Route::domain($domain)
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/student.php'));
-
-            Route::domain($domain)
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/parent.php'));
-
-            Route::domain($domain)
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/teacher.php'));
-
-            Route::domain($domain)
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/ajax.php'));
         }
     }
 
-    /**
-     * Define the "api" routes for the application.
-     *
-     * These routes are typically stateless.
-     *
-     * @return void
-     */
-    protected function mapApiRoutes()
+    protected function mapApiRoutes(): void
     {
         foreach (config('centers.central_domains', []) as $domain) {
             Route::domain($domain)
@@ -106,16 +46,6 @@ class RouteServiceProvider extends ServiceProvider
                 ->middleware('api')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/api.php'));
-        }
-    }
-
-    protected function mapPlatformRoutes()
-    {
-        foreach (config('centers.central_domains', []) as $domain) {
-            Route::domain($domain)
-                ->middleware('web')
-                ->namespace($this->namespace)
-                ->group(base_path('routes/platform.php'));
         }
     }
 }

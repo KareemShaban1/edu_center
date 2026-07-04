@@ -2,44 +2,49 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Library extends Model implements HasMedia 
+class Library extends Model implements HasMedia
 {
+    use BelongsToCenter;
     use InteractsWithMedia;
-    protected $table= "library";
+    use SoftDeletes;
 
-    protected $fillable=['grade_id'];
+    protected $connection = 'center';
 
-    public function getLibraryAttribute()
+    protected $table = 'library';
+
+    protected $fillable = [
+        'title',
+        'grade_id',
+        'class_id',
+        'section_id',
+        'type',
+        'notes',
+        'center_id',
+    ];
+
+    public function registerMediaCollections(): void
     {
-        return $this->getMedia('library')->map(function ($media) {
-            return $media->getUrl();
-        })->toArray();
+        $this->addMediaCollection('library');
     }
-
-
-    ////////////   Relationships   ////////////
 
     public function grade()
     {
-        return $this->belongsTo('App\Models\Grade', 'grade_id');
+        return $this->belongsTo(Grade::class, 'grade_id');
     }
-
 
     public function class()
     {
-        return $this->belongsTo('App\Models\Classes', 'class_id');
+        return $this->belongsTo(Classes::class, 'class_id');
     }
 
     public function section()
     {
-        return $this->belongsTo('App\Models\Section', 'section_id');
+        return $this->belongsTo(Section::class, 'section_id');
     }
-
-    ////////////////////////////////////////////////////////
-
-
 }

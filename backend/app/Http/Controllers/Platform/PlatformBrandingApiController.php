@@ -18,6 +18,16 @@ class PlatformBrandingApiController extends Controller
         'font_body',
         'font_display',
         'font_arabic',
+        'text_scale',
+        'text_scale_ar',
+        'nav_font_scale',
+        'nav_font_scale_ar',
+        'button_font_scale',
+        'button_font_scale_ar',
+        'table_font_scale',
+        'table_font_scale_ar',
+        'landing_text_scale',
+        'landing_text_scale_ar',
     ];
 
     public static function defaults(): array
@@ -26,7 +36,17 @@ class PlatformBrandingApiController extends Controller
             'primary_color' => 'rgb(186, 24, 27)',
             'font_body' => "'Inter', sans-serif",
             'font_display' => "'Plus Jakarta Sans', sans-serif",
-            'font_arabic' => "'Hajeen', 'Cairo', 'Noto Sans Arabic', sans-serif",
+            'font_arabic' => "'Hajeen', 'Cairo', sans-serif",
+            'text_scale' => '106.25',
+            'text_scale_ar' => '112.5',
+            'nav_font_scale' => '100',
+            'nav_font_scale_ar' => '100',
+            'button_font_scale' => '100',
+            'button_font_scale_ar' => '100',
+            'table_font_scale' => '100',
+            'table_font_scale_ar' => '100',
+            'landing_text_scale' => '100',
+            'landing_text_scale_ar' => '100',
         ];
     }
 
@@ -50,6 +70,16 @@ class PlatformBrandingApiController extends Controller
             'font_body' => ['required', 'string', 'max:255'],
             'font_display' => ['required', 'string', 'max:255'],
             'font_arabic' => ['required', 'string', 'max:255'],
+            'text_scale' => ['required', 'numeric', 'min:80', 'max:150'],
+            'text_scale_ar' => ['required', 'numeric', 'min:80', 'max:150'],
+            'nav_font_scale' => ['required', 'numeric', 'min:80', 'max:150'],
+            'nav_font_scale_ar' => ['required', 'numeric', 'min:80', 'max:150'],
+            'button_font_scale' => ['required', 'numeric', 'min:80', 'max:150'],
+            'button_font_scale_ar' => ['required', 'numeric', 'min:80', 'max:150'],
+            'table_font_scale' => ['required', 'numeric', 'min:80', 'max:150'],
+            'table_font_scale_ar' => ['required', 'numeric', 'min:80', 'max:150'],
+            'landing_text_scale' => ['required', 'numeric', 'min:80', 'max:150'],
+            'landing_text_scale_ar' => ['required', 'numeric', 'min:80', 'max:150'],
         ]);
 
         foreach ($payload as $key => $value) {

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import AdminUserFilterBar from '@/components/admin/AdminUserFilterBar';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import StatusBadge from '@/components/StatusBadge';
@@ -38,7 +39,7 @@ function UserShowDialog({ item, onClose }: { item: AdminUserItem; onClose: () =>
             <DetailRow label={t('col.email')} value={item.email} />
             <DetailRow label={t('col.phone')} value={item.phone} />
             <DetailRow label={t('col.role')} value={t(`role.${item.role}`)} />
-            <DetailRow label={t('col.status')} value={<StatusBadge status={item.status} />} />
+            <DetailRow label={t('col.status')} value={<StatusBadge status={item.status || 'active'} label={t(`status.${item.status || 'active'}`)} />} />
             <DetailRow label={t('col.enrolled')} value={item.created_at} />
           </div>
           <div className="flex justify-end">
@@ -149,6 +150,8 @@ export default function AdminUsers() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [showItem, setShowItem] = useState<AdminUserItem | null>(null);
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => adminAccessApi.listUsers(),
@@ -175,13 +178,29 @@ export default function AdminUsers() {
     },
   });
 
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      if (roleFilter && u.role !== roleFilter) return false;
+      if (statusFilter && (u.status || 'active') !== statusFilter) return false;
+      return true;
+    });
+  }, [users, roleFilter, statusFilter]);
+
+  const appliedCount = [roleFilter, statusFilter].filter(Boolean).length;
+  const clearFilters = () => {
+    setRoleFilter('');
+    setStatusFilter('');
+  };
+
   const columns: CrudColumn<AdminUserItem>[] = [
     { key: 'id', label: t('col.id') },
     { key: 'name', label: t('col.name'), sortable: true },
     { key: 'phone', label: t('col.phone') },
     { key: 'email', label: t('col.email') },
     { key: 'role', label: t('col.role'), render: u => <span className="capitalize font-medium">{t(`role.${u.role}`)}</span> },
-    { key: 'status', label: t('col.status'), render: u => <StatusBadge status={u.status} /> },
+    { key: 'status', label: t('col.status'), render: u => (
+      <StatusBadge status={u.status || 'active'} label={t(`status.${u.status || 'active'}`)} />
+    ) },
     {
       key: '_show',
       label: t('crud.view'),
@@ -199,8 +218,20 @@ export default function AdminUsers() {
         title={t('nav.adminUsers')}
         description={t('page.adminUsers.desc')}
         columns={columns}
-        data={users}
+        data={filteredUsers}
         searchKeys={['name', 'email', 'phone', 'role']}
+        topContent={(
+          <AdminUserFilterBar
+            roleFilter={roleFilter}
+            statusFilter={statusFilter}
+            roleOptions={roleOptions}
+            onRoleChange={setRoleFilter}
+            onStatusChange={setStatusFilter}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredUsers.length}
+          />
+        )}
         renderForm={(item, onClose) => (
           <UserForm
             item={item}

@@ -31,12 +31,12 @@ export default function AdminPaymentHistory() {
             </Link>
           </Button>
           <div>
-            <h1 className="page-title">Payment History</h1>
+            <h1 className="page-title">{t('payments.history')}</h1>
             {section && <p className="text-sm text-muted-foreground">{grade?.name} — {cls?.name} — {section.name}</p>}
           </div>
         </div>
         <Button asChild>
-          <Link to={`/admin/payments/section/${sectionId}/today`}>{t('attendance.today')}</Link>
+          <Link to={`/admin/payments/section/${sectionId}/today`}>{t('payments.today')}</Link>
         </Button>
       </div>
 
@@ -44,11 +44,11 @@ export default function AdminPaymentHistory() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-2 text-start font-medium text-muted-foreground">Date</th>
-              <th className="px-4 py-2 text-start font-medium text-muted-foreground">Paid</th>
-              <th className="px-4 py-2 text-start font-medium text-muted-foreground">Unpaid</th>
+              <th className="px-4 py-2 text-start font-medium text-muted-foreground">{t('col.date')}</th>
+              <th className="px-4 py-2 text-start font-medium text-muted-foreground">{t('payments.paid')}</th>
+              <th className="px-4 py-2 text-start font-medium text-muted-foreground">{t('payments.unpaid')}</th>
               <th className="px-4 py-2 text-start font-medium text-muted-foreground">{t('col.amount')}</th>
-              <th className="px-4 py-2 text-start font-medium text-muted-foreground">Total</th>
+              <th className="px-4 py-2 text-start font-medium text-muted-foreground">{t('payments.totalPaid')}</th>
               <th className="px-4 py-2 text-end font-medium text-muted-foreground">{t('crud.actions')}</th>
             </tr>
           </thead>
@@ -69,7 +69,7 @@ export default function AdminPaymentHistory() {
                     <Button asChild size="sm" variant="outline" className="gap-1.5">
                       <Link to={`/admin/payments/section/${sectionId}/date/${day.date}`}>
                         <Eye className="h-3.5 w-3.5" />
-                        Show
+                        {t('crud.show')}
                       </Link>
                     </Button>
                   </td>

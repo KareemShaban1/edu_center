@@ -1,44 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\Route;
-use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 
 /*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
+| SPA is served by Vite (dev) or nginx static `dist/` (production).
+| Laravel web routes only provide an optional SPA fallback when index.html exists in public/.
 */
 
-//Auth::routes();
-
 Route::get('/', function () {
-    return view('frontend.home');
+    $spa = public_path('index.html');
+    if (is_file($spa)) {
+        return response()->file($spa);
+    }
+
+    return response()->json([
+        'message' => 'EduCenter API is running.',
+        'hint' => 'Run the React app with npm run dev, or build and deploy dist/ to public/.',
+    ]);
 });
-
-Route::get('/selection', 'Dashboards\AdminDashboard\HomeController@index')->name('selection');
-// Route::get('/', 'App\Http\Controllers\Frontend\HomeController@index')->name('home');
-
-Route::group(['namespace' => 'Auth'], function () {
-    Route::get('/login/{type}', 'LoginController@loginForm')->name('login.show');
-    Route::post('/login', 'LoginController@login')->name('login');
-    Route::get('/logout/{type}', 'LoginController@logout')->name('logout');
-});
-
-
-
-require __DIR__ . '/admin.php';
-
-require __DIR__ . '/teacher.php';
-
-require __DIR__ . '/platform.php';
 
 Route::fallback(function () {
-    return response()->view('errors.404', [], 404);
+    $spa = public_path('index.html');
+    if (is_file($spa)) {
+        return response()->file($spa);
+    }
+
+    return response()->json(['message' => 'Not found'], 404);
 });
-
-

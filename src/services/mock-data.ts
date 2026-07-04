@@ -42,6 +42,7 @@ const studentSectionMap = [
 
 export const mockStudents: Student[] = Array.from({ length: 12 }, (_, i) => ({
   id: i + 1,
+  code: `STU-${String(i + 1).padStart(6, '0')}`,
   name: `Student ${i + 1}`,
   email: `student${i + 1}@school.com`,
   gender: i % 2 === 0 ? 'male' : 'female',

@@ -2,22 +2,35 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Announcement extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia;
+    use BelongsToCenter;
+    use InteractsWithMedia;
+    use SoftDeletes;
+
+    protected $connection = 'center';
 
     protected $fillable = [
-        'grade_id','class_id','section_id','title','body','time','announcement_type'
+        'center_id',
+        'grade_id',
+        'class_id',
+        'section_id',
+        'title',
+        'body',
+        'time',
+        'announcement_type',
     ];
-    
 
-
-    ////////////   Relationships   ////////////
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('announcements');
+    }
 
     public function grade()
     {
@@ -33,6 +46,4 @@ class Announcement extends Model implements HasMedia
     {
         return $this->belongsTo(Section::class, 'section_id');
     }
-
-    //////////////////////////////////////////////
 }

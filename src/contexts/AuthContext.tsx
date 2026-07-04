@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string, guard?: string, tenantSlug?: string, membershipId?: number) => Promise<User>;
   loginPortal: (email: string, password: string, guard: 'parent' | 'student') => Promise<User>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   hasRole: (role: UserRole) => boolean;
 }
@@ -115,6 +116,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const verified = await authApi.getUser();
+    setUser(verified);
+    localStorage.setItem('auth_user', JSON.stringify(verified));
+    apiClient.setTenantContext({
+      tenantId: verified.tenant_id ?? undefined,
+      tenantSlug: verified.tenant_slug ?? undefined,
+    });
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -122,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       loginPortal,
       logout,
+      refreshUser,
       isAuthenticated: !!user,
       hasRole: (role: UserRole) => user?.role === role,
     }}>

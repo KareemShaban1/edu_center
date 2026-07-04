@@ -94,20 +94,25 @@ export function LandingPageRenderer({
         </div>
       )}
       {sorted.map(section => (
-        <SectionRenderer
+        <div
           key={section.id}
-          section={section}
-          page={page}
-          locale={locale}
-          editMode={editMode}
-          isSelected={selectedSectionId === section.id}
-          selectedTextKey={selectedTextKey}
-          selectedComponentId={selectedComponentId}
-          onSelect={() => onSelectSection?.(section.id)}
-          onSelectTextField={onSelectTextField}
-          onSelectComponent={componentId => onSelectComponent?.(section.id, componentId)}
-          onContentChange={content => onSectionContentChange?.(section.id, content)}
-        />
+          data-section-id={section.id}
+          className={cn(editMode && 'scroll-my-8')}
+        >
+          <SectionRenderer
+            section={section}
+            page={page}
+            locale={locale}
+            editMode={editMode}
+            isSelected={selectedSectionId === section.id}
+            selectedTextKey={selectedTextKey}
+            selectedComponentId={selectedComponentId}
+            onSelect={() => onSelectSection?.(section.id)}
+            onSelectTextField={onSelectTextField}
+            onSelectComponent={componentId => onSelectComponent?.(section.id, componentId)}
+            onContentChange={content => onSectionContentChange?.(section.id, content)}
+          />
+        </div>
       ))}
     </div>
   );

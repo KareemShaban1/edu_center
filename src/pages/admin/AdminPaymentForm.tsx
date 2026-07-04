@@ -44,21 +44,41 @@ export default function AdminPaymentForm() {
   );
 
   const { data, isLoading } = useQuery({
-    queryKey: ['payments', 'section', Number(sectionId), selectedFeeId],
+    queryKey: ['payments', 'section', Number(sectionId), paymentDate, selectedFeeId],
     queryFn: () => adminPaymentsApi.getSectionDate(Number(sectionId), paymentDate, selectedFeeId),
     enabled: Boolean(sectionId && paymentDate),
   });
 
+  const bootstrapFees = useMemo(() => {
+    if (!section) return [] as PaymentFeeOption[];
+    const all = (bootstrap?.fees || []) as Array<PaymentFeeOption & { grade_id?: number; classroom_id?: number; section_id?: number }>;
+    return all
+      .filter(f =>
+        f.section_id === section.id
+        || (f.grade_id === section.grade_id && f.classroom_id === section.class_id)
+        || f.grade_id === section.grade_id,
+      )
+      .map(f => ({
+        id: f.id,
+        title: f.title,
+        amount: Number(f.amount),
+        year: f.year,
+        month: f.month,
+        type: f.type,
+      }));
+  }, [bootstrap?.fees, section]);
+
   useEffect(() => {
     if (data?.rows) setRows(data.rows.map(r => ({ ...r, payment_date: r.payment_date || paymentDate, amount: Number(r.amount || 0) })));
-    if (data?.fees) {
-      setFees(data.fees);
-      const backendSelectedFee = (data.selected_fee_id as number | null | undefined) ?? data.fees[0]?.id ?? null;
-      if (!selectedFeeId || (backendSelectedFee && selectedFeeId !== backendSelectedFee && !data.fees.some(f => f.id === selectedFeeId))) {
+    const apiFees = data?.fees?.length ? data.fees : bootstrapFees;
+    if (apiFees.length) {
+      setFees(apiFees);
+      const backendSelectedFee = (data?.selected_fee_id as number | null | undefined) ?? apiFees[0]?.id ?? null;
+      if (!selectedFeeId || !apiFees.some(f => f.id === selectedFeeId)) {
         setSelectedFeeId(backendSelectedFee);
       }
     }
-  }, [data, selectedFeeId, paymentDate]);
+  }, [data, bootstrapFees, paymentDate, selectedFeeId]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -106,7 +126,7 @@ export default function AdminPaymentForm() {
         return;
       }
       await saveMutation.mutateAsync();
-      toast({ title: t('crud.save'), description: `Payments saved for ${paymentDate}` });
+      toast({ title: t('crud.save'), description: `${t('payments.savedForDate')} ${paymentDate}` });
       navigate('/admin/payments');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save payments';
@@ -132,7 +152,7 @@ export default function AdminPaymentForm() {
             </Link>
           </Button>
           <div>
-            <h1 className="page-title">{isToday ? 'Today Payments' : `Payments for ${paymentDate}`}</h1>
+            <h1 className="page-title">{isToday ? t('payments.today') : t('payments.forDate')} {paymentDate}</h1>
             <p className="text-sm text-muted-foreground">{grade?.name} — {cls?.name} — {section.name}</p>
           </div>
         </div>
@@ -149,29 +169,34 @@ export default function AdminPaymentForm() {
       <div className="mb-4 rounded-lg border border-border bg-card p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Fee</span>
+            <span className="mb-1 block text-muted-foreground">{t('col.fee')}</span>
             <select
               title="Fee"
               value={selectedFeeId ?? ''}
               onChange={e => handleFeeFilterChange(Number(e.target.value))}
               className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="" disabled>Select fee</option>
+              <option value="" disabled>{t('filter.select_fee')}</option>
               {fees.map(fee => (
                 <option key={fee.id} value={fee.id}>
                   {fee.title} (${Number(fee.amount).toFixed(2)})
                 </option>
               ))}
             </select>
+            {fees.length === 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                No fees for this section. <Link to="/admin/fees" className="text-primary hover:underline">Create a fee</Link> first.
+              </p>
+            )}
           </label>
           <div className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Year</span>
+            <span className="mb-1 block text-muted-foreground">{t('col.year')}</span>
             <div className="w-full rounded border border-input bg-muted/30 px-3 py-2 text-sm">
               {selectedFee?.year || '-'}
             </div>
           </div>
           <div className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Month</span>
+            <span className="mb-1 block text-muted-foreground">{t('col.month')}</span>
             <div className="w-full rounded border border-input bg-muted/30 px-3 py-2 text-sm">
               {selectedFee?.month || '-'}
             </div>
@@ -188,15 +213,15 @@ export default function AdminPaymentForm() {
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-primary">{paidCount}</p>
-          <p className="text-xs text-muted-foreground">Paid</p>
+          <p className="text-xs text-muted-foreground">{t('payments.paid')}</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-destructive">{unpaidCount}</p>
-          <p className="text-xs text-muted-foreground">Unpaid</p>
+          <p className="text-xs text-muted-foreground">{t('payments.unpaid')}</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
-          <p className="text-2xl font-bold text-success">${totalAmount.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Total Paid</p>
+          <p className="text-2xl font-bold text-success">{totalAmount.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">{t('payments.totalPaid')}</p>
         </div>
       </div>
 
@@ -207,9 +232,9 @@ export default function AdminPaymentForm() {
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground w-10">#</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.name')}</th>
-                <th className="px-3 py-2 text-start font-medium text-muted-foreground">Fee</th>
+                <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.fee')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.date')}</th>
-                <th className="px-3 py-2 text-start font-medium text-muted-foreground">Month</th>
+                <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.month')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.amount')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.status')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.notes')}</th>
@@ -237,7 +262,7 @@ export default function AdminPaymentForm() {
                       onChange={e => handleFeeChange(row.student_id, Number(e.target.value))}
                       disabled={!selectedFeeId}
                     >
-                      <option value="" disabled>Select fee</option>
+                      <option value="" disabled>{t('filter.select_fee')}</option>
                       {fees.map(fee => <option key={fee.id} value={fee.id}>{fee.title}</option>)}
                     </select>
                   </td>
@@ -252,7 +277,7 @@ export default function AdminPaymentForm() {
                   </td>
                   <td className="px-3 py-2">
                     <input
-                      title="Month"
+                      title={t('col.month')}
                       type="text"
                       value={row.month}
                       onChange={e => updateRow(row.student_id, { month: e.target.value })}
@@ -277,17 +302,17 @@ export default function AdminPaymentForm() {
                         value={row.payment_status}
                         onChange={e => updateRow(row.student_id, { payment_status: e.target.value as 'paid' | 'unpaid' })}
                       >
-                        <option value="paid">Paid</option>
-                        <option value="unpaid">Unpaid</option>
+                        <option value="paid">{t('payments.paid')}</option>
+                        <option value="unpaid">{t('payments.unpaid')}</option>
                       </select>
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          row.payment_status === 'paid'
+                           row.payment_status === 'paid'
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-rose-100 text-rose-700'
                         }`}
                       >
-                        {row.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+                        {row.payment_status === 'paid' ? t('payments.paid') : t('payments.unpaid')}
                       </span>
                     </div>
                   </td>

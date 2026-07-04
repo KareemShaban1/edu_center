@@ -1,55 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders\Center;
 
 use App\Models\Classes;
+use App\Models\Grade;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class ClassesSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    use CenterSeederSupport;
+
+    public function run(): void
     {
-        //
-        Classes::query()->delete();
-        $classes = [
+        $this->scopedDelete('classes');
+
+        $classNames = [
             'الصف الاول',
             'الصف الثاني',
             'الصف الثالث',
         ];
 
-
-
-        foreach ($classes as $class) {
-            Classes::create([
-                'class_name' => $class,
-                'grade_id' => 1
-            ]);
-            
-        }
-
-
-        foreach ($classes as $class) {
-           
-            Classes::create([
-                'class_name' => $class,
-                'grade_id' => 2
-            ]);
-            
-        }
-
-        foreach ($classes as $class) {
-           
-            Classes::create([
-                'class_name' => $class,
-                'grade_id' => 3
-            ]);
-        }
-    
+        Grade::query()->orderBy('id')->each(function (Grade $grade) use ($classNames) {
+            foreach ($classNames as $className) {
+                Classes::create([
+                    'class_name' => $className,
+                    'grade_id' => $grade->id,
+                ]);
+            }
+        });
     }
 }

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { GraduationCap, ArrowLeft, Check, Languages } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
-import { getTenantLoginPath } from '@/lib/tenant-routes';
+import { getTenantLoginPath, getRoleLoginPath } from '@/lib/tenant-routes';
 import { dashboardPreviews } from '@/components/landing/LandingDashboardPreviews';
 import { navLinks, heroBadges, features, roles, whyUs, footerTrust } from './constants';
 import { PlatformLandingHeroIllustration } from './PlatformLandingHeroIllustration';
@@ -295,6 +295,7 @@ export function PlatformLandingPage() {
           >
             {roles.map((role, i) => {
               const Preview = dashboardPreviews[role.key];
+              const previewImage = 'previewImage' in role ? role.previewImage : undefined;
               return (
                 <motion.div
                   key={role.key}
@@ -313,7 +314,16 @@ export function PlatformLandingPage() {
                     viewport={{ once: true }}
                     className="mb-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-2"
                   >
-                    <Preview idPrefix={`landing-${role.key}`} />
+                    {previewImage ? (
+                      <img
+                        src={previewImage}
+                        alt={isAr ? role.titleAr : role.titleEn}
+                        className="h-auto w-full rounded-lg object-cover object-top"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <Preview idPrefix={`landing-${role.key}`} />
+                    )}
                   </motion.div>
                   <ul className="mt-auto space-y-2.5">
                     {(isAr ? role.itemsAr : role.itemsEn).map((item, j) => (
@@ -331,6 +341,17 @@ export function PlatformLandingPage() {
                       </motion.li>
                     ))}
                   </ul>
+
+			    <motion.button
+				    type="button"
+				    onClick={() => navigate(getRoleLoginPath(role.key))}
+				    whileHover={{ scale: 1.03 }}
+				    whileTap={{ scale: 0.97 }}
+				    className="mt-4 w-full rounded-full px-4 py-2.5 font-semibold text-white shadow-md transition"
+				    style={{ backgroundColor: brand.red, fontSize: fonts.button }}
+			    >
+				    {isAr ? `تسجيل دخول ${role.titleAr}` : `Login — ${role.titleEn}`}
+			    </motion.button>
                 </motion.div>
               );
             })}

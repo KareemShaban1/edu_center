@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLocale } from '@/contexts/LocaleContext';
 import { SECTION_CATALOG } from '@/lib/landing/constants';
+import { getSectionLayouts, resolveSectionLayout } from '@/lib/landing/section-layouts';
 import type { LandingSection } from '@/types/landing';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +69,9 @@ export function SectionList({
             const label = section.type === 'custom' && customTitle
               ? (customTitle.en || customTitle.ar || t('landing.section.custom'))
               : meta ? t(meta.labelKey) : section.type;
+            const heroLayoutLabel = section.type === 'hero'
+              ? getSectionLayouts('hero').find(o => o.value === resolveSectionLayout(section))?.labelKey
+              : undefined;
             return (
               <div
                 key={section.id}
@@ -94,7 +98,12 @@ export function SectionList({
                 onClick={() => onSelect(section.id)}
               >
                 <GripVertical className="w-3 h-3 shrink-0 text-muted-foreground cursor-grab" />
-                <span className="flex-1 truncate">{label}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate">{label}</span>
+                  {heroLayoutLabel && (
+                    <span className="block truncate text-[10px] text-muted-foreground">{t(heroLayoutLabel)}</span>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"

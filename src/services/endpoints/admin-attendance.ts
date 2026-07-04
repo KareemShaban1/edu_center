@@ -1,4 +1,5 @@
 import { apiClient, USE_MOCK } from '../api-client';
+import type { SessionOption } from './session-types';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late';
 
@@ -16,6 +17,8 @@ export interface AttendanceDayPayload {
     grade_id: number;
     class_id: number;
   };
+  session_id?: number | null;
+  session_options?: SessionOption[];
   rows: AttendanceRowPayload[];
 }
 
@@ -37,15 +40,18 @@ interface AttendanceHistoryPayload {
 }
 
 export const adminAttendanceApi = {
-  async getSectionDate(sectionId: number, date: string): Promise<AttendanceDayPayload> {
+  async getSectionDate(sectionId: number, date: string, sessionId?: number | null): Promise<AttendanceDayPayload> {
     if (USE_MOCK) {
       return {
         date,
         section: { id: sectionId, grade_id: 0, class_id: 0 },
+        session_id: sessionId ?? null,
+        session_options: [],
         rows: [],
       };
     }
-    return apiClient.get<AttendanceDayPayload>(`/admin/attendance/section/${sectionId}/date/${date}`, undefined, false);
+    const params = sessionId && sessionId > 0 ? { session_id: sessionId } : undefined;
+    return apiClient.get<AttendanceDayPayload>(`/admin/attendance/section/${sectionId}/date/${date}`, params, false);
   },
 
   async getSectionHistory(sectionId: number): Promise<AttendanceHistoryPayload> {
@@ -55,9 +61,17 @@ export const adminAttendanceApi = {
     return apiClient.get<AttendanceHistoryPayload>(`/admin/attendance/section/${sectionId}/history`, undefined, false);
   },
 
-  async saveSectionDate(sectionId: number, date: string, rows: Array<Pick<AttendanceRowPayload, 'student_id' | 'status' | 'notes'>>): Promise<void> {
+  async saveSectionDate(
+    sectionId: number,
+    date: string,
+    rows: Array<Pick<AttendanceRowPayload, 'student_id' | 'status' | 'notes'>>,
+    sessionId?: number | null,
+  ): Promise<void> {
     if (USE_MOCK) return;
-    await apiClient.post(`/admin/attendance/section/${sectionId}/date/${date}`, { rows }, false);
+    await apiClient.post(
+      `/admin/attendance/section/${sectionId}/date/${date}`,
+      { rows, session_id: sessionId && sessionId > 0 ? sessionId : null },
+      false,
+    );
   },
 };
-

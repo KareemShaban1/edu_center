@@ -203,8 +203,8 @@ export default function AdminTeachers() {
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'name', label: t('col.name'), sortable: true },
     { key: 'email', label: t('col.email') },
-    { key: 'gender', label: t('col.gender'), render: tc => <span className="capitalize">{tc.gender || '—'}</span> },
-    { key: 'status', label: t('col.status'), render: tc => <StatusBadge status={tc.status || 'active'} /> },
+    { key: 'gender', label: t('col.gender'), render: tc => <span className="capitalize">{t(`gender.${tc.gender}`)}</span> },
+    { key: 'status', label: t('col.status'), render: tc => <StatusBadge status={tc.status || 'active'} label={t(`status.${tc.status}`)} /> },
     { key: 'specialization', label: t('col.subject'), sortable: true },
     { key: 'class_ids', label: t('form.assignedClasses'), render: tc => {
       if (!tc.class_ids?.length) return '—';

@@ -26,7 +26,7 @@ export default function FormDialog({ open, onClose, title, description, children
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

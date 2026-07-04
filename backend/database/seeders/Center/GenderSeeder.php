@@ -1,27 +1,27 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Database\Seeders\Center;
-use App\Models\Gender;
+
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class GenderSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    use CenterSeederSupport;
+
+    public function run(): void
     {
-        DB::table('genders')->delete();
+        $this->scopedDelete('genders');
 
-        $genders = [
-            ['en'=> 'Male', 'ar'=> 'ذكر'],
-            ['en'=> 'Female', 'ar'=> 'انثي'],
-
-        ];
-        foreach ($genders as $ge) {
-            Gender::create(['Name' => $ge]);
+        foreach ([
+            ['en' => 'Male', 'ar' => 'ذكر'],
+            ['en' => 'Female', 'ar' => 'انثي'],
+        ] as $gender) {
+            $this->insertScopedRow('genders', [
+                'Name' => json_encode($gender, JSON_UNESCAPED_UNICODE),
+            ]);
         }
     }
 }

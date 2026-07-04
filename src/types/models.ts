@@ -46,7 +46,7 @@ export interface ApiError {
 
 export interface TenantMembershipOption {
   membership_id: number;
-  tenant_id: string;
+  tenant_id: number;
   tenant_slug?: string | null;
   tenant_name?: string | null;
   role: string;
@@ -90,6 +90,7 @@ export interface Section {
 
 export interface Student {
   id: number;
+  code: string;
   name: string;
   grade_name?: string;
   class_name?: string;
@@ -235,11 +236,13 @@ export interface Homework {
 // ===== Learning Content =====
 
 export interface MediaFile {
-  id: string;
+  id: number | string;
   name: string;
   size: number;
   type: string;
   url: string;
+  file_name?: string;
+  mime_type?: string | null;
 }
 
 export interface Unit {
@@ -413,7 +416,7 @@ export interface DashboardStat {
     value: number;
     label: string;
   };
-  variant?: 'default' | 'attendance' | 'finance' | 'exams' | 'alerts';
+  variant?: 'default' | 'students' | 'teachers' | 'attendance' | 'finance' | 'exams' | 'alerts';
   icon?: string;
 }
 

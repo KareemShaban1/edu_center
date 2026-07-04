@@ -39,6 +39,8 @@ class DashboardApiController extends Controller
             return $context['error'];
         }
 
+        $this->applyApiLocale($request);
+
         return match ($context['role']) {
             'super_admin' => $this->superAdminDashboard(),
             'admin' => $this->adminDashboard($request, $context['tenantDb']),
@@ -154,21 +156,37 @@ class DashboardApiController extends Controller
 
         $announcements = $announcementsTable
             ? $tenantDb->table('announcements')
-                ->orderByDesc('created_at')
+                ->leftJoin('grades', 'announcements.grade_id', '=', 'grades.id')
+                ->leftJoin('classes', 'announcements.class_id', '=', 'classes.id')
+                ->leftJoin('sections', 'announcements.section_id', '=', 'sections.id')
+                ->whereNull('announcements.deleted_at')
+                ->orderByDesc('announcements.created_at')
                 ->limit(5)
-                ->get(['id', 'title', 'body', 'created_at'])
+                ->select(
+                    'announcements.id',
+                    'announcements.title',
+                    'announcements.body',
+                    'announcements.created_at',
+                    'grades.grade_name as grade_name',
+                    'classes.class_name as class_name',
+                    'sections.section_name as section_name',
+                )
+                ->get()
                 ->map(fn ($row) => [
                     'id' => $row->id,
                     'title' => $row->title,
                     'subtitle' => $row->body,
+                    'grade_name' => $row->grade_name,
+                    'class_name' => $row->class_name,
+                    'section_name' => $row->section_name,
                     'meta' => optional($row->created_at)->format('Y-m-d') ?? now()->toDateString(),
                 ])->values()
             : collect();
 
         return response()->json([
             'stats' => [
-                ['id' => 'students', 'title' => __('api/dashboard.total_students'), 'value' => (string) $studentsCount, 'icon' => 'graduation-cap'],
-                ['id' => 'teachers', 'title' => __('api/dashboard.teachers'), 'value' => (string) $teachersCount, 'icon' => 'users'],
+                ['id' => 'students', 'title' => __('api/dashboard.total_students'), 'value' => (string) $studentsCount, 'variant' => 'students', 'icon' => 'graduation-cap'],
+                ['id' => 'teachers', 'title' => __('api/dashboard.teachers'), 'value' => (string) $teachersCount, 'variant' => 'teachers', 'icon' => 'users'],
                 ['id' => 'attendance', 'title' => __('api/dashboard.attendance_rate'), 'value' => number_format($attendanceRate, 1).'%', 'variant' => 'attendance', 'icon' => 'calendar-check'],
                 ['id' => 'unpaid_students', 'title' => __('api/dashboard.unpaid_this_month'), 'value' => (string) $unpaidSummary['unpaid_count'], 'variant' => 'alerts', 'icon' => 'dollar-sign'],
                 ['id' => 'unpaid_amount', 'title' => __('api/dashboard.unpaid_amount'), 'value' => number_format($unpaidSummary['unpaid_amount'], 2), 'variant' => 'finance', 'icon' => 'dollar-sign'],
@@ -259,58 +277,243 @@ class DashboardApiController extends Controller
 
     private function teacherDashboard($tenantDb, mixed $teacherId): JsonResponse
     {
+        $teacherId = (int) $teacherId;
+        $sectionIds = $this->resolveTeacherSectionIds($tenantDb, $teacherId);
+        $locale = app()->getLocale();
+
         $studentsTable = Schema::connection('center')->hasTable('students');
         $attendanceTable = Schema::connection('center')->hasTable('attendances');
         $homeworksTable = Schema::connection('center')->hasTable('homeworks');
-        $sectionQuery = Schema::connection('center')->hasTable('sections')
-            ? $tenantDb->table('sections')
-            : null;
+        $examsTable = Schema::connection('center')->hasTable('exam_degrees');
+        $quizzesTable = Schema::connection('center')->hasTable('quiz_degrees');
 
-        if ($sectionQuery && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
-            $classCount = (clone $sectionQuery)->where('teacher_id', $teacherId)->count();
-            $scheduleItems = (clone $sectionQuery)
-                ->where('teacher_id', $teacherId)
-                ->limit(5)
-                ->get(['id', 'section_name'])
-                ->map(fn ($row) => ['id' => $row->id, 'title' => $row->section_name, 'meta' => '-'])
-                ->values();
-        } else {
-            $classCount = Schema::connection('center')->hasTable('classes') ? $tenantDb->table('classes')->count() : 0;
-            $scheduleItems = collect();
+        $sectionCount = $sectionIds->count();
+
+        $studentsCount = 0;
+        if ($studentsTable && $sectionIds->isNotEmpty()) {
+            $studentsQuery = $tenantDb->table('students')->whereIn('section_id', $sectionIds);
+            if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+                $studentsQuery->whereNull('deleted_at');
+            }
+            $studentsCount = (int) $studentsQuery->count();
         }
 
-        $studentsCount = $studentsTable ? $tenantDb->table('students')->count() : 0;
-        $attendanceRate = $attendanceTable
-            ? (float) $tenantDb->table('attendances')->avg('attendance_status') * 100
+        $attendanceRate = 0.0;
+        if ($attendanceTable && $sectionIds->isNotEmpty()) {
+            $attendanceQuery = $tenantDb->table('attendances')->whereIn('section_id', $sectionIds);
+            $totalAttendance = (int) (clone $attendanceQuery)->count();
+            if ($totalAttendance > 0) {
+                $presentCount = (int) (clone $attendanceQuery)->where('attendance_status', 1)->count();
+                $attendanceRate = round(($presentCount / $totalAttendance) * 100, 1);
+            }
+        }
+
+        $pendingHomework = 0;
+        if ($homeworksTable && $sectionIds->isNotEmpty()) {
+            $pendingHomework = (int) $tenantDb->table('homeworks')
+                ->whereIn('section_id', $sectionIds)
+                ->whereDate('due_date', '>=', now()->toDateString())
+                ->count();
+        }
+
+        $examCount = ($examsTable && $sectionIds->isNotEmpty())
+            ? (int) $tenantDb->table('exam_degrees')->whereIn('section_id', $sectionIds)->count()
             : 0;
-        $pendingHomework = $homeworksTable ? $tenantDb->table('homeworks')->whereDate('due_date', '>=', now()->toDateString())->count() : 0;
+        $quizCount = ($quizzesTable && $sectionIds->isNotEmpty())
+            ? (int) $tenantDb->table('quiz_degrees')->whereIn('section_id', $sectionIds)->count()
+            : 0;
+
+        $classItems = collect();
+        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
+            $classItems = $tenantDb->table('sections')
+                ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
+                ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
+                ->whereIn('sections.id', $sectionIds)
+                ->select(
+                    'sections.id',
+                    'sections.section_name',
+                    'classes.class_name',
+                    'grades.grade_name'
+                )
+                ->orderBy('grades.grade_name')
+                ->orderBy('classes.class_name')
+                ->orderBy('sections.section_name')
+                ->get()
+                ->map(function ($row) use ($tenantDb, $studentsTable) {
+                    $studentsInSection = 0;
+                    if ($studentsTable) {
+                        $q = $tenantDb->table('students')->where('section_id', $row->id);
+                        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+                            $q->whereNull('deleted_at');
+                        }
+                        $studentsInSection = (int) $q->count();
+                    }
+
+                    return [
+                        'id' => (int) $row->id,
+                        'title' => trim(collect([$row->grade_name, $row->class_name, $row->section_name])->filter()->implode(' · ')),
+                        'subtitle' => $row->section_name,
+                        'meta' => (string) $studentsInSection,
+                    ];
+                })
+                ->values();
+        }
 
         $attendanceItems = collect();
-        if ($attendanceTable && $studentsTable) {
+        if ($attendanceTable && $studentsTable && $sectionIds->isNotEmpty()) {
             $attendanceItems = $tenantDb->table('attendances')
-                ->leftJoin('students', 'attendances.student_id', '=', 'students.id')
-                ->orderByDesc('attendances.created_at')
-                ->limit(5)
-                ->get(['attendances.id', 'students.name', 'attendances.attendance_status'])
-                ->map(fn ($row) => [
-                    'id' => $row->id,
-                    'title' => $row->name ?? 'Student',
-                    'status' => ((int) $row->attendance_status) === 1 ? 'present' : 'absent',
-                ])->values();
+                ->join('students', 'attendances.student_id', '=', 'students.id')
+                ->whereIn('attendances.section_id', $sectionIds)
+                ->orderByDesc('attendances.attendance_date')
+                ->limit(6)
+                ->get(['attendances.id', 'students.name', 'attendances.attendance_date', 'attendances.attendance_status'])
+                ->map(function ($row) use ($locale) {
+                    $status = ((int) $row->attendance_status) === 1
+                        ? 'present'
+                        : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
+
+                    return [
+                        'id' => (int) $row->id,
+                        'title' => $row->name ?? 'Student',
+                        'meta' => $row->attendance_date
+                            ? Carbon::parse($row->attendance_date)->locale($locale)->translatedFormat('M d')
+                            : '',
+                        'status' => $status,
+                    ];
+                })
+                ->values();
+        }
+
+        $homeworkItems = collect();
+        if ($homeworksTable && $sectionIds->isNotEmpty()) {
+            $homeworkItems = $tenantDb->table('homeworks')
+                ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
+                ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
+                ->whereIn('homeworks.section_id', $sectionIds)
+                ->whereDate('homeworks.due_date', '>=', now()->toDateString())
+                ->orderBy('homeworks.due_date')
+                ->limit(6)
+                ->get(['homeworks.id', 'homeworks.title', 'homeworks.due_date', 'grades.grade_name', 'classes.class_name'])
+                ->map(function ($row) use ($locale) {
+                    $due = $row->due_date ? Carbon::parse($row->due_date)->locale($locale)->translatedFormat('M d') : '-';
+
+                    return [
+                        'id' => (int) $row->id,
+                        'title' => $row->title,
+                        'subtitle' => trim(collect([$row->grade_name, $row->class_name])->filter()->implode(' · ')),
+                        'meta' => __('api/dashboard.teacher_due', ['date' => $due]),
+                    ];
+                })
+                ->values();
+        }
+
+        $examItems = collect();
+        if ($examsTable && $sectionIds->isNotEmpty()) {
+            $examItems = $tenantDb->table('exam_degrees')
+                ->leftJoin('students', 'exam_degrees.student_id', '=', 'students.id')
+                ->leftJoin('sections', 'exam_degrees.section_id', '=', 'sections.id')
+                ->leftJoin('classes', 'exam_degrees.class_id', '=', 'classes.id')
+                ->leftJoin('grades', 'exam_degrees.grade_id', '=', 'grades.id')
+                ->whereIn('exam_degrees.section_id', $sectionIds)
+                ->orderByDesc('exam_degrees.exam_date')
+                ->limit(6)
+                ->get([
+                    'exam_degrees.id',
+                    'exam_degrees.exam_date',
+                    'exam_degrees.degree',
+                    'students.name as student_name',
+                    'grades.grade_name',
+                    'classes.class_name',
+                    'sections.section_name',
+                ])
+                ->map(function ($row) use ($locale) {
+                    $date = $row->exam_date ? Carbon::parse($row->exam_date)->locale($locale)->translatedFormat('M d') : '-';
+
+                    return [
+                        'id' => (int) $row->id,
+                        'title' => $row->student_name ?: '-',
+                        'subtitle' => trim(collect([$row->grade_name, $row->class_name, $row->section_name])->filter()->implode(' · ')),
+                        'meta' => $row->degree !== null
+                            ? __('api/dashboard.teacher_degree', ['degree' => $row->degree]).' · '.$date
+                            : $date,
+                    ];
+                })
+                ->values();
+        }
+
+        $quizItems = collect();
+        if ($quizzesTable && $sectionIds->isNotEmpty()) {
+            $quizItems = $tenantDb->table('quiz_degrees')
+                ->leftJoin('students', 'quiz_degrees.student_id', '=', 'students.id')
+                ->leftJoin('sections', 'quiz_degrees.section_id', '=', 'sections.id')
+                ->leftJoin('classes', 'quiz_degrees.class_id', '=', 'classes.id')
+                ->leftJoin('grades', 'quiz_degrees.grade_id', '=', 'grades.id')
+                ->whereIn('quiz_degrees.section_id', $sectionIds)
+                ->orderByDesc('quiz_degrees.quiz_date')
+                ->limit(6)
+                ->get([
+                    'quiz_degrees.id',
+                    'quiz_degrees.quiz_date',
+                    'quiz_degrees.degree',
+                    'students.name as student_name',
+                    'grades.grade_name',
+                    'classes.class_name',
+                    'sections.section_name',
+                ])
+                ->map(function ($row) use ($locale) {
+                    $date = $row->quiz_date ? Carbon::parse($row->quiz_date)->locale($locale)->translatedFormat('M d') : '-';
+
+                    return [
+                        'id' => (int) $row->id,
+                        'title' => $row->student_name ?: '-',
+                        'subtitle' => trim(collect([$row->grade_name, $row->class_name, $row->section_name])->filter()->implode(' · ')),
+                        'meta' => $row->degree !== null
+                            ? __('api/dashboard.teacher_degree', ['degree' => $row->degree]).' · '.$date
+                            : $date,
+                    ];
+                })
+                ->values();
         }
 
         return response()->json([
             'stats' => [
-                ['id' => 'classes', 'title' => 'My Classes', 'value' => (string) $classCount, 'icon' => 'book-open'],
-                ['id' => 'students', 'title' => 'Total Students', 'value' => (string) $studentsCount, 'icon' => 'users'],
-                ['id' => 'attendance', 'title' => 'Avg Attendance', 'value' => number_format($attendanceRate, 1).'%', 'variant' => 'attendance', 'icon' => 'calendar-check'],
-                ['id' => 'homework', 'title' => 'Pending Homework', 'value' => (string) $pendingHomework, 'variant' => 'exams', 'icon' => 'clipboard-list'],
+                ['id' => 'sections', 'title' => __('api/dashboard.teacher_sections'), 'value' => (string) $sectionCount, 'icon' => 'book-open'],
+                ['id' => 'students', 'title' => __('api/dashboard.teacher_students'), 'value' => (string) $studentsCount, 'variant' => 'students', 'icon' => 'users'],
+                ['id' => 'attendance', 'title' => __('api/dashboard.teacher_attendance'), 'value' => number_format($attendanceRate, 1).'%', 'variant' => 'attendance', 'icon' => 'calendar-check'],
+                ['id' => 'homework', 'title' => __('api/dashboard.teacher_homework'), 'value' => (string) $pendingHomework, 'variant' => 'exams', 'icon' => 'clipboard-list'],
+                ['id' => 'exams', 'title' => __('api/dashboard.teacher_exams'), 'value' => (string) $examCount, 'variant' => 'default', 'icon' => 'file-text'],
+                ['id' => 'quizzes', 'title' => __('api/dashboard.teacher_quizzes'), 'value' => (string) $quizCount, 'variant' => 'default', 'icon' => 'trophy'],
             ],
             'sections' => [
-                ['key' => 'today_schedule', 'title' => "Today's Schedule", 'items' => $scheduleItems],
-                ['key' => 'attendance', 'title' => 'Attendance', 'items' => $attendanceItems],
+                ['key' => 'my_classes', 'title' => __('api/dashboard.teacher_my_classes'), 'items' => $classItems],
+                ['key' => 'recent_attendance', 'title' => __('api/dashboard.teacher_recent_attendance'), 'items' => $attendanceItems],
+                ['key' => 'upcoming_homework', 'title' => __('api/dashboard.teacher_upcoming_homework'), 'items' => $homeworkItems],
+                ['key' => 'recent_exams', 'title' => __('api/dashboard.teacher_recent_exams'), 'items' => $examItems],
+                ['key' => 'recent_quizzes', 'title' => __('api/dashboard.teacher_recent_quizzes'), 'items' => $quizItems],
             ],
         ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function resolveTeacherSectionIds($tenantDb, int $teacherId): \Illuminate\Support\Collection
+    {
+        $sectionIds = collect();
+
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
+            );
+        }
+
+        if (Schema::connection('center')->hasTable('teacher_section')) {
+            $sectionIds = $sectionIds->merge(
+                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
+            );
+        }
+
+        return $sectionIds->map(fn ($id) => (int) $id)->unique()->values();
     }
 
     private function studentDashboard($tenantDb, mixed $studentId): JsonResponse

@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import FormDialog from '@/components/FormDialog';
+import MediaPreviewList, { formatMediaSize } from '@/components/MediaPreviewList';
 import { useLocale } from '@/contexts/LocaleContext';
-import { X, Upload, FileText, Image } from 'lucide-react';
+import { Eye, Upload, X } from 'lucide-react';
 import type { Unit, MediaFile } from '@/types/models';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
+import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminLearningApi } from '@/services/endpoints/admin-learning';
+import { adminLearningApi, type UnitSavePayload } from '@/services/endpoints/admin-learning';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -14,11 +17,13 @@ export default function AdminUnits() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const { data: bootstrap } = useAdminBootstrap();
-  const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string }>;
+  const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
+  const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
+  const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
   const [data, setData] = useState<Unit[]>([]);
   const [viewItem, setViewItem] = useState<Unit | null>(null);
   const saveMutation = useMutation({
-    mutationFn: ({ payload, id }: { payload: Pick<Unit, 'name' | 'class_id' | 'notes'>; id?: number }) => (
+    mutationFn: ({ payload, id }: { payload: UnitSavePayload; id?: number }) => (
       id ? adminLearningApi.updateUnit(id, payload) : adminLearningApi.createUnit(payload)
     ),
     onSuccess: async () => {
@@ -29,6 +34,21 @@ export default function AdminUnits() {
   useEffect(() => {
     setData((bootstrap?.units || []) as Unit[]);
   }, [bootstrap]);
+
+  const {
+    gradeFilter,
+    classFilter,
+    sectionFilter,
+    setSectionFilter,
+    grades: gradeOptions,
+    classesByGrade,
+    sectionsByClass,
+    filteredRows,
+    appliedCount,
+    clearFilters,
+    handleGradeChange,
+    handleClassChange,
+  } = useAdminScopeFilters(grades, classes, sections, data);
 
   const columns: CrudColumn<Unit>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
@@ -42,7 +62,20 @@ export default function AdminUnits() {
       key: 'media' as keyof Unit, label: t('col.media'),
       render: (u) => <span className="text-muted-foreground">{u.media?.length || 0} files</span>,
     },
-    { key: 'show', label: t('crud.show'), render: (u) => <button title={t('crud.show')} onClick={() => setViewItem(u)} className="text-primary hover:underline">{t('attendance.view')}</button> },
+    {
+      key: 'show',
+      label: t('crud.show'),
+      render: (u) => (
+        <button
+          type="button"
+          title={t('crud.show')}
+          onClick={() => setViewItem(u)}
+          className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -51,17 +84,33 @@ export default function AdminUnits() {
         title={t('nav.units')}
         description={t('page.unitsAdmin.desc')}
         columns={columns}
-        data={data}
+        data={filteredRows}
         searchKeys={['name']}
+        topContent={(
+          <AdminScopeFilterBar
+            grades={gradeOptions}
+            classesByGrade={classesByGrade}
+            sectionsByClass={sectionsByClass}
+            gradeFilter={gradeFilter}
+            classFilter={classFilter}
+            sectionFilter={sectionFilter}
+            onGradeChange={handleGradeChange}
+            onClassChange={handleClassChange}
+            onSectionChange={setSectionFilter}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+          />
+        )}
         onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
         renderForm={(item, onClose) => (
           <UnitForm
             item={item}
             classes={classes}
             onClose={onClose}
-            onSave={async (unit) => {
+            onSave={async (payload) => {
               try {
-                await saveMutation.mutateAsync({ payload: { name: unit.name, class_id: unit.class_id, notes: unit.notes }, id: item?.id });
+                await saveMutation.mutateAsync({ payload, id: item?.id });
                 onClose();
               } catch (error) {
                 const message = error instanceof Error ? error.message : 'Failed to save unit';
@@ -74,12 +123,15 @@ export default function AdminUnits() {
       />
       {viewItem && (
         <Dialog open onOpenChange={v => !v && setViewItem(null)}>
-          <DialogContent>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader><DialogTitle>{viewItem.name}</DialogTitle></DialogHeader>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-4 text-sm">
               <p><strong>{t('col.class')}:</strong> {classes.find(c => c.id === viewItem.class_id)?.name ?? '—'}</p>
               <p><strong>{t('col.notes')}:</strong> {viewItem.notes || '—'}</p>
-              <p><strong>{t('col.media')}:</strong> {viewItem.media?.length || 0}</p>
+              <div>
+                <p className="mb-2 font-medium">{t('col.media')}</p>
+                <MediaPreviewList media={viewItem.media || []} />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -98,41 +150,65 @@ function UnitForm({
   item: Unit | null;
   classes: Array<{ id: number; name: string }>;
   onClose: () => void;
-  onSave: (u: Unit) => Promise<void>;
+  onSave: (payload: UnitSavePayload) => Promise<void>;
   saving: boolean;
 }) {
   const { t } = useLocale();
   const [name, setName] = useState(item?.name ?? '');
   const [classId, setClassId] = useState(item?.class_id ?? classes[0]?.id ?? 0);
   const [notes, setNotes] = useState(item?.notes ?? '');
-  const [media, setMedia] = useState<MediaFile[]>(item?.media ?? []);
+  const [files, setFiles] = useState<File[]>([]);
+  const [removeMediaIds, setRemoveMediaIds] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const existingMedia = useMemo(
+    () => (item?.media || []).filter(m => !removeMediaIds.includes(Number(m.id))),
+    [item?.media, removeMediaIds],
+  );
+
+  const pendingMedia = useMemo<MediaFile[]>(
+    () => files.map((file, index) => ({
+      id: `pending-${index}-${file.name}`,
+      name: file.name,
+      file_name: file.name,
+      size: file.size,
+      type: file.type,
+      mime_type: file.type,
+      url: URL.createObjectURL(file),
+    })),
+    [files],
+  );
+
+  const toggleRemoveMedia = (id: number) => {
+    setRemoveMediaIds(prev => (prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]));
+  };
+
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newMedia: MediaFile[] = files.map(f => ({
-      id: crypto.randomUUID(),
-      name: f.name,
-      size: f.size,
-      type: f.type,
-      url: URL.createObjectURL(f),
-    }));
-    setMedia(prev => [...prev, ...newMedia]);
+    const picked = Array.from(e.target.files || []);
+    setFiles(prev => [...prev, ...picked]);
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const removeFile = (id: string) => setMedia(prev => prev.filter(f => f.id !== id));
-
-  const formatSize = (bytes: number) => bytes < 1024 * 1024
-    ? `${(bytes / 1024).toFixed(1)} KB`
-    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const removePendingFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <FormDialog
       open
       onClose={onClose}
       title={item ? `${t('crud.edit')} ${t('nav.units')}` : `${t('crud.addNew')} ${t('nav.units')}`}
-      onSubmit={(e) => { e.preventDefault(); void onSave({ id: item?.id ?? 0, name, class_id: classId, notes, media }); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim() || !classId) return;
+        void onSave({
+          name: name.trim(),
+          class_id: classId,
+          notes,
+          files,
+          remove_media_ids: removeMediaIds,
+        });
+      }}
       loading={saving}
     >
       <div className="space-y-4">
@@ -162,9 +238,43 @@ function UnitForm({
             rows={3} value={notes} onChange={e => setNotes(e.target.value)}
           />
         </div>
+
+        {item && (item.media?.length || 0) > 0 && (
+          <div>
+            <label className="mb-2 block text-sm font-medium">{t('col.media')}</label>
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              {(item.media || []).map(m => {
+                const mediaId = Number(m.id);
+                const marked = removeMediaIds.includes(mediaId);
+                return (
+                  <div key={String(m.id)} className={`flex items-center justify-between rounded-md px-2 py-1.5 ${marked ? 'bg-destructive/10' : 'bg-muted/30'}`}>
+                    <span className="truncate text-sm">{m.file_name || m.name}</span>
+                    <button
+                      type="button"
+                      title={marked ? 'Undo remove' : t('crud.delete')}
+                      onClick={() => toggleRemoveMedia(mediaId)}
+                      className={`rounded p-1 ${marked ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div>
-          <label className="text-sm font-medium">{t('col.media')}</label>
-          <input title={t('col.media')} ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} accept="image/*,video/*,audio/*,.pdf,.doc,.docx" />
+          <label className="text-sm font-medium">{t('col.addFiles')}</label>
+          <input
+            ref={fileRef}
+            title={t('col.media')}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFiles}
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+          />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -172,21 +282,32 @@ function UnitForm({
           >
             <Upload className="h-4 w-4" /> {t('col.addFiles')}
           </button>
-          {media.length > 0 && (
-            <ul className="mt-2 space-y-1.5">
-              {media.map(f => (
-                <li key={f.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                  {f.type.startsWith('image/') ? <Image className="h-4 w-4 shrink-0 text-primary" /> : <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />}
-                  <span className="flex-1 truncate">{f.name}</span>
-                  <span className="text-xs text-muted-foreground">{formatSize(f.size)}</span>
-                  <button title={t('crud.delete')} type="button" onClick={() => removeFile(f.id)} className="text-destructive hover:text-destructive/80">
-                    <X className="h-4 w-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
+
+        {(existingMedia.length > 0 || pendingMedia.length > 0) && (
+          <div>
+            <label className="mb-2 block text-sm font-medium">{t('crud.view')}</label>
+            <MediaPreviewList media={[...existingMedia, ...pendingMedia]} />
+            {files.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {files.map((file, index) => (
+                  <li key={`${file.name}-${index}`} className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="truncate">{file.name} · {formatMediaSize(file.size)}</span>
+                    <button
+                      type="button"
+                      title={t('crud.delete')}
+                      aria-label={t('crud.delete')}
+                      onClick={() => removePendingFile(index)}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </FormDialog>
   );

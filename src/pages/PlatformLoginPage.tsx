@@ -12,6 +12,11 @@ import {
   getPlatformDefaultsForGuard,
   isPlatformGuard,
 } from '@/config/login-defaults';
+import {
+  grantPlatformAccess,
+  hasPlatformAccess,
+  verifyPlatformAccessPassword,
+} from '@/config/platform-access';
 import { getTenantLoginPath } from '@/lib/tenant-routes';
 import { EgyptEducationScene } from '@/components/illustrations/EgyptEducationArt';
 
@@ -34,6 +39,10 @@ export default function PlatformLoginPage() {
   const [password, setPassword] = useState(() => getPlatformDefaultsForGuard('super_admin').password);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accessGranted, setAccessGranted] = useState(() => hasPlatformAccess());
+  const [accessPassword, setAccessPassword] = useState('');
+  const [accessError, setAccessError] = useState('');
+  const [accessLoading, setAccessLoading] = useState(false);
 
   const { data: guards = ['super_admin', 'platform_admin'] } = useQuery({
     queryKey: ['auth-guards'],
@@ -57,6 +66,22 @@ export default function PlatformLoginPage() {
     setEmail(d.email);
     setPassword(d.password);
   }, [selectedGuard]);
+
+  const handleAccessSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccessError('');
+    setAccessLoading(true);
+    try {
+      if (!verifyPlatformAccessPassword(accessPassword)) {
+        setAccessError(t('auth.platformAccessDenied'));
+        return;
+      }
+      grantPlatformAccess();
+      setAccessGranted(true);
+    } finally {
+      setAccessLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +121,56 @@ export default function PlatformLoginPage() {
         </div>
 
         <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end animate-fade-in">
+        {!accessGranted ? (
+          <>
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-exams">
+                <Shield className="h-7 w-7 text-primary-foreground" />
+              </div>
+              <h1 className="font-display text-2xl font-bold">{t('auth.platformAccessTitle')}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{t('auth.platformAccessSubtitle')}</p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-elevated">
+              <form onSubmit={handleAccessSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="platform-access-password" className="mb-1.5 block text-sm font-medium">
+                    {t('auth.platformAccessPassword')}
+                  </label>
+                  <input
+                    id="platform-access-password"
+                    type="password"
+                    value={accessPassword}
+                    onChange={e => setAccessPassword(e.target.value)}
+                    required
+                    autoComplete="off"
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                {accessError && <p className="text-sm text-destructive">{accessError}</p>}
+
+                <button
+                  type="submit"
+                  disabled={accessLoading}
+                  className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {accessLoading ? t('auth.platformAccessChecking') : t('auth.platformAccessContinue')}
+                </button>
+              </form>
+
+              <p className="mt-4 text-center">
+                <Link
+                  to={getTenantLoginPath()}
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {t('auth.linkSchoolLogin')}
+                </Link>
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-exams">
             <Globe className="h-7 w-7 text-primary-foreground" />
@@ -184,6 +259,8 @@ export default function PlatformLoginPage() {
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">{t('app.demoMode')}</p>
+          </>
+        )}
         </div>
       </div>
     </div>

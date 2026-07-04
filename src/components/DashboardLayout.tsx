@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getTenantLoginPath } from '@/lib/tenant-routes';
+import { getLoginPathForUser } from '@/lib/routes';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useAppFontClasses } from '@/hooks/use-app-font';
 import {
   LayoutDashboard,
   Users,
@@ -40,6 +41,7 @@ import type { UserRole } from '@/types/models';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { NotificationBell } from '@/components/NotificationBell';
+import HeaderUserMenu from '@/components/dashboard/HeaderUserMenu';
 
 type NavIcon = React.ElementType;
 
@@ -152,12 +154,11 @@ const adminNavBlocks: NavBlock[] = [
   {
     type: 'group',
     group: {
-      id: 'admin-meetings',
-      labelKey: 'nav.group.meetings',
+      id: 'admin-sessions',
+      labelKey: 'nav.group.sessions',
       icon: CalendarCheck,
       items: [
-        { labelKey: 'nav.adminMeetings', path: '/admin/meetings', icon: Video },
-        { labelKey: 'nav.meetingSeriesAdmin', path: '/admin/meeting-series', icon: CalendarCheck },
+        { labelKey: 'nav.adminSessions', path: '/admin/sessions', icon: Video },
       ],
     },
   },
@@ -206,7 +207,12 @@ const adminNavBlocks: NavBlock[] = [
       id: 'admin-insights',
       labelKey: 'nav.group.insights',
       icon: PieChart,
-      items: [{ labelKey: 'nav.reports', path: '/admin/reports', icon: FileText }],
+      items: [
+        { labelKey: 'nav.reportsAttendance', path: '/admin/reports/attendance', icon: CalendarCheck },
+        { labelKey: 'nav.reportsExams', path: '/admin/reports/exams', icon: ClipboardList },
+        { labelKey: 'nav.reportsQuizzes', path: '/admin/reports/quizzes', icon: ClipboardCheck },
+        { labelKey: 'nav.reportsPayments', path: '/admin/reports/payments', icon: DollarSign },
+      ],
     },
   },
   {
@@ -234,8 +240,7 @@ const teacherNavBlocks: NavBlock[] = [
       icon: BookOpen,
       items: [
         { labelKey: 'nav.myClasses', path: '/teacher/classes', icon: BookOpen },
-        { labelKey: 'nav.teacherMeetings', path: '/teacher/meetings', icon: Video },
-        { labelKey: 'nav.meetingSeries', path: '/teacher/meeting-series', icon: CalendarCheck },
+        { labelKey: 'nav.teacherSessions', path: '/teacher/sessions', icon: Video },
         { labelKey: 'nav.attendance', path: '/teacher/attendance', icon: CalendarCheck },
         { labelKey: 'nav.homework', path: '/teacher/homework', icon: FileText },
       ],
@@ -266,7 +271,7 @@ const teacherNavBlocks: NavBlock[] = [
 
 const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/student', icon: LayoutDashboard } },
-  { type: 'link', item: { labelKey: 'nav.myMeetings', path: '/student/meetings', icon: BookOpen } },
+  { type: 'link', item: { labelKey: 'nav.mySessions', path: '/student/sessions', icon: BookOpen } },
   { type: 'link', item: { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck } },
   { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
@@ -300,6 +305,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const { locale, setLocale, t, dir } = useLocale();
+  const fonts = useAppFontClasses();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -343,10 +349,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
             <GraduationCap className="h-4 w-4 text-sidebar-primary-foreground" />
           </div>
-          <span className="font-display text-lg font-bold text-sidebar-primary-foreground">{t('app.name')}</span>
+          <span className={cn('text-xl font-bold text-sidebar-primary-foreground', fonts.display)}>{t('app.name')}</span>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav className={cn('flex-1 space-y-1 overflow-y-auto p-3', fonts.body)}>
           {navBlocks.map(block => {
             if (block.type === 'link') {
               const item = block.item;
@@ -357,7 +363,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 app-nav-text font-medium transition-colors',
                     isActive
                       ? 'bg-sidebar-accent text-sidebar-primary-foreground'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
@@ -384,7 +390,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <button
                     type="button"
                     className={cn(
-                      'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-start text-sm font-medium transition-colors',
+                      'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-start app-nav-text font-medium transition-colors',
                       groupActive
                         ? 'bg-sidebar-accent/80 text-sidebar-primary-foreground'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
@@ -409,13 +415,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           to={sub.path}
                           onClick={() => setSidebarOpen(false)}
                           className={cn(
-                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ltr:ml-6 rtl:mr-6',
+                            'flex items-center gap-3 rounded-lg px-3 py-2.5 app-nav-text transition-colors ltr:ml-6 rtl:mr-6',
                             subActive
                               ? 'bg-sidebar-accent font-medium text-sidebar-primary-foreground'
                               : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
                           )}
                         >
-                          <SubIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                          <SubIcon className="h-4 w-4 shrink-0 opacity-80" />
                           <span className="truncate">{t(sub.labelKey)}</span>
                         </Link>
                       );
@@ -431,12 +437,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <button
             type="button"
             onClick={() => {
-              const platformSession = user && !user.tenant_slug && !user.tenant_id;
-              const tenantSlug = user?.tenant_slug;
+              const loginPath = getLoginPathForUser(user);
               logout();
-              navigate(platformSession ? '/platform/login' : getTenantLoginPath(tenantSlug));
+              navigate(loginPath);
             }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 app-nav-text font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+              fonts.body,
+            )}
           >
             <LogOut className="h-4 w-4" />
             {t('auth.signOut')}
@@ -456,7 +464,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
 
           <div className="hidden lg:block">
-            <h2 className="text-xl font-medium text-muted-foreground">
+            <h2 className={'text-xl font-medium text-muted-foreground'}>
               {currentNavLabel ? t(currentNavLabel) : t('nav.dashboard')}
             </h2>
           </div>
@@ -464,35 +472,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center gap-2">
             <PwaInstallButton />
 
-            <button
+            {/* <button
               type="button"
               onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 app-nav-text font-medium transition-colors hover:bg-muted"
               aria-label={t('misc.language')}
             >
               <Languages className="h-4 w-4 text-muted-foreground" />
-              <span className="hidden text-muted-foreground sm:inline">{locale === 'en' ? 'العربية' : 'English'}</span>
-            </button>
+              <span className="hidden text-muted-foreground text-xs sm:inline">{locale === 'en' ? 'العربية' : 'English'}</span>
+            </button> */}
 
             <NotificationBell />
-            <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                {user.name.charAt(0)}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
-                <p className="text-xs capitalize text-muted-foreground">{t(`role.${user.role}`)}</p>
-                {user.tenant_name && user.role !== 'platform_admin' && user.role !== 'super_admin' && (
-                  <p className="text-[11px] text-muted-foreground">{user.tenant_name}</p>
-                )}
-              </div>
-            </div>
+            <HeaderUserMenu
+              user={user}
+              onLogout={() => {
+                const loginPath = getLoginPathForUser(user);
+                logout();
+                navigate(loginPath);
+              }}
+            />
           </div>
         </header>
 
-        <main className="flex-1 p-4 pb-24 md:pb-6 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden p-4 pb-6 lg:p-6">{children}</main>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/90 md:hidden">
+        <div className={cn('hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/90 md:hidden', fonts.body)}>
           <div className="overflow-x-auto p-2">
             <div className="flex min-w-max gap-2">
               {flatNav.slice(0, 4).map(item => {
@@ -504,7 +508,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
                     className={cn(
-                      'flex h-12 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs font-medium transition-colors',
+                      'flex h-12 items-center gap-2 whitespace-nowrap rounded-lg border px-3 app-nav-text font-medium transition-colors',
                       isActive
                         ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border bg-background text-foreground hover:bg-muted',

@@ -1,32 +1,50 @@
 import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { SlidersHorizontal } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import DashboardHomeLinks from '@/components/DashboardHomeLinks';
-import StatCard from '@/components/StatCard';
+import AdminDashboardHero from '@/components/dashboard/AdminDashboardHero';
+import DashboardStatCard from '@/components/dashboard/DashboardStatCard';
+import UnpaidStudentsFilters, { MONTHS, monthLabel } from '@/components/dashboard/UnpaidStudentsFilters';
 import DataTable from '@/components/DataTable';
-import { FormSelect } from '@/components/FormFields';
-import { Users, GraduationCap, CalendarCheck, DollarSign, Shield, Activity, BookOpen, ClipboardList, Trophy, FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { GraduationCap, CalendarCheck, DollarSign, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/endpoints/dashboard';
+import { adminLinkGroups, adminMainLinks } from '@/config/admin-dashboard-links';
 import type { DashboardFilters, DashboardStat } from '@/types/models';
 
-const MONTHS = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
-] as const;
+const statVariantById: Record<string, DashboardStat['variant']> = {
+  students: 'students',
+  teachers: 'teachers',
+  attendance: 'attendance',
+  unpaid_students: 'alerts',
+  unpaid_amount: 'finance',
+};
+
+const statIconById: Record<string, typeof GraduationCap> = {
+  students: GraduationCap,
+  teachers: Users,
+  attendance: CalendarCheck,
+  unpaid_students: DollarSign,
+  unpaid_amount: DollarSign,
+};
 
 const iconMap = {
   users: Users,
   'graduation-cap': GraduationCap,
   'calendar-check': CalendarCheck,
   'dollar-sign': DollarSign,
-  shield: Shield,
-  activity: Activity,
-  'book-open': BookOpen,
-  'clipboard-list': ClipboardList,
-  trophy: Trophy,
-  'file-text': FileText,
 };
 
 const statTitleKeys: Record<string, string> = {
@@ -58,17 +76,16 @@ function sectionTitle(key: string, fallback: string | undefined, t: (key: string
   return titleKey ? t(titleKey) : (fallback || key);
 }
 
-function monthLabel(month: string, locale: 'en' | 'ar') {
-  const index = MONTHS.indexOf(month as (typeof MONTHS)[number]);
-  if (index < 0) return month;
-  return new Date(2026, index, 1).toLocaleString(locale === 'ar' ? 'ar' : 'en', { month: 'long' });
-}
-
 function currentMonthValue(): string {
   return MONTHS[new Date().getMonth()];
 }
 
+function activeFilterCount(gradeId: string, classId: string, sectionId: string) {
+  return [gradeId, classId, sectionId].filter(Boolean).length;
+}
+
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const { t, locale } = useLocale();
   const { data: bootstrap } = useAdminBootstrap();
   const grades = useMemo(() => (bootstrap?.grades || []) as Array<{ id: number; name: string }>, [bootstrap?.grades]);
@@ -82,6 +99,7 @@ export default function AdminDashboard() {
   const [gradeId, setGradeId] = useState('');
   const [classId, setClassId] = useState('');
   const [sectionId, setSectionId] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const unpaidFilters = useMemo<DashboardFilters>(() => ({
     month: unpaidMonth,
@@ -103,6 +121,37 @@ export default function AdminDashboard() {
     return list;
   }, [sections, gradeId, classId]);
 
+  const filterProps = {
+    locale,
+    t,
+    unpaidMonth,
+    gradeId,
+    classId,
+    sectionId,
+    grades,
+    classesByGrade,
+    sectionsByClass,
+    onMonthChange: setUnpaidMonth,
+    onGradeChange: (value: string) => {
+      setGradeId(value);
+      setClassId('');
+      setSectionId('');
+    },
+    onClassChange: (value: string) => {
+      setClassId(value);
+      setSectionId('');
+    },
+    onSectionChange: setSectionId,
+  };
+
+  const appliedFilters = activeFilterCount(gradeId, classId, sectionId);
+
+  const clearFilters = () => {
+    setGradeId('');
+    setClassId('');
+    setSectionId('');
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'admin', locale, unpaidFilters],
     queryFn: () => dashboardApi.getByRole('admin', unpaidFilters),
@@ -115,67 +164,59 @@ export default function AdminDashboard() {
   const paymentSummary = data?.payment_summary;
   const unpaidSectionTitle = data?.sections.find(s => s.key === 'unpaid_students')?.title;
 
+  const skeletonStats = [
+    { id: 'students', title: t('stat.totalStudents'), icon: GraduationCap, variant: 'students' as const },
+    { id: 'teachers', title: t('stat.teachers'), icon: Users, variant: 'teachers' as const },
+    { id: 'attendance', title: t('stat.attendanceRate'), icon: CalendarCheck, variant: 'attendance' as const },
+    { id: 'unpaid_students', title: t('stat.unpaidStudents'), icon: DollarSign, variant: 'alerts' as const },
+    { id: 'unpaid_amount', title: t('stat.unpaidAmount'), icon: DollarSign, variant: 'finance' as const },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="page-header">
-        <h1 className="page-title">{t('dashboard.admin')}</h1>
-        <p className="page-description">{t('dashboard.admin.desc')}</p>
-      </div>
-
-      <DashboardHomeLinks
-        mainLinks={[
-          { labelKey: 'nav.students', path: '/admin/students' },
-          { labelKey: 'nav.teachers', path: '/admin/teachers' },
-          { labelKey: 'nav.parents', path: '/admin/parents' },
-        ]}
-        extraLinks={[
-          { labelKey: 'nav.grades', path: '/admin/grades' },
-          { labelKey: 'nav.classes', path: '/admin/classes' },
-          { labelKey: 'nav.sections', path: '/admin/sections' },
-          { labelKey: 'nav.attendance', path: '/admin/attendance' },
-          { labelKey: 'nav.units', path: '/admin/units' },
-          { labelKey: 'nav.lessons', path: '/admin/lessons' },
-          { labelKey: 'nav.homework', path: '/admin/homework' },
-          { labelKey: 'nav.fees', path: '/admin/fees' },
-          { labelKey: 'nav.payments', path: '/admin/payments' },
-          { labelKey: 'nav.exams', path: '/admin/exams' },
-          { labelKey: 'nav.quizzes', path: '/admin/quizzes' },
-          { labelKey: 'nav.library', path: '/admin/library' },
-          { labelKey: 'nav.announcements', path: '/admin/announcements' },
-          { labelKey: 'nav.reports', path: '/admin/reports' },
-          { labelKey: 'nav.adminUsers', path: '/admin/users' },
-          { labelKey: 'nav.rolesPermissions', path: '/admin/roles' },
-          { labelKey: 'nav.settings', path: '/admin/settings' },
-        ]}
+      <AdminDashboardHero
+        userName={user?.name}
+        mainLinks={adminMainLinks}
+        linkGroups={adminLinkGroups}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        {isLoading ? (
-          <>
-            <StatCard title={t('stat.totalStudents')} value="..." icon={GraduationCap} />
-            <StatCard title={t('stat.teachers')} value="..." icon={Users} />
-            <StatCard title={t('stat.attendanceRate')} value="..." icon={CalendarCheck} />
-            <StatCard title={t('stat.unpaidStudents')} value="..." icon={DollarSign} variant="alerts" />
-            <StatCard title={t('stat.unpaidAmount')} value="..." icon={DollarSign} variant="finance" />
-          </>
-        ) : (
-          stats.map(s => {
-            const Icon = iconMap[s.icon as keyof typeof iconMap] || GraduationCap;
-            return (
-              <StatCard
-                key={s.id}
-                title={statTitle(s, t)}
-                value={s.value}
-                icon={Icon}
-                trend={s.trend}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {isLoading
+          ? skeletonStats.map((s, i) => (
+              <DashboardStatCard
+                key={s.title}
+                title={s.title}
+                value="—"
+                icon={s.icon}
+                statKey={s.id}
                 variant={s.variant}
+                index={i}
+                loading
               />
-            );
-          })
-        )}
+            ))
+          : stats.map((s, i) => {
+              const Icon = statIconById[s.id] ?? iconMap[s.icon as keyof typeof iconMap] ?? GraduationCap;
+              return (
+                <DashboardStatCard
+                  key={s.id}
+                  title={statTitle(s, t)}
+                  value={s.value}
+                  icon={Icon}
+                  statKey={s.id}
+                  trend={s.trend}
+                  variant={s.variant ?? statVariantById[s.id] ?? 'default'}
+                  index={i}
+                />
+              );
+            })}
       </div>
 
-      <div className="mb-6">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.45 }}
+        className="mb-6"
+      >
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h3 className="font-display font-semibold">
@@ -189,79 +230,50 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label htmlFor="unpaid-filter-month" className="mb-1.5 block text-sm font-medium">
-              {t('col.month')}
-            </label>
-            <FormSelect
-              id="unpaid-filter-month"
-              value={unpaidMonth}
-              onChange={e => setUnpaidMonth(e.target.value)}
-            >
-              {MONTHS.map(m => (
-                <option key={m} value={m}>{monthLabel(m, locale)}</option>
-              ))}
-            </FormSelect>
-          </div>
-
-          <div>
-            <label htmlFor="unpaid-filter-grade" className="mb-1.5 block text-sm font-medium">
-              {t('col.grade')}
-            </label>
-            <FormSelect
-              id="unpaid-filter-grade"
-              value={gradeId}
-              onChange={e => {
-                setGradeId(e.target.value);
-                setClassId('');
-                setSectionId('');
-              }}
-            >
-              <option value="">{t('filter.all')}</option>
-              {grades.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </FormSelect>
-          </div>
-
-          <div>
-            <label htmlFor="unpaid-filter-class" className="mb-1.5 block text-sm font-medium">
-              {t('col.class')}
-            </label>
-            <FormSelect
-              id="unpaid-filter-class"
-              value={classId}
-              disabled={!gradeId}
-              onChange={e => {
-                setClassId(e.target.value);
-                setSectionId('');
-              }}
-            >
-              <option value="">{t('filter.all')}</option>
-              {classesByGrade.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </FormSelect>
-          </div>
-
-          <div>
-            <label htmlFor="unpaid-filter-section" className="mb-1.5 block text-sm font-medium">
-              {t('col.section')}
-            </label>
-            <FormSelect
-              id="unpaid-filter-section"
-              value={sectionId}
-              disabled={!classId}
-              onChange={e => setSectionId(e.target.value)}
-            >
-              <option value="">{t('filter.all')}</option>
-              {sectionsByClass.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </FormSelect>
-          </div>
+        <div className="mb-4 hidden gap-3 md:grid sm:grid-cols-2 lg:grid-cols-4">
+          <UnpaidStudentsFilters {...filterProps} />
         </div>
+
+        <div className="mb-4 flex items-center gap-2 md:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setFiltersOpen(true)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {t('filter.title')}
+            {appliedFilters > 0 ? (
+              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] tabular-nums">
+                {appliedFilters}
+              </Badge>
+            ) : null}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {monthLabel(unpaidMonth, locale)}
+            {gradeId ? ` · ${grades.find(g => String(g.id) === gradeId)?.name}` : ''}
+          </span>
+        </div>
+
+        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl pb-8">
+            <SheetHeader className="text-start">
+              <SheetTitle>{t('filter.title')}</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4 grid gap-4">
+              <UnpaidStudentsFilters {...filterProps} idPrefix="unpaid-filter-sheet" />
+            </div>
+            <SheetFooter className="mt-6 flex-row gap-2 sm:justify-between">
+              <Button type="button" variant="outline" className="flex-1" onClick={clearFilters}>
+                {t('filter.clear')}
+              </Button>
+              <Button type="button" className="flex-1" onClick={() => setFiltersOpen(false)}>
+                {t('filter.apply')}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
 
         <DataTable
           searchable
@@ -284,10 +296,14 @@ export default function AdminDashboard() {
             status: s.status === 'unpaid' ? t('payments.status.unpaid') : (s.status || '-'),
           }))}
         />
-      </div>
+      </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: locale === 'ar' ? 12 : -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.45, duration: 0.45 }}
+        >
           <h3 className="mb-3 font-display font-semibold">
             {sectionTitle('recent_students', data?.sections.find(s => s.key === 'recent_students')?.title, t)}
           </h3>
@@ -295,29 +311,52 @@ export default function AdminDashboard() {
             searchable
             columns={[
               { key: 'name', label: t('col.name') },
-              { key: 'gender', label: t('col.gender') },
+          //     { key: 'gender', label: t('col.gender') },
               { key: 'created_at', label: t('col.enrolled') },
             ]}
-            data={students.map(s => ({ name: s.title, gender: s.subtitle || '-', created_at: s.meta || '-' }))}
+            data={students.map(s => ({ name: s.title, created_at: s.meta || '-' }))}
           />
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: locale === 'ar' ? -12 : 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.45 }}
+        >
           <h3 className="mb-3 font-display font-semibold">
             {sectionTitle('announcements', data?.sections.find(s => s.key === 'announcements')?.title, t)}
           </h3>
           <div className="space-y-3">
-            {announcements.map(a => (
-              <div key={a.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
-                <div className="flex items-start justify-between">
+            {announcements.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                {t('crud.noData')}
+              </p>
+            ) : announcements.map((a, i) => {
+              const scope = [a.grade_name, a.class_name, a.section_name].filter(Boolean).join(' — ');
+              return (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 + i * 0.06 }}
+                whileHover={{ scale: 1.01 }}
+                className="rounded-xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
                   <h4 className="font-medium">{a.title}</h4>
-                  <span className="text-xs text-muted-foreground">{a.meta}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{a.meta}</span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{a.subtitle}</p>
-              </div>
-            ))}
+                {scope ? (
+                  <p className="mt-1.5 text-xs font-medium text-primary/90">{scope}</p>
+                ) : null}
+                {a.subtitle ? (
+                  <p className="mt-1 text-sm text-muted-foreground line-clamp-3">{a.subtitle}</p>
+                ) : null}
+              </motion.div>
+            );
+            })}
           </div>
-        </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

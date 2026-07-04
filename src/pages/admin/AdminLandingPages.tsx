@@ -24,11 +24,13 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { adminLandingApi } from '@/services/endpoints/admin-landing';
 import { getPublicLandingPath, resolvePublicLandingTenant } from '@/lib/tenant-routes';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
-import { LANDING_TEMPLATES } from '@/lib/landing/templates';
+import { LANDING_TEMPLATES, getTemplateById } from '@/lib/landing/templates';
 import { SUBJECT_LABELS, TEACHER_SUBJECT_TEMPLATES } from '@/lib/landing/constants';
 import { LandingTemplatePreview } from '@/components/landing-builder/LandingTemplatePreview';
 import type { LandingPageType, LandingPageListItem } from '@/types/landing';
 import { toast } from 'sonner';
+
+const FEATURED_TEACHER_TEMPLATE_IDS = ['teacher-arabic-premium'] as const;
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   teacher: GraduationCap,
@@ -37,6 +39,16 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   center: Building2,
   branch: Building2,
 };
+
+function templatePickerActivate(
+  e: React.KeyboardEvent<HTMLDivElement>,
+  onActivate: () => void,
+) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onActivate();
+  }
+}
 
 export default function AdminLandingPages() {
   const { t, locale } = useLocale();
@@ -227,19 +239,51 @@ export default function AdminLandingPages() {
             </TabsList>
             <TabsContent value="teacher" className="overflow-auto flex-1 mt-4">
               <div className="grid sm:grid-cols-2 gap-4">
+                {FEATURED_TEACHER_TEMPLATE_IDS.map(templateId => {
+                  const tmpl = getTemplateById(templateId);
+                  if (!tmpl) return null;
+                  return (
+                    <div
+                      key={templateId}
+                      role="button"
+                      tabIndex={0}
+                      className="relative col-span-full cursor-pointer overflow-hidden rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-card p-4 text-left shadow-sm transition-all hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:col-span-2"
+                      onClick={() => templateMutation.mutate(templateId)}
+                      onKeyDown={e => templatePickerActivate(e, () => templateMutation.mutate(templateId))}
+                    >
+                      <Badge className="mb-2" variant="default">{t('landing.template.featured')}</Badge>
+                      <div className="font-medium text-lg">{tmpl.name[locale]}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{tmpl.description[locale]}</div>
+                      {tmpl.thumbnail ? (
+                        <img
+                          src={tmpl.thumbnail}
+                          alt=""
+                          className="mt-3 w-full rounded-lg border object-cover object-top"
+                          style={{ maxHeight: 220 }}
+                        />
+                      ) : (
+                        <LandingTemplatePreview templateId={templateId} locale={locale} />
+                      )}
+                      <div className="text-xs text-primary mt-2 font-medium">{t('landing.clickToUse')}</div>
+                    </div>
+                  );
+                })}
+
                 {TEACHER_SUBJECT_TEMPLATES.map(key => {
                   const templateId = `teacher-${key}`;
                   return (
-                    <button
+                    <div
                       key={key}
-                      type="button"
-                      className="p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors"
+                      role="button"
+                      tabIndex={0}
+                      className="cursor-pointer rounded-lg border p-4 text-left transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => templateMutation.mutate(templateId)}
+                      onKeyDown={e => templatePickerActivate(e, () => templateMutation.mutate(templateId))}
                     >
                       <div className="font-medium">{SUBJECT_LABELS[key][locale]}</div>
                       <div className="text-xs text-muted-foreground mt-1">{t('landing.clickToUse')}</div>
                       <LandingTemplatePreview templateId={templateId} locale={locale} />
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -247,16 +291,18 @@ export default function AdminLandingPages() {
             <TabsContent value="other" className="overflow-auto flex-1 mt-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 {LANDING_TEMPLATES.filter(tmpl => tmpl.category !== 'teacher').map(tmpl => (
-                  <button
+                  <div
                     key={tmpl.id}
-                    type="button"
-                    className="p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors"
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer rounded-lg border p-4 text-left transition-colors hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => templateMutation.mutate(tmpl.id)}
+                    onKeyDown={e => templatePickerActivate(e, () => templateMutation.mutate(tmpl.id))}
                   >
                     <div className="font-medium">{tmpl.name[locale]}</div>
                     <div className="text-xs text-muted-foreground mt-1">{tmpl.description[locale]}</div>
                     <LandingTemplatePreview templateId={tmpl.id} locale={locale} />
-                  </button>
+                  </div>
                 ))}
               </div>
             </TabsContent>

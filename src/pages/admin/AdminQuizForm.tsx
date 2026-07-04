@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { adminAssessmentsApi } from '@/services/endpoints/admin-assessments';
+import SessionLinkField from '@/components/SessionLinkField';
 
 interface StudentQuizRow {
   student_id: number;
@@ -32,6 +33,8 @@ export default function AdminQuizForm() {
   const isToday = !dateParam;
 
   const [rows, setRows] = useState<StudentQuizRow[]>([]);
+  const [sessionId, setSessionId] = useState(0);
+  const [sessionOptions, setSessionOptions] = useState<Array<{ id: number; topic: string; start_at: string }>>([]);
   const { data, isLoading } = useQuery({
     queryKey: ['quiz-date', Number(sectionId), currentDate],
     queryFn: () => adminAssessmentsApi.getQuizDate(Number(sectionId), currentDate),
@@ -43,6 +46,7 @@ export default function AdminQuizForm() {
         Number(sectionId),
         currentDate,
         rows.map(r => ({ student_id: r.student_id, status: r.status, degree: r.degree, notes: r.notes })),
+        sessionId,
       ),
   });
   useEffect(() => {
@@ -54,6 +58,8 @@ export default function AdminQuizForm() {
         degree: r.degree || '',
         notes: r.notes || '',
       })));
+      setSessionId(data.session_id ? Number(data.session_id) : 0);
+      setSessionOptions(data.session_options || []);
     }
   }, [data]);
 
@@ -114,6 +120,11 @@ export default function AdminQuizForm() {
       </div>
 
       {isLoading && <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading...</div>}
+      {sessionOptions.length > 0 && (
+        <div className="mb-4 max-w-md">
+          <SessionLinkField id="quiz-session" value={sessionId} options={sessionOptions} onChange={setSessionId} />
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-primary">{presentCount}</p>

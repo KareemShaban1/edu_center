@@ -1,5 +1,5 @@
 import type { LandingPageTheme, LandingSection, LocalizedText, TextRole } from '@/types/landing';
-import { localized } from '@/lib/landing/defaults';
+import { localized, resolveLocalizedValue } from '@/lib/landing/defaults';
 import { resolveLandingAssetUrl } from '@/lib/landing/media-url';
 import { resolveSectionLayout } from '@/lib/landing/section-layouts';
 import { resolveTextStyle } from '@/lib/landing/typography';
@@ -37,15 +37,17 @@ interface SectionProps {
 
 function sectionStyle(section: LandingSection, theme: LandingPageTheme): React.CSSProperties {
   const s = section.style ?? {};
-  const bgImage = s.backgroundGradient
-    ?? (s.backgroundImage ? `url(${resolveLandingAssetUrl(s.backgroundImage)})` : undefined);
+  const gradient = s.backgroundGradient?.trim() || undefined;
+  const bgImageUrl = s.backgroundImage?.trim() || undefined;
+  const bgImage = gradient
+    ?? (bgImageUrl ? `url(${resolveLandingAssetUrl(bgImageUrl)})` : undefined);
 
   return {
     backgroundColor: s.backgroundColor ?? theme.backgroundColor,
     backgroundImage: bgImage,
-    backgroundSize: s.backgroundImage && !s.backgroundGradient ? 'cover' : undefined,
-    backgroundPosition: s.backgroundImage && !s.backgroundGradient ? 'center' : undefined,
-    backgroundRepeat: s.backgroundImage && !s.backgroundGradient ? 'no-repeat' : undefined,
+    backgroundSize: bgImageUrl && !gradient ? 'cover' : undefined,
+    backgroundPosition: bgImageUrl && !gradient ? 'center' : undefined,
+    backgroundRepeat: bgImageUrl && !gradient ? 'no-repeat' : undefined,
     color: s.textColor ?? theme.textColor,
     paddingTop: `clamp(2rem, 5vw, ${s.paddingTop ?? 64}px)`,
     paddingBottom: `clamp(2rem, 5vw, ${s.paddingBottom ?? 64}px)`,
@@ -194,6 +196,108 @@ function HeroStatCell({
   );
 }
 
+function localizedFieldValue(value: string | LocalizedText | undefined, locale: 'en' | 'ar'): string {
+  return resolveLocalizedValue(value, locale);
+}
+
+function toLocalizedText(value: string | LocalizedText | undefined): LocalizedText {
+  if (value == null) return { en: '', ar: '' };
+  if (typeof value === 'string') return { en: value, ar: value };
+  return { en: value.en ?? '', ar: value.ar ?? '' };
+}
+
+function StudentResultCell({
+  result,
+  index,
+  results,
+  leftLabel,
+  rightLabel,
+  locale,
+  section,
+  theme,
+  editMode,
+  onContentChange,
+}: {
+  result: { year: string | LocalizedText; passRate: string | LocalizedText; topScore: string | LocalizedText };
+  index: number;
+  results: { year: string | LocalizedText; passRate: string | LocalizedText; topScore: string | LocalizedText }[];
+  leftLabel: string;
+  rightLabel: string;
+  locale: 'en' | 'ar';
+  section: LandingSection;
+  theme: LandingPageTheme;
+  editMode?: boolean;
+  onContentChange?: (content: Record<string, unknown>) => void;
+}) {
+  const typo = useTypography();
+  const titleKey = `result_year_${index}`;
+  const leftKey = `result_pass_${index}`;
+  const rightKey = `result_top_${index}`;
+  const titleStyle = resolveTextStyle(titleKey, section, theme, 'heading');
+  const valueStyle = resolveTextStyle(leftKey, section, theme, 'stat');
+
+  const updateResult = (patch: Partial<typeof result>) => {
+    if (!onContentChange) return;
+    onContentChange({
+      results: results.map((r, i) => (i === index ? { ...r, ...patch } : r)),
+    });
+  };
+
+  const updateLocalized = (
+    field: 'year' | 'passRate' | 'topScore',
+    value: string,
+  ) => {
+    const current = toLocalizedText(result[field]);
+    updateResult({ [field]: { ...current, [locale]: value } });
+  };
+
+  return (
+    <div className="rounded-xl border p-6 text-center" style={{ borderRadius: theme.borderRadius }}>
+      <InlineEditable
+        className={cn(
+          'mb-4 block text-2xl font-bold',
+          typo?.selectedTextKey === titleKey && editMode && 'ring-2 ring-primary ring-offset-1 rounded-sm',
+        )}
+        style={titleStyle}
+        value={localizedFieldValue(result.year, locale)}
+        editMode={editMode}
+        onClick={editMode ? e => { e.stopPropagation(); typo?.onTextFieldSelect?.(titleKey); } : undefined}
+        onChange={v => updateLocalized('year', v)}
+      />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="text-sm opacity-60">{leftLabel}</div>
+          <InlineEditable
+            className={cn(
+              'text-xl font-bold',
+              typo?.selectedTextKey === leftKey && editMode && 'ring-2 ring-primary ring-offset-1 rounded-sm',
+            )}
+            style={{ ...valueStyle, color: theme.primaryColor }}
+            value={localizedFieldValue(result.passRate, locale)}
+            editMode={editMode}
+            onClick={editMode ? e => { e.stopPropagation(); typo?.onTextFieldSelect?.(leftKey); } : undefined}
+            onChange={v => updateLocalized('passRate', v)}
+          />
+        </div>
+        <div>
+          <div className="text-sm opacity-60">{rightLabel}</div>
+          <InlineEditable
+            className={cn(
+              'text-xl font-bold',
+              typo?.selectedTextKey === rightKey && editMode && 'ring-2 ring-primary ring-offset-1 rounded-sm',
+            )}
+            style={{ ...valueStyle, color: theme.primaryColor }}
+            value={localizedFieldValue(result.topScore, locale)}
+            editMode={editMode}
+            onClick={editMode ? e => { e.stopPropagation(); typo?.onTextFieldSelect?.(rightKey); } : undefined}
+            onChange={v => updateLocalized('topScore', v)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Renders localized text with typography; editable in builder via TypographyContext. */
 function LocStyledInner({
   content,
@@ -253,7 +357,18 @@ function locStyled(
   );
 }
 
-function SectionWrapper({ section, theme, editMode, isSelected, onSelect, children }: SectionProps & { children: React.ReactNode }) {
+function SectionWrapper({
+  section,
+  theme,
+  editMode,
+  isSelected,
+  onSelect,
+  children,
+  backgroundOverlay,
+}: SectionProps & { children: React.ReactNode; backgroundOverlay?: number }) {
+  const overlay = backgroundOverlay ?? 0;
+  const hasBgImage = Boolean(section.style?.backgroundImage && !section.style?.backgroundGradient);
+
   return (
     <AnimatedSection
       animation={section.animation}
@@ -262,7 +377,13 @@ function SectionWrapper({ section, theme, editMode, isSelected, onSelect, childr
       style={sectionStyle(section, theme)}
       {...(editMode ? { onClick: onSelect } : {})}
     >
-      <div className="container mx-auto w-full max-w-6xl px-4 @sm:px-6 @lg:px-8">{children}</div>
+      {overlay > 0 && hasBgImage && (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1]"
+          style={{ backgroundColor: `rgba(0,0,0,${overlay / 100})` }}
+        />
+      )}
+      <div className="container relative z-[2] mx-auto w-full max-w-6xl px-4 @sm:px-6 @lg:px-8">{children}</div>
     </AnimatedSection>
   );
 }
@@ -272,14 +393,18 @@ export function HeroSection(props: SectionProps) {
   const c = section.content;
   const stats = (c.stats as { value: string; label: LocalizedText }[]) ?? [];
   const layout = resolveSectionLayout(section);
+  const overlayOpacity = Number(c.overlayOpacity ?? 0);
+  const showStats = c.showStats !== false && stats.length > 0;
 
   const badge = (
-    <span className="inline-block px-4 py-1 rounded-full" style={{ backgroundColor: `${theme.primaryColor}20` }}>
+    <span className="inline-block rounded-full px-4 py-1" style={{ backgroundColor: `${theme.primaryColor}20` }}>
       {locEdit(c, 'badge', locale, editMode, onContentChange, section, theme, 'label')}
     </span>
   );
+  const headline = locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1');
+  const subheadline = locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p');
   const ctas = (
-    <div className="flex flex-col @sm:flex-row flex-wrap gap-3 @sm:gap-4">
+    <div className="flex flex-col flex-wrap gap-3 @sm:flex-row @sm:gap-4">
       <Button size="lg" className="w-full @sm:w-auto" style={{ backgroundColor: theme.primaryColor }}>
         {locEdit(c, 'ctaPrimary', locale, editMode, onContentChange, section, theme, 'button')}
       </Button>
@@ -288,8 +413,28 @@ export function HeroSection(props: SectionProps) {
       </Button>
     </div>
   );
-  const statsBlock = c.showStats && stats.length > 0 && (
-    <div className="grid grid-cols-2 @sm:grid-cols-3 gap-3 @sm:gap-4 pt-4 @sm:pt-6">
+  const statsBlock = showStats && (
+    <div className="grid grid-cols-2 gap-3 pt-4 @sm:grid-cols-3 @sm:gap-4 @sm:pt-6">
+      {stats.map((s, i) => (
+        <HeroStatCell
+          key={i}
+          stat={s}
+          index={i}
+          stats={stats}
+          locale={locale}
+          section={section}
+          theme={theme}
+          editMode={editMode}
+          onContentChange={onContentChange}
+        />
+      ))}
+    </div>
+  );
+  const statsRowBlock = showStats && (
+    <div
+      className="grid grid-cols-2 gap-4 rounded-xl p-4 @sm:grid-cols-4 @sm:p-6"
+      style={{ backgroundColor: `${theme.primaryColor}12` }}
+    >
       {stats.map((s, i) => (
         <HeroStatCell
           key={i}
@@ -306,23 +451,48 @@ export function HeroSection(props: SectionProps) {
     </div>
   );
   const imageBlock = (
-    <div className="aspect-[4/3] @sm:aspect-square rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden" style={{ borderRadius: theme.borderRadius }}>
+    <div
+      className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 @sm:aspect-square"
+      style={{ borderRadius: theme.borderRadius }}
+    >
       {contentImageUrl(c) ? (
-        <SectionImage src={c.imageUrl as string} alt="" className="w-full h-full object-cover" />
+        <SectionImage src={c.imageUrl as string} alt="" className="h-full w-full object-cover" />
       ) : (
-        <BookOpen className="w-24 h-24 opacity-20" style={{ color: theme.primaryColor }} />
+        <BookOpen className="h-24 w-24 opacity-20" style={{ color: theme.primaryColor }} />
       )}
+    </div>
+  );
+  const textStack = (centered = false) => (
+    <div className={cn('space-y-4 @sm:space-y-6', centered && 'text-center')}>
+      {badge}
+      {centered
+        ? locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', 'text-center', false, 'h1')
+        : headline}
+      {centered
+        ? locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'text-center', true, 'p')
+        : subheadline}
+      {centered ? (
+        <div className="flex flex-col flex-wrap justify-center gap-3 @sm:flex-row @sm:gap-4">
+          <Button size="lg" className="w-full @sm:w-auto" style={{ backgroundColor: theme.primaryColor }}>
+            {locEdit(c, 'ctaPrimary', locale, editMode, onContentChange, section, theme, 'button')}
+          </Button>
+          <Button size="lg" variant="outline" className="w-full @sm:w-auto">
+            {locEdit(c, 'ctaSecondary', locale, editMode, onContentChange, section, theme, 'button')}
+          </Button>
+        </div>
+      ) : ctas}
+      {statsBlock}
     </div>
   );
 
   if (layout === 'centered') {
     return (
-      <SectionWrapper {...props}>
-        <div className="max-w-3xl mx-auto text-center space-y-4 @sm:space-y-6">
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="mx-auto max-w-3xl space-y-4 text-center @sm:space-y-6">
           {badge}
           {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', 'text-center', false, 'h1')}
           {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'text-center', true, 'p')}
-          <div className="flex flex-col @sm:flex-row flex-wrap justify-center gap-3 @sm:gap-4">
+          <div className="flex flex-col flex-wrap justify-center gap-3 @sm:flex-row @sm:gap-4">
             <Button size="lg" className="w-full @sm:w-auto" style={{ backgroundColor: theme.primaryColor }}>
               {locEdit(c, 'ctaPrimary', locale, editMode, onContentChange, section, theme, 'button')}
             </Button>
@@ -330,7 +500,7 @@ export function HeroSection(props: SectionProps) {
               {locEdit(c, 'ctaSecondary', locale, editMode, onContentChange, section, theme, 'button')}
             </Button>
           </div>
-          <div className="max-w-md mx-auto">{imageBlock}</div>
+          <div className="mx-auto max-w-md">{imageBlock}</div>
           {statsBlock}
         </div>
       </SectionWrapper>
@@ -338,22 +508,64 @@ export function HeroSection(props: SectionProps) {
   }
 
   if (layout === 'background') {
-    const bgUrl = contentImageUrl(c);
     return (
-      <SectionWrapper {...props}>
-        <div
-          className="relative rounded-2xl overflow-hidden px-6 py-12 @sm:px-10 @sm:py-16"
-          style={{
-            borderRadius: theme.borderRadius,
-            backgroundImage: bgUrl ? `linear-gradient(rgba(15,23,42,0.72), rgba(15,23,42,0.72)), url(${bgUrl})` : `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="relative max-w-2xl space-y-4 @sm:space-y-6 text-white">
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="mx-auto max-w-2xl space-y-4 @sm:space-y-6">
+          {badge}
+          {headline}
+          {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'opacity-90', true, 'p')}
+          {ctas}
+          {statsBlock}
+        </div>
+      </SectionWrapper>
+    );
+  }
+
+  if (layout === 'minimal') {
+    return (
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="mx-auto max-w-3xl space-y-4 @sm:space-y-6">
+          {badge}
+          {headline}
+          {subheadline}
+          {ctas}
+          {statsBlock}
+        </div>
+      </SectionWrapper>
+    );
+  }
+
+  if (layout === 'image-top') {
+    return (
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="space-y-8 @sm:space-y-10">
+          <div className="mx-auto max-w-3xl">{imageBlock}</div>
+          {textStack(true)}
+        </div>
+      </SectionWrapper>
+    );
+  }
+
+  if (layout === 'image-bottom') {
+    return (
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="space-y-8 @sm:space-y-10">
+          {textStack(true)}
+          <div className="mx-auto max-w-3xl">{imageBlock}</div>
+        </div>
+      </SectionWrapper>
+    );
+  }
+
+  if (layout === 'split-reverse') {
+    return (
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="grid grid-cols-1 items-center gap-8 @lg:grid-cols-2 @lg:gap-12">
+          <div className="order-1 @lg:order-1">{imageBlock}</div>
+          <div className="order-2 space-y-4 @sm:space-y-6 @lg:order-2">
             {badge}
-            {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1')}
-            {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', 'opacity-90', true, 'p')}
+            {headline}
+            {subheadline}
             {ctas}
             {statsBlock}
           </div>
@@ -362,13 +574,30 @@ export function HeroSection(props: SectionProps) {
     );
   }
 
+  if (layout === 'stats-row') {
+    return (
+      <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+        <div className="grid grid-cols-1 items-center gap-8 @lg:grid-cols-2 @lg:gap-12">
+          <div className="space-y-4 @sm:space-y-6">
+            {badge}
+            {headline}
+            {subheadline}
+            {statsRowBlock}
+            {ctas}
+          </div>
+          <div>{imageBlock}</div>
+        </div>
+      </SectionWrapper>
+    );
+  }
+
   return (
-    <SectionWrapper {...props}>
-      <div className="grid grid-cols-1 @lg:grid-cols-2 gap-8 @lg:gap-12 items-center">
-        <div className="space-y-4 @sm:space-y-6 order-2 @lg:order-1">
+    <SectionWrapper {...props} backgroundOverlay={overlayOpacity}>
+      <div className="grid grid-cols-1 items-center gap-8 @lg:grid-cols-2 @lg:gap-12">
+        <div className="order-2 space-y-4 @sm:space-y-6 @lg:order-1">
           {badge}
-          {locEdit(c, 'headline', locale, editMode, onContentChange, section, theme, 'heading', undefined, false, 'h1')}
-          {locEdit(c, 'subheadline', locale, editMode, onContentChange, section, theme, 'body', undefined, true, 'p')}
+          {headline}
+          {subheadline}
           {ctas}
           {statsBlock}
         </div>
@@ -471,7 +700,7 @@ export function FeaturesSection(props: SectionProps) {
       ) : (
         <div className={cn(
           'grid gap-6 @sm:gap-8',
-          layout === 'grid-2' ? 'grid-cols-1 @sm:grid-cols-2' : 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3',
+          layout === 'grid-2' ? 'grid-cols-1 @sm:grid-cols-2' : layout === 'grid-3' ? 'grid-cols-1 @sm:grid-cols-3' : layout === 'grid-4' ? 'grid-cols-1 @sm:grid-cols-4' : layout === 'grid-5' ? 'grid-cols-1 @sm:grid-cols-5' : layout === 'grid-6' ? 'grid-cols-1 @sm:grid-cols-6' : 'grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3',
         )}>
           {items.map((item, i) => renderItem(item, i))}
         </div>
@@ -483,7 +712,7 @@ export function FeaturesSection(props: SectionProps) {
 export function TestimonialsSection(props: SectionProps) {
   const { section, locale, theme } = props;
   const c = section.content;
-  const items = (c.items as { name: string; role: LocalizedText; text: LocalizedText; rating?: number }[]) ?? [];
+  const items = (c.items as { name: string | LocalizedText; role: string | LocalizedText; text: string | LocalizedText; rating?: number }[]) ?? [];
   const layout = resolveSectionLayout(section);
 
   const renderCard = (item: typeof items[number], i: number, featured = false) => (
@@ -500,10 +729,10 @@ export function TestimonialsSection(props: SectionProps) {
           <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
         ))}
       </div>
-      <p className={cn('italic opacity-80', featured && 'text-lg')}>{`"${item.text[locale]}"`}</p>
+      <p className={cn('italic opacity-80', featured && 'text-lg')}>{`"${resolveLocalizedValue(item.text, locale)}"`}</p>
       <div>
-        <div className="font-semibold">{item.name}</div>
-        <div className="text-sm opacity-60">{item.role[locale]}</div>
+        <div className="font-semibold">{resolveLocalizedValue(item.name, locale)}</div>
+        <div className="text-sm opacity-60">{resolveLocalizedValue(item.role, locale)}</div>
       </div>
     </div>
   );
@@ -1169,21 +1398,36 @@ export function LogosSection(props: SectionProps) {
 }
 
 export function StudentResultsSection(props: SectionProps) {
-  const { section, locale, theme } = props;
+  const { section, locale, theme, editMode, onContentChange } = props;
   const c = section.content;
-  const results = (c.results as { year: string; passRate: string; topScore: string }[]) ?? [];
+  const results = (c.results as { year: string | LocalizedText; passRate: string | LocalizedText; topScore: string | LocalizedText }[]) ?? [];
+  const leftLabel = resolveLocalizedValue(
+    (c.leftColumnLabel as LocalizedText | undefined) ?? { en: 'Pass Rate', ar: 'نسبة النجاح' },
+    locale,
+  );
+  const rightLabel = resolveLocalizedValue(
+    (c.rightColumnLabel as LocalizedText | undefined) ?? { en: 'Top Score', ar: 'أعلى درجة' },
+    locale,
+  );
+
   return (
     <SectionWrapper {...props}>
       {locStyled(c, 'title', locale, section, theme, 'heading', 'h2', SECTION_TITLE)}
-      <div className="grid grid-cols-1 @sm:grid-cols-2 gap-4 @sm:gap-6 max-w-xl mx-auto">
+      <div className="mx-auto grid max-w-xl grid-cols-1 gap-4 @sm:grid-cols-2 @sm:gap-6">
         {results.map((r, i) => (
-          <div key={i} className="p-6 rounded-xl border text-center" style={{ borderRadius: theme.borderRadius }}>
-            <div className="text-2xl font-bold mb-4">{r.year}</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><div className="text-sm opacity-60">{locale === 'ar' ? 'نسبة النجاح' : 'Pass Rate'}</div><div className="text-xl font-bold" style={{ color: theme.primaryColor }}>{r.passRate}</div></div>
-              <div><div className="text-sm opacity-60">{locale === 'ar' ? 'أعلى درجة' : 'Top Score'}</div><div className="text-xl font-bold" style={{ color: theme.primaryColor }}>{r.topScore}</div></div>
-            </div>
-          </div>
+          <StudentResultCell
+            key={i}
+            result={r}
+            index={i}
+            results={results}
+            leftLabel={leftLabel}
+            rightLabel={rightLabel}
+            locale={locale}
+            section={section}
+            theme={theme}
+            editMode={editMode}
+            onContentChange={onContentChange}
+          />
         ))}
       </div>
     </SectionWrapper>

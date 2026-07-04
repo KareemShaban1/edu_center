@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { adminAttendanceApi, type AttendanceStatus } from '@/services/endpoints/admin-attendance';
+import SessionLinkField from '@/components/SessionLinkField';
 
 interface StudentAttendanceRow {
   student_id: number;
@@ -34,6 +35,8 @@ export default function AdminAttendanceForm() {
   const isToday = !dateParam;
 
   const [rows, setRows] = useState<StudentAttendanceRow[]>([]);
+  const [sessionId, setSessionId] = useState(0);
+  const [sessionOptions, setSessionOptions] = useState<Array<{ id: number; topic: string; start_at: string }>>([]);
   const { data, isLoading } = useQuery({
     queryKey: ['attendance', 'section', Number(sectionId), currentDate],
     queryFn: () => adminAttendanceApi.getSectionDate(Number(sectionId), currentDate),
@@ -41,7 +44,7 @@ export default function AdminAttendanceForm() {
   });
   const saveMutation = useMutation({
     mutationFn: (payloadRows: Array<{ student_id: number; status: AttendanceStatus; notes: string }>) =>
-      adminAttendanceApi.saveSectionDate(Number(sectionId), currentDate, payloadRows),
+      adminAttendanceApi.saveSectionDate(Number(sectionId), currentDate, payloadRows, sessionId),
   });
 
   useEffect(() => {
@@ -52,6 +55,8 @@ export default function AdminAttendanceForm() {
         status: r.status,
         notes: r.notes || '',
       })));
+      setSessionId(data.session_id ? Number(data.session_id) : 0);
+      setSessionOptions(data.session_options || []);
     }
   }, [data]);
 
@@ -119,6 +124,17 @@ export default function AdminAttendanceForm() {
 
       {isLoading && (
         <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading attendance...</div>
+      )}
+
+      {sessionOptions.length > 0 && (
+        <div className="mb-4 max-w-md">
+          <SessionLinkField
+            id="attendance-session"
+            value={sessionId}
+            options={sessionOptions}
+            onChange={setSessionId}
+          />
+        </div>
       )}
 
       <div className="grid grid-cols-3 gap-3 mb-6">

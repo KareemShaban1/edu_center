@@ -1,22 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders\Center;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class MonthsSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    use CenterSeederSupport;
+
+    public function run(): void
     {
-        //
-        DB::table('months')->delete();
+        $this->scopedDelete('months');
 
         $data = [
             ['title' => 'شهر يناير', 'value' => '1'],
@@ -33,6 +30,8 @@ class MonthsSeeder extends Seeder
             ['title' => 'شهر ديسمبر', 'value' => '12'],
         ];
 
-        DB::table('months')->insert($data);
+        foreach ($data as $row) {
+            $this->insertScopedRow('months', $row);
+        }
     }
 }

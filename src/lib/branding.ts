@@ -3,6 +3,16 @@ export interface AppBranding {
   font_body: string;
   font_display: string;
   font_arabic: string;
+  text_scale: string;
+  text_scale_ar: string;
+  nav_font_scale: string;
+  nav_font_scale_ar: string;
+  button_font_scale: string;
+  button_font_scale_ar: string;
+  table_font_scale: string;
+  table_font_scale_ar: string;
+  landing_text_scale: string;
+  landing_text_scale_ar: string;
 }
 
 export const BRANDING_STORAGE_KEY = 'edu_app_branding';
@@ -11,7 +21,17 @@ export const DEFAULT_APP_BRANDING: AppBranding = {
   primary_color: 'rgb(186, 24, 27)',
   font_body: "'Inter', sans-serif",
   font_display: "'Plus Jakarta Sans', sans-serif",
-  font_arabic: "'Hajeen', 'Cairo', 'Noto Sans Arabic', sans-serif",
+  font_arabic: "'Hajeen', 'Cairo', sans-serif",
+  text_scale: '106.25',
+  text_scale_ar: '112.5',
+  nav_font_scale: '100',
+  nav_font_scale_ar: '100',
+  button_font_scale: '100',
+  button_font_scale_ar: '100',
+  table_font_scale: '100',
+  table_font_scale_ar: '100',
+  landing_text_scale: '100',
+  landing_text_scale_ar: '100',
 };
 
 export type FontOption = { value: string; label: string };
@@ -27,6 +47,11 @@ export const APP_LATIN_FONT_OPTIONS: FontOption[] = [
 /** Arabic / bilingual fonts — includes self-hosted Hajeen + Google Fonts */
 export const APP_ARABIC_FONT_OPTIONS: FontOption[] = [
   { value: "'Hajeen', 'Cairo', sans-serif", label: 'Hajeen' },
+  { value: "'Naveid Arabic', 'Cairo', sans-serif", label: 'Naveid Arabic' },
+  { value: "'Tinta Arabic', 'Cairo', sans-serif", label: 'Tinta Arabic' },
+  { value: "'Tufuli Arabic', 'Cairo', sans-serif", label: 'Tufuli Arabic' },
+  { value: "'Lutfey Arabic', 'Cairo', sans-serif", label: 'Lutfey Arabic' },
+  { value: "'Ramis Arabic', 'Cairo', sans-serif", label: 'Ramis Arabic' },
   { value: "'Cairo', sans-serif", label: 'Cairo' },
   { value: "'Tajawal', sans-serif", label: 'Tajawal' },
   { value: "'Noto Sans Arabic', sans-serif", label: 'Noto Sans Arabic' },
@@ -58,15 +83,102 @@ export const APP_ARABIC_FONT_OPTIONS: FontOption[] = [
   { value: "'Handjet', sans-serif", label: 'Handjet' },
 ];
 
+const LOCAL_OR_SYSTEM_FONTS = new Set([
+  'arial',
+  'tahoma',
+  'georgia',
+  'times new roman',
+  'courier new',
+  'hajeen',
+  'naveid arabic',
+  'tinta arabic',
+  'tufuli arabic',
+  'lutfey arabic',
+  'ramis arabic',
+  'system-ui',
+  'sans-serif',
+  'serif',
+]);
+
+/** First family name from a CSS font-family stack. */
+export function primaryFontName(stack: string): string {
+  const first = stack.split(',')[0]?.trim() ?? '';
+  return first.replace(/^['"]+|['"]+$/g, '').trim();
+}
+
+/** Map a stored stack to the closest known option so selects stay in sync. */
+export function resolveFontOption(
+  value: string | undefined,
+  options: FontOption[],
+  fallback: string,
+): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+
+  const exact = options.find(o => o.value === trimmed);
+  if (exact) return exact.value;
+
+  const primary = primaryFontName(trimmed).toLowerCase();
+  const byPrimary = options.find(o => primaryFontName(o.value).toLowerCase() === primary);
+  if (byPrimary) return byPrimary.value;
+
+  return trimmed;
+}
+
+/** Load a Google Font for the primary family in a stack (skips local/system fonts). */
+export function ensureFontFaceLoaded(fontStack: string) {
+  if (typeof document === 'undefined') return;
+
+  const name = primaryFontName(fontStack);
+  if (!name || LOCAL_OR_SYSTEM_FONTS.has(name.toLowerCase())) return;
+
+  const id = `gfont-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  if (document.getElementById(id)) return;
+
+  const link = document.createElement('link');
+  link.id = id;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@300;400;500;600;700;800&display=swap`;
+  document.head.appendChild(link);
+}
+
 /** @deprecated Use APP_LATIN_FONT_OPTIONS or APP_ARABIC_FONT_OPTIONS */
 export const APP_FONT_OPTIONS = [...APP_LATIN_FONT_OPTIONS, ...APP_ARABIC_FONT_OPTIONS];
+
+export type TextScaleOption = { value: string; labelKey: string };
+
+/** Root font-size scale (% of browser default 16px). */
+export const APP_TEXT_SCALE_OPTIONS: TextScaleOption[] = [
+  { value: '87.5', labelKey: 'platform.settings.textSizeSmall' },
+  { value: '100', labelKey: 'platform.settings.textSizeDefault' },
+  { value: '106.25', labelKey: 'platform.settings.textSizeMedium' },
+  { value: '112.5', labelKey: 'platform.settings.textSizeLarge' },
+  { value: '118.75', labelKey: 'platform.settings.textSizeXLarge' },
+  { value: '125', labelKey: 'platform.settings.textSizeMaximum' },
+];
+
+function normalizeTextScale(value: string | undefined, fallback: string): string {
+  const n = Number.parseFloat(value ?? '');
+  if (Number.isNaN(n) || n < 80 || n > 150) return fallback;
+  return String(n);
+}
 
 export function normalizeBranding(input: Partial<AppBranding> | null | undefined): AppBranding {
   return {
     primary_color: input?.primary_color?.trim() || DEFAULT_APP_BRANDING.primary_color,
-    font_body: input?.font_body?.trim() || DEFAULT_APP_BRANDING.font_body,
-    font_display: input?.font_display?.trim() || DEFAULT_APP_BRANDING.font_display,
-    font_arabic: input?.font_arabic?.trim() || DEFAULT_APP_BRANDING.font_arabic,
+    font_body: resolveFontOption(input?.font_body, APP_LATIN_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_body),
+    font_display: resolveFontOption(input?.font_display, APP_LATIN_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_display),
+    font_arabic: resolveFontOption(input?.font_arabic, APP_ARABIC_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_arabic),
+    text_scale: normalizeTextScale(input?.text_scale, DEFAULT_APP_BRANDING.text_scale),
+    text_scale_ar: normalizeTextScale(input?.text_scale_ar, DEFAULT_APP_BRANDING.text_scale_ar),
+    nav_font_scale: normalizeTextScale(input?.nav_font_scale, DEFAULT_APP_BRANDING.nav_font_scale),
+    nav_font_scale_ar: normalizeTextScale(input?.nav_font_scale_ar, DEFAULT_APP_BRANDING.nav_font_scale_ar),
+    button_font_scale: normalizeTextScale(input?.button_font_scale, DEFAULT_APP_BRANDING.button_font_scale),
+    button_font_scale_ar: normalizeTextScale(input?.button_font_scale_ar, DEFAULT_APP_BRANDING.button_font_scale_ar),
+    table_font_scale: normalizeTextScale(input?.table_font_scale, DEFAULT_APP_BRANDING.table_font_scale),
+    table_font_scale_ar: normalizeTextScale(input?.table_font_scale_ar, DEFAULT_APP_BRANDING.table_font_scale_ar),
+    landing_text_scale: normalizeTextScale(input?.landing_text_scale, DEFAULT_APP_BRANDING.landing_text_scale),
+    landing_text_scale_ar: normalizeTextScale(input?.landing_text_scale_ar, DEFAULT_APP_BRANDING.landing_text_scale_ar),
   };
 }
 
@@ -85,16 +197,31 @@ export function cacheBranding(branding: AppBranding) {
 }
 
 export function applyBrandingToDocument(branding: AppBranding) {
+  const normalized = normalizeBranding(branding);
+  ensureFontFaceLoaded(normalized.font_body);
+  ensureFontFaceLoaded(normalized.font_display);
+  ensureFontFaceLoaded(normalized.font_arabic);
+
   const root = document.documentElement;
-  root.style.setProperty('--primary', branding.primary_color);
-  root.style.setProperty('--sidebar-primary', branding.primary_color);
-  root.style.setProperty('--font-body', branding.font_body);
-  root.style.setProperty('--font-display', branding.font_display);
-  root.style.setProperty('--font-arabic', branding.font_arabic);
+  root.style.setProperty('--primary', normalized.primary_color);
+  root.style.setProperty('--sidebar-primary', normalized.primary_color);
+  root.style.setProperty('--font-body', normalized.font_body);
+  root.style.setProperty('--font-display', normalized.font_display);
+  root.style.setProperty('--font-arabic', normalized.font_arabic);
+  root.style.setProperty('--app-text-scale', `${normalized.text_scale}%`);
+  root.style.setProperty('--app-text-scale-ar', `${normalized.text_scale_ar}%`);
+  root.style.setProperty('--app-nav-font-scale', normalized.nav_font_scale);
+  root.style.setProperty('--app-nav-font-scale-ar', normalized.nav_font_scale_ar);
+  root.style.setProperty('--app-button-font-scale', normalized.button_font_scale);
+  root.style.setProperty('--app-button-font-scale-ar', normalized.button_font_scale_ar);
+  root.style.setProperty('--app-table-font-scale', normalized.table_font_scale);
+  root.style.setProperty('--app-table-font-scale-ar', normalized.table_font_scale_ar);
+  root.style.setProperty('--landing-text-scale', normalized.landing_text_scale);
+  root.style.setProperty('--landing-text-scale-ar', normalized.landing_text_scale_ar);
 
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) {
-    themeMeta.setAttribute('content', colorInputValue(branding.primary_color));
+    themeMeta.setAttribute('content', colorInputValue(normalized.primary_color));
   }
 }
 

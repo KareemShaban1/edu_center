@@ -14,6 +14,46 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Naveid Arabic';
+  src: url('/fonts/NaveidArabic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tinta Arabic';
+  src: url('/fonts/TintaArabic-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tufuli Arabic';
+  src: url('/fonts/TufuliArabic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lutfey Arabic';
+  src: url('/fonts/LutfeyArabic-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Ramis Arabic';
+  src: url('/fonts/RamisArabic-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 210 20% 98%;
@@ -74,7 +114,15 @@
 
     --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
-    --font-arabic: 'Hajeen', 'Cairo', 'Noto Sans Arabic', sans-serif;
+    --font-arabic: 'Hajeen', 'Cairo', sans-serif;
+    --app-text-scale: 106.25%;
+    --app-text-scale-ar: 112.5%;
+    --app-nav-font-scale: 100;
+    --app-nav-font-scale-ar: 100;
+    --app-button-font-scale: 100;
+    --app-button-font-scale-ar: 100;
+    --app-table-font-scale: 100;
+    --app-table-font-scale-ar: 100;
 
     --shadow-card: 0 1px 3px 0 hsl(220 25% 10% / 0.04), 0 1px 2px -1px hsl(220 25% 10% / 0.04);
     --shadow-elevated: 0 4px 6px -1px hsl(220 25% 10% / 0.06), 0 2px 4px -2px hsl(220 25% 10% / 0.04);
@@ -142,8 +190,16 @@
     @apply border-border;
   }
 
+  html {
+    font-size: var(--app-text-scale);
+  }
+
+  html[lang='ar'] {
+    font-size: var(--app-text-scale-ar);
+  }
+
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-body text-base antialiased;
   }
 
   html[lang='ar'] {
@@ -181,11 +237,35 @@
   }
 
   .page-title {
-    @apply text-2xl font-bold tracking-tight;
+    @apply text-3xl font-bold tracking-tight;
     font-family: var(--font-display);
   }
 
   .page-description {
-    @apply text-muted-foreground text-sm mt-1;
+    @apply text-muted-foreground text-base mt-1;
+  }
+
+  html {
+    --app-nav-font-scale-active: var(--app-nav-font-scale);
+    --app-button-font-scale-active: var(--app-button-font-scale);
+    --app-table-font-scale-active: var(--app-table-font-scale);
+  }
+
+  html[lang='ar'] {
+    --app-nav-font-scale-active: var(--app-nav-font-scale-ar);
+    --app-button-font-scale-active: var(--app-button-font-scale-ar);
+    --app-table-font-scale-active: var(--app-table-font-scale-ar);
+  }
+
+  .app-nav-text {
+    font-size: calc(1rem * var(--app-nav-font-scale-active, 100) / 100);
+  }
+
+  .app-btn-text {
+    font-size: calc(0.875rem * var(--app-button-font-scale-active, 100) / 100);
+  }
+
+  .app-table-text {
+    font-size: calc(1rem * var(--app-table-font-scale-active, 100) / 100);
   }
 }

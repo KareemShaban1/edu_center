@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
-import FormDialog from '@/components/FormDialog';
-import { FormField, FormInput, FormSelect, FormTextarea } from '@/components/FormFields';
 import StatusBadge from '@/components/StatusBadge';
+import StudentPageFilterBar, { dateOnly, uniqueSorted } from '@/components/student/StudentPageFilterBar';
+import StudentFilterField from '@/components/student/StudentFilterField';
+import { FormInput, FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import { studentSelfApi, type StudentGradePayload } from '@/services/endpoints/student-self';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -26,7 +26,7 @@ function GradeShowDialog({ item, onClose }: { item: GradeRow; onClose: () => voi
   const { t } = useLocale();
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{t('crud.view')} {t('nav.grades')}</DialogTitle></DialogHeader>
         <div className="space-y-2 text-sm">
           <p><strong>{t('col.subject')}:</strong> {item.subject}</p>
@@ -47,38 +47,131 @@ export default function StudentGrades() {
   const { data } = useStudentBootstrap();
   const rows = (data?.grades || []) as GradeRow[];
   const [showItem, setShowItem] = useState<GradeRow | null>(null);
-  const saveMutation = useMutation({
-    mutationFn: async ({ payload, id, source }: { payload: StudentGradePayload; id?: number; source?: 'exam' | 'quiz' }) => {
-      if (id && source) {
-        await studentSelfApi.updateGrade(source, id, { date: payload.date, degree: payload.degree, attendance_status: payload.attendance_status, notes: payload.notes });
-      } else {
-        await studentSelfApi.createGrade(payload);
-      }
-    },
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
-  });
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const subjects = useMemo(() => uniqueSorted(rows.map(r => r.subject)), [rows]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter(row => {
+      if (subjectFilter && row.subject !== subjectFilter) return false;
+      if (sourceFilter && row.source !== sourceFilter) return false;
+      if (dateFilter && dateOnly(row.date) !== dateFilter) return false;
+      if (statusFilter && (row.attendance_status || 'present') !== statusFilter) return false;
+      return true;
+    });
+  }, [rows, subjectFilter, sourceFilter, dateFilter, statusFilter]);
+
+  const appliedFilters = [subjectFilter, sourceFilter, dateFilter, statusFilter].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setSubjectFilter('');
+    setSourceFilter('');
+    setDateFilter('');
+    setStatusFilter('');
+  };
+
   const deleteMutation = useMutation({
     mutationFn: ({ source, id }: { source: 'exam' | 'quiz'; id: number }) => studentSelfApi.deleteGrade(source, id),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
   });
+
   const columns: CrudColumn<GradeRow>[] = [
-    { key: 'subject', label: t('col.subject'), sortable: true },
-    { key: 'source', label: t('nav.exams'), render: g => (g.source === 'exam' ? t('nav.exams') : t('nav.quizzes')) },
+    { key: 'subject', label: t('col.subject'), sortable: true, primary: true, hideOnMobile: Boolean(subjectFilter) },
+    {
+      key: 'source',
+      label: t('nav.exams'),
+      hideOnMobile: Boolean(sourceFilter),
+      render: g => (g.source === 'exam' ? t('nav.exams') : t('nav.quizzes')),
+    },
     { key: 'date', label: t('col.date'), sortable: true },
     { key: 'score', label: t('col.score'), render: g => `${g.score ?? '—'}/${g.total}` },
-    { key: 'attendance_status', label: t('col.status'), render: g => <StatusBadge status={g.attendance_status || 'present'} /> },
-    { key: 'notes', label: t('col.notes'), render: g => g.notes || '—' },
-    { key: '_show', label: t('crud.view'), render: g => <button onClick={() => setShowItem(g)} className="rounded-lg border px-2 py-1 text-xs">{t('crud.view')}</button> },
+    {
+      key: 'attendance_status',
+      label: t('col.status'),
+      hideOnMobile: Boolean(statusFilter),
+      render: g => <StatusBadge status={g.attendance_status || 'present'} />,
+    },
+    { key: 'notes', label: t('col.notes'), render: g => g.notes || '—', hideOnMobile: true },
+    {
+      key: '_show',
+      label: t('crud.view'),
+      render: g => (
+        <button type="button" onClick={() => setShowItem(g)} className="rounded-lg border px-2.5 py-1.5 text-xs font-medium">
+          {t('crud.view')}
+        </button>
+      ),
+    },
   ];
+
   return (
     <>
       <CrudPage<GradeRow>
         title={t('nav.grades')}
         description={t('page.grades.desc')}
         columns={columns}
-        data={rows}
+        data={filteredRows}
         searchKeys={['subject', 'source', 'date']}
         onDelete={item => { void deleteMutation.mutateAsync({ source: item.source, id: item.id }); }}
+        topContent={(
+          <StudentPageFilterBar
+            appliedCount={appliedFilters}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+            renderFilters={idPrefix => (
+              <>
+                <StudentFilterField id={`${idPrefix}-subject`} label={t('col.subject')}>
+                  <FormSelect
+                    id={`${idPrefix}-subject`}
+                    title={t('col.subject')}
+                    value={subjectFilter}
+                    onChange={e => setSubjectFilter(e.target.value)}
+                  >
+                    <option value="">{t('filter.all')}</option>
+                    {subjects.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </FormSelect>
+                </StudentFilterField>
+                <StudentFilterField id={`${idPrefix}-source`} label={t('nav.exams')}>
+                  <FormSelect
+                    id={`${idPrefix}-source`}
+                    title={t('nav.exams')}
+                    value={sourceFilter}
+                    onChange={e => setSourceFilter(e.target.value)}
+                  >
+                    <option value="">{t('filter.all')}</option>
+                    <option value="exam">{t('nav.exams')}</option>
+                    <option value="quiz">{t('nav.quizzes')}</option>
+                  </FormSelect>
+                </StudentFilterField>
+                <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
+                  <FormInput
+                    id={`${idPrefix}-date`}
+                    type="date"
+                    value={dateFilter}
+                    onChange={e => setDateFilter(e.target.value)}
+                  />
+                </StudentFilterField>
+                <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
+                  <FormSelect
+                    id={`${idPrefix}-status`}
+                    title={t('col.status')}
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">{t('filter.all')}</option>
+                    <option value="present">{t('attendance.present')}</option>
+                    <option value="absent">{t('attendance.absent')}</option>
+                    <option value="late">{t('attendance.late')}</option>
+                  </FormSelect>
+                </StudentFilterField>
+              </>
+            )}
+          />
+        )}
       />
       {showItem && <GradeShowDialog item={showItem} onClose={() => setShowItem(null)} />}
     </>

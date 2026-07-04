@@ -5,6 +5,7 @@ export interface AnnouncementMediaItem {
   name: string;
   file_name: string;
   mime_type?: string | null;
+  type?: string;
   size: number;
   url: string;
 }
@@ -37,6 +38,16 @@ export interface AnnouncementSavePayload {
   remove_media_ids?: number[];
 }
 
+interface AnnouncementEnvelope {
+  announcement: AnnouncementItemPayload;
+}
+
+function appendUploadFiles(fd: FormData, files?: File[]) {
+  (files || [])
+    .filter((file): file is File => file instanceof File && file.size > 0)
+    .forEach((file, index) => fd.append(`files[${index}]`, file, file.name));
+}
+
 function toFormData(payload: AnnouncementSavePayload): FormData {
   const fd = new FormData();
   fd.append('title', payload.title);
@@ -46,7 +57,7 @@ function toFormData(payload: AnnouncementSavePayload): FormData {
   fd.append('section_id', String(payload.section_id));
   fd.append('type', payload.type);
   if (payload.time) fd.append('time', payload.time);
-  (payload.files || []).forEach(file => fd.append('files[]', file));
+  appendUploadFiles(fd, payload.files);
   (payload.remove_media_ids || []).forEach(id => fd.append('remove_media_ids[]', String(id)));
   return fd;
 }
@@ -58,14 +69,42 @@ export const adminAnnouncementsApi = {
     return res.announcements || [];
   },
 
-  async create(payload: AnnouncementSavePayload): Promise<void> {
-    if (USE_MOCK) return;
-    await apiClient.upload('/admin/announcements', toFormData(payload), false);
+  async create(payload: AnnouncementSavePayload): Promise<AnnouncementItemPayload> {
+    if (USE_MOCK) {
+      return {
+        id: Date.now(),
+        title: payload.title,
+        content: payload.content,
+        grade_id: payload.grade_id,
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+        type: payload.type,
+        time: payload.time,
+        created_at: new Date().toISOString().slice(0, 10),
+        media: [],
+      };
+    }
+    const res = await apiClient.upload<AnnouncementEnvelope>('/admin/announcements', toFormData(payload), false);
+    return res.announcement;
   },
 
-  async update(id: number, payload: AnnouncementSavePayload): Promise<void> {
-    if (USE_MOCK) return;
-    await apiClient.upload(`/admin/announcements/${id}`, toFormData(payload), false);
+  async update(id: number, payload: AnnouncementSavePayload): Promise<AnnouncementItemPayload> {
+    if (USE_MOCK) {
+      return {
+        id,
+        title: payload.title,
+        content: payload.content,
+        grade_id: payload.grade_id,
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+        type: payload.type,
+        time: payload.time,
+        created_at: new Date().toISOString().slice(0, 10),
+        media: [],
+      };
+    }
+    const res = await apiClient.upload<AnnouncementEnvelope>(`/admin/announcements/${id}`, toFormData(payload), false);
+    return res.announcement;
   },
 
   async delete(id: number): Promise<void> {
@@ -73,4 +112,3 @@ export const adminAnnouncementsApi = {
     await apiClient.delete(`/admin/announcements/${id}`, false);
   },
 };
-

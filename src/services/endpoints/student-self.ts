@@ -2,7 +2,7 @@ import { apiClient, USE_MOCK } from '../api-client';
 import type { CenterScopedRow } from '@/types/models';
 
 export interface StudentSelfBootstrapPayload {
-  meetings: Array<CenterScopedRow & {
+  sessions: Array<CenterScopedRow & {
     id: number;
 
     topic: string;
@@ -63,6 +63,13 @@ export interface StudentSelfBootstrapPayload {
     grade: string;
     student_notes?: string;
     response?: string;
+    file_url?: string | null;
+    file_name?: string | null;
+    correction_url?: string | null;
+    correction_name?: string | null;
+    upload_date?: string;
+    center_id?: string | number;
+    center_slug?: string;
   }>;
 
   homework_options: Array<{ id: number; title: string; center_id?: string | number }>;
@@ -80,7 +87,7 @@ export interface StudentSelfBootstrapPayload {
 
 
 
-export interface StudentMeetingPayload {
+export interface StudentSessionPayload {
 
   topic: string;
 
@@ -137,19 +144,25 @@ export interface StudentGradePayload {
 
 
 export interface StudentHomeworkPayload {
-
   homework_id: number;
-
-  status: 'not_submitted' | 'submitted' | 'late' | 'approved' | 'rejected';
-
   student_notes?: string;
+  file?: File;
+  center_id?: number | string;
+  center_slug?: string;
+}
 
-  response?: string;
-
-  degree?: string;
-
-  rate?: string;
-
+function toHomeworkFormData(payload: StudentHomeworkPayload): FormData {
+  const fd = new FormData();
+  fd.append('homework_id', String(payload.homework_id));
+  if (payload.student_notes) fd.append('student_notes', payload.student_notes);
+  if (payload.center_id != null && payload.center_id !== '') {
+    fd.append('center_id', String(payload.center_id));
+  }
+  if (payload.center_slug) fd.append('center_slug', payload.center_slug);
+  if (payload.file instanceof File && payload.file.size > 0) {
+    fd.append('files[0]', payload.file, payload.file.name);
+  }
+  return fd;
 }
 
 
@@ -172,7 +185,7 @@ export const studentSelfApi = {
 
     if (USE_MOCK) {
 
-      return { meetings: [], attendance: [], grades: [], homework: [], homework_options: [], library: [] };
+      return { sessions: [], attendance: [], grades: [], homework: [], homework_options: [], library: [] };
 
     }
 
@@ -180,27 +193,27 @@ export const studentSelfApi = {
 
   },
 
-  async createMeeting(payload: StudentMeetingPayload): Promise<void> {
+  async createSession(payload: StudentSessionPayload): Promise<void> {
 
-    await apiClient.post('/student/meetings', payload, false);
-
-  },
-
-  async updateMeeting(id: number, payload: StudentMeetingPayload): Promise<void> {
-
-    await apiClient.put(`/student/meetings/${id}`, payload, false);
+    await apiClient.post('/student/sessions', payload, false);
 
   },
 
-  async deleteMeeting(id: number): Promise<void> {
+  async updateSession(id: number, payload: StudentSessionPayload): Promise<void> {
 
-    await apiClient.delete(`/student/meetings/${id}`, false);
+    await apiClient.put(`/student/sessions/${id}`, payload, false);
 
   },
 
-  async getLiveKitToken(meetingId: number): Promise<{ token: string; url: string; room: string }> {
+  async deleteSession(id: number): Promise<void> {
 
-    return apiClient.get(`/student/meetings/${meetingId}/livekit-token`, undefined, false);
+    await apiClient.delete(`/student/sessions/${id}`, false);
+
+  },
+
+  async getLiveKitToken(sessionId: number): Promise<{ token: string; url: string; room: string }> {
+
+    return apiClient.get(`/student/sessions/${sessionId}/livekit-token`, undefined, false);
 
   },
 
@@ -241,15 +254,22 @@ export const studentSelfApi = {
   },
 
   async createHomeworkSubmission(payload: StudentHomeworkPayload): Promise<void> {
-
-    await apiClient.post('/student/homework/submissions', payload, false);
-
+    if (USE_MOCK) return;
+    await apiClient.upload('/student/homework/submissions', toHomeworkFormData(payload), false);
   },
 
   async updateHomeworkSubmission(id: number, payload: StudentHomeworkPayload): Promise<void> {
-
-    await apiClient.put(`/student/homework/submissions/${id}`, payload, false);
-
+    if (USE_MOCK) return;
+    if (payload.file instanceof File && payload.file.size > 0) {
+      await apiClient.upload(`/student/homework/submissions/${id}`, toHomeworkFormData(payload), false);
+      return;
+    }
+    await apiClient.put(`/student/homework/submissions/${id}`, {
+      homework_id: payload.homework_id,
+      student_notes: payload.student_notes ?? '',
+      center_id: payload.center_id,
+      center_slug: payload.center_slug,
+    }, false);
   },
 
   async deleteHomeworkSubmission(id: number): Promise<void> {

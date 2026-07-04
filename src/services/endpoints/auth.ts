@@ -18,6 +18,29 @@ export interface LoginPayload {
   portal?: boolean;
 }
 
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  password_confirmation: string;
+  gender?: 'male' | 'female';
+  center_slug?: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    code?: string;
+    center_slug?: string | null;
+  };
+}
+
 export interface LoginResponse {
   user: User;
   token: string;
@@ -124,6 +147,26 @@ export const authApi = {
   async loginPortal(payload: LoginPayload): Promise<LoginResponse> {
     apiClient.setTenantContext(null);
     return this.login({ ...payload, portal: true }) as Promise<LoginResponse>;
+  },
+
+  async registerParent(payload: RegisterPayload): Promise<RegisterResponse> {
+    if (USE_MOCK) {
+      return {
+        message: 'Parent account created.',
+        user: { id: Date.now(), name: payload.name, email: payload.email, phone: payload.phone, role: 'parent' },
+      };
+    }
+    return apiClient.post<RegisterResponse>('/register/parent', payload, false);
+  },
+
+  async registerStudent(payload: RegisterPayload & { gender: 'male' | 'female' }): Promise<RegisterResponse> {
+    if (USE_MOCK) {
+      return {
+        message: 'Student account created.',
+        user: { id: Date.now(), name: payload.name, email: payload.email, phone: payload.phone, role: 'student', code: 'STU-000099' },
+      };
+    }
+    return apiClient.post<RegisterResponse>('/register/student', payload, false);
   },
 
   async login(payload: LoginPayload): Promise<LoginResult> {

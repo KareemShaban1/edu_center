@@ -17,15 +17,15 @@ export const LANDING_FONT_SIZES = {
   cardTitle: { mobile: 17, tablet: 19, desktop: 20 },
   cardBody: { mobile: 14, tablet: 15, desktop: 18 },
   roleTitle: { mobile: 16, tablet: 17, desktop: 18 },
-  roleItem: { mobile: 14, tablet: 15, desktop: 18 },
+  roleItem: { mobile: 14, tablet: 15, desktop: 20 },
   whyUsTitle: { mobile: 16, tablet: 20, desktop: 22 },
   whyUsBody: { mobile: 14, tablet: 16, desktop: 18 },
   ctaTitle: { mobile: 24, tablet: 32, desktop: 48 },
   ctaBody: { mobile: 16, tablet: 18, desktop: 20 },
-  ctaTrial: { mobile: 14, tablet: 15, desktop: 16 },
-  trustItem: { mobile: 12, tablet: 13, desktop: 14 },
-  footerBrand: { mobile: 14, tablet: 15, desktop: 16 },
-  footerCopy: { mobile: 12, tablet: 13, desktop: 14 },
+  ctaTrial: { mobile: 14, tablet: 15, desktop: 20 },
+  trustItem: { mobile: 12, tablet: 13, desktop: 20 },
+  footerBrand: { mobile: 14, tablet: 15, desktop: 20 },
+  footerCopy: { mobile: 12, tablet: 13, desktop: 16 },
 } as const satisfies Record<string, SizeScale>;
 
 export type LandingFontKey = keyof typeof LANDING_FONT_SIZES;
@@ -36,9 +36,13 @@ export function getLandingBreakpoint(width: number): Breakpoint {
   return 'mobile';
 }
 
-export function resolveLandingFonts(breakpoint: Breakpoint): Record<LandingFontKey, string> {
+export function resolveLandingFonts(
+  breakpoint: Breakpoint,
+  scalePercent = 100,
+): Record<LandingFontKey, string> {
+  const factor = Math.max(80, Math.min(150, scalePercent)) / 100;
   const entries = Object.entries(LANDING_FONT_SIZES) as [LandingFontKey, SizeScale][];
   return Object.fromEntries(
-    entries.map(([key, scale]) => [key, `${scale[breakpoint]}px`]),
+    entries.map(([key, scale]) => [key, `${Math.round(scale[breakpoint] * factor)}px`]),
   ) as Record<LandingFontKey, string>;
 }

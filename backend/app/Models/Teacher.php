@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCenter;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Spatie\Translatable\HasTranslations;
 
 class Teacher extends  Authenticatable
 {
     use BelongsToCenter;
+    use Notifiable;
  
     protected $guarded = [];
 
@@ -25,6 +26,11 @@ class Teacher extends  Authenticatable
     public function sections()
     {
         return $this->belongsToMany('App\Models\Section', 'teacher_section');
+    }
+
+    public function receivesBroadcastNotificationsOn()
+    {
+        return 'teacher.' . $this->id;
     }
     ///////////////////////////////////////////
     

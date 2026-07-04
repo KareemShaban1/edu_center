@@ -26,9 +26,19 @@ class DatabaseSeeder extends Seeder
                 'city' => 'Benha',
                 'status' => 1,
             ],
+            [
+                'name' => 'Test Center',
+                'slug' => 'test',
+                'domain' => 'test',
+                'email' => 'test@platform.com',
+                'phone' => '01090537395',
+                'address' => 'Cairo',
+                'city' => 'Cairo',
+                'status' => 1,
+            ],
         ];
 
-        $seedDemoData = app()->environment('local', 'development');
+        $seedDemoData = app()->environment('local', 'development', 'testing');
 
         foreach ($centers as $data) {
             $center = Center::query()->updateOrCreate(
@@ -50,7 +60,7 @@ class DatabaseSeeder extends Seeder
         }
 
         if ($seedDemoData) {
-            $this->command?->info('Demo center seeded with sample grades, parents, students, and teachers.');
+            $this->command?->info('Seeded demo + test centers with students, parents, teachers, fees, attendance, homework, exams, and quizzes.');
         }
     }
 }

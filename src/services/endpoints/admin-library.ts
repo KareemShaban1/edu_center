@@ -5,6 +5,7 @@ export interface LibraryMediaItem {
   name: string;
   file_name: string;
   mime_type?: string | null;
+  type?: string;
   size: number;
   url: string;
 }
@@ -35,6 +36,16 @@ export interface LibrarySavePayload {
   remove_media_ids?: number[];
 }
 
+interface LibraryEnvelope {
+  library: LibraryItemPayload;
+}
+
+function appendUploadFiles(fd: FormData, files?: File[]) {
+  (files || [])
+    .filter((file): file is File => file instanceof File && file.size > 0)
+    .forEach((file, index) => fd.append(`files[${index}]`, file, file.name));
+}
+
 function toFormData(payload: LibrarySavePayload): FormData {
   const fd = new FormData();
   fd.append('title', payload.title);
@@ -43,7 +54,7 @@ function toFormData(payload: LibrarySavePayload): FormData {
   fd.append('section_id', String(payload.section_id));
   fd.append('type', payload.type);
   if (payload.notes) fd.append('notes', payload.notes);
-  (payload.files || []).forEach(file => fd.append('files[]', file));
+  appendUploadFiles(fd, payload.files);
   (payload.remove_media_ids || []).forEach(id => fd.append('remove_media_ids[]', String(id)));
   return fd;
 }
@@ -55,14 +66,40 @@ export const adminLibraryApi = {
     return res.library || [];
   },
 
-  async create(payload: LibrarySavePayload): Promise<void> {
-    if (USE_MOCK) return;
-    await apiClient.upload('/admin/library', toFormData(payload), false);
+  async create(payload: LibrarySavePayload): Promise<LibraryItemPayload> {
+    if (USE_MOCK) {
+      return {
+        id: Date.now(),
+        title: payload.title,
+        grade_id: payload.grade_id,
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+        type: payload.type,
+        notes: payload.notes,
+        created_at: new Date().toISOString().slice(0, 10),
+        media: [],
+      };
+    }
+    const res = await apiClient.upload<LibraryEnvelope>('/admin/library', toFormData(payload), false);
+    return res.library;
   },
 
-  async update(id: number, payload: LibrarySavePayload): Promise<void> {
-    if (USE_MOCK) return;
-    await apiClient.upload(`/admin/library/${id}`, toFormData(payload), false);
+  async update(id: number, payload: LibrarySavePayload): Promise<LibraryItemPayload> {
+    if (USE_MOCK) {
+      return {
+        id,
+        title: payload.title,
+        grade_id: payload.grade_id,
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+        type: payload.type,
+        notes: payload.notes,
+        created_at: new Date().toISOString().slice(0, 10),
+        media: [],
+      };
+    }
+    const res = await apiClient.upload<LibraryEnvelope>(`/admin/library/${id}`, toFormData(payload), false);
+    return res.library;
   },
 
   async delete(id: number): Promise<void> {
@@ -70,4 +107,3 @@ export const adminLibraryApi = {
     await apiClient.delete(`/admin/library/${id}`, false);
   },
 };
-

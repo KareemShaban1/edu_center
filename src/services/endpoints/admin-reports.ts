@@ -1,5 +1,39 @@
 import { apiClient, USE_MOCK } from '../api-client';
 
+export type AdminReportType = 'attendance' | 'exams' | 'quizzes' | 'payments';
+
+export const ADMIN_REPORT_TYPES: AdminReportType[] = ['attendance', 'exams', 'quizzes', 'payments'];
+
+export interface AdminReportStat {
+  key: string;
+  value: number;
+}
+
+export interface AdminReportGradeRow {
+  grade_id?: number;
+  grade_name: string;
+  total: number;
+  rate: number;
+}
+
+export interface AdminReportRecentRow {
+  id: number;
+  student_name: string;
+  grade_name: string;
+  class_name?: string;
+  section_name?: string;
+  date: string;
+  degree?: string;
+  status: string;
+}
+
+export interface AdminTypedReportPayload {
+  type: AdminReportType;
+  stats: AdminReportStat[];
+  by_grade: AdminReportGradeRow[];
+  recent: AdminReportRecentRow[];
+}
+
 export interface AdminReportsPayload {
   stats: {
     students: number;
@@ -51,5 +85,11 @@ export const adminReportsApi = {
     }
     return apiClient.get<AdminReportsPayload>('/admin/reports', undefined, false);
   },
-};
 
+  async getByType(type: AdminReportType): Promise<AdminTypedReportPayload> {
+    if (USE_MOCK) {
+      return { type, stats: [], by_grade: [], recent: [] };
+    }
+    return apiClient.get<AdminTypedReportPayload>(`/admin/reports/${type}`, undefined, false);
+  },
+};

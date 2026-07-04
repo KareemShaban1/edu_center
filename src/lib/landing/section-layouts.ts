@@ -8,10 +8,18 @@ export interface SectionLayoutOption {
 export const SECTION_LAYOUTS: Partial<Record<SectionType, SectionLayoutOption[]>> = {
   hero: [
     { value: 'split', labelKey: 'landing.layout.hero.split' },
+    { value: 'split-reverse', labelKey: 'landing.layout.hero.splitReverse' },
     { value: 'centered', labelKey: 'landing.layout.hero.centered' },
+    { value: 'image-top', labelKey: 'landing.layout.hero.imageTop' },
+    { value: 'image-bottom', labelKey: 'landing.layout.hero.imageBottom' },
     { value: 'background', labelKey: 'landing.layout.hero.background' },
+    { value: 'minimal', labelKey: 'landing.layout.hero.minimal' },
+    { value: 'stats-row', labelKey: 'landing.layout.hero.statsRow' },
   ],
-  features: [
+  features: [ 
+    {value:'grid-6', labelKey: 'landing.layout.features.grid6'},
+    {value:'grid-5', labelKey: 'landing.layout.features.grid5'},
+    { value:'grid-4', labelKey: 'landing.layout.features.grid4'},
     { value: 'grid-3', labelKey: 'landing.layout.features.grid3' },
     { value: 'grid-2', labelKey: 'landing.layout.features.grid2' },
     { value: 'list', labelKey: 'landing.layout.features.list' },

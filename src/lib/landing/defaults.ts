@@ -14,6 +14,15 @@ export function lt(en: string, ar: string): LocalizedText {
   return { en, ar };
 }
 
+export function resolveLocalizedValue(
+  value: string | LocalizedText | undefined,
+  locale: 'en' | 'ar',
+): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  return value[locale] || value.en || '';
+}
+
 export function createDefaultSection(type: SectionType, order: number): LandingSection {
   const id = uid('sec');
   const base = { id, type, order, visible: true, animation: 'fade-in' as const, content: {} };

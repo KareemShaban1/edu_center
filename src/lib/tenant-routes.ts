@@ -9,6 +9,7 @@ export const reservedTenantSlugs = new Set([
   'parent',
   'platform',
   'login',
+  'register',
   'api',
   'p',
 ]);
@@ -28,9 +29,33 @@ export function getParentLoginPath(): string {
   return '/parent/login';
 }
 
+export function getStudentRegisterPath(): string {
+  return '/student/register';
+}
+
+export function getParentRegisterPath(): string {
+  return '/parent/register';
+}
+
 export function getTenantLoginPath(tenantSlug?: string | null): string {
   const slug = tenantSlug || apiClient.getTenantContext().tenantSlug || defaultTenantSlug;
   return `/${slug}/login`;
+}
+
+export type DashboardRoleKey = 'admin' | 'teacher' | 'student' | 'parent';
+
+export function getRoleLoginPath(role: DashboardRoleKey, tenantSlug?: string | null): string {
+  switch (role) {
+    case 'student':
+      return getStudentLoginPath();
+    case 'parent':
+      return getParentLoginPath();
+    case 'teacher':
+      return `${getTenantLoginPath(tenantSlug)}?guard=teacher`;
+    case 'admin':
+    default:
+      return getTenantLoginPath(tenantSlug);
+  }
 }
 
 export function normalizeTenantSlug(raw: string | undefined): string | null {

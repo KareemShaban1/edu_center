@@ -11,6 +11,7 @@ class Attendance extends Model
         'grade_id',
         'class_id',
         'section_id',
+        'session_id',
         'teacher_id',
         'attendance_date',
         'attendance_status',
@@ -48,6 +49,11 @@ class Attendance extends Model
     public function section()
     {
         return $this->belongsTo(Section::class, 'section_id');
+    }
+
+    public function session()
+    {
+        return $this->belongsTo(Session::class, 'session_id');
     }
 
     ///////////////////////////////////////////////////////

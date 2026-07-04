@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import FormDialog from '@/components/FormDialog';
+import { FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { ClassRoom } from '@/types/models';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
@@ -14,6 +15,7 @@ export default function AdminClasses() {
   const { data: bootstrap } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const [data, setData] = useState<ClassRoom[]>([]);
+  const [gradeFilter, setGradeFilter] = useState('');
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: Pick<ClassRoom, 'name' | 'grade_id' | 'notes'>; id?: number }) => (
       id ? adminAcademicsApi.updateClass(id, payload) : adminAcademicsApi.createClass(payload)
@@ -26,6 +28,12 @@ export default function AdminClasses() {
   useEffect(() => {
     setData((bootstrap?.classes || []) as ClassRoom[]);
   }, [bootstrap]);
+
+  const filteredData = useMemo(() => {
+    if (!gradeFilter) return data;
+    const gradeId = Number(gradeFilter);
+    return data.filter(c => c.grade_id === gradeId);
+  }, [data, gradeFilter]);
 
   const columns: CrudColumn<ClassRoom>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
@@ -41,8 +49,28 @@ export default function AdminClasses() {
     <CrudPage
       title={t('nav.classes')}
       description={t('page.classesAdmin.desc')}
+      topContent={(
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="w-full sm:max-w-xs">
+            <label htmlFor="classes-grade-filter" className="mb-1.5 block text-sm font-medium">
+              {t('col.grade')}
+            </label>
+            <FormSelect
+              id="classes-grade-filter"
+              title={t('col.grade')}
+              value={gradeFilter}
+              onChange={e => setGradeFilter(e.target.value)}
+            >
+              <option value="">{t('filter.all')}</option>
+              {grades.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </FormSelect>
+          </div>
+        </div>
+      )}
       columns={columns}
-      data={data}
+      data={filteredData}
       searchKeys={['name']}
       onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
       renderForm={(item, onClose) => (

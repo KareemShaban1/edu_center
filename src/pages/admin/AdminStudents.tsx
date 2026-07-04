@@ -1,231 +1,147 @@
-import React, { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
-import FormDialog from '@/components/FormDialog';
-import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import type { Student } from '@/types/models';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import StatusBadge from '@/components/StatusBadge';
-import { Paperclip } from 'lucide-react';
+import { Search, UserMinus, UserPlus } from 'lucide-react';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
-import { adminStudentsApi, type StudentSavePayload } from '@/services/endpoints/admin-students';
+import { adminStudentsApi } from '@/services/endpoints/admin-students';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormInput } from '@/components/FormFields';
+import { useState } from 'react';
 
-function StudentForm({
-  item,
-  onClose,
-  onSave,
-  saving,
-  parents,
-  grades,
-  classes,
-  sections,
-}: {
-  item: Student | null;
-  onClose: () => void;
-  onSave: (payload: StudentSavePayload, id?: number) => Promise<void>;
-  saving: boolean;
-  parents: Array<{ id: number; name: string }>;
-  grades: Array<{ id: number; name: string }>;
-  classes: Array<{ id: number; name: string; grade_id: number }>;
-  sections: Array<{ id: number; name: string; class_id: number; grade_id: number; class_name: string; grade_name: string; section_name: string }>;
-}) {
+function AssignByCodePanel({ onAssigned }: { onAssigned: () => Promise<void> }) {
   const { t } = useLocale();
-  const [form, setForm] = useState({
-    name: item?.name || '',
-    email: item?.email || '',
-    password: '',
-    gender: item?.gender || 'male',
-    status: item?.status || 'active',
-    grade_id: item?.grade_id || 0,
-    classroom_id: item?.classroom_id || 0,
-    section_id: item?.section_id || 0,
-    parent_id: item?.parent_id || 0,
-  });
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [code, setCode] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
+  const [result, setResult] = useState<{
+    student: Student & { is_assigned: boolean };
+    parent: { id: number; name: string; email: string; is_assigned: boolean } | null;
+  } | null>(null);
 
-  const classesByGrade = useMemo(
-    () => classes.filter(c => c.grade_id === form.grade_id),
-    [classes, form.grade_id],
-  );
-  const sectionsByClass = useMemo(
-    () => sections.filter(s => s.class_id === form.classroom_id),
-    [sections, form.classroom_id],
-  );
-
-  const handleGradeChange = (gradeId: number) => {
-    setForm(f => ({
-      ...f,
-      grade_id: gradeId,
-      classroom_id: 0,
-      section_id: 0,
-    }));
-  };
-
-  const handleClassChange = (classId: number) => {
-    setForm(f => ({
-      ...f,
-      classroom_id: classId,
-      section_id: 0,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.grade_id || !form.classroom_id || !form.section_id || !form.email.trim()) {
-      toast({
-        title: 'Validation error',
-        description: 'Please fill name, email, grade, class, and section.',
-        variant: 'destructive',
-      });
+  const handleSearch = async () => {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      toast({ title: 'Enter a student code', variant: 'destructive' });
       return;
     }
 
+    setSearching(true);
+    setResult(null);
     try {
-      await onSave(
-        {
-          name: form.name.trim(),
-          email: form.email.trim(),
-          password: form.password || undefined,
-          gender: form.gender,
-          status: form.status,
-          grade_id: form.grade_id,
-          classroom_id: form.classroom_id,
-          section_id: form.section_id,
-          parent_id: form.parent_id || null,
-        },
-        item?.id,
-      );
-      toast({ title: item ? t('crud.edit') : t('crud.addNew'), description: form.name });
-      onClose();
+      const data = await adminStudentsApi.searchByCode(trimmed);
+      setResult(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save student';
-      toast({ title: 'Save failed', description: message, variant: 'destructive' });
+      const message = error instanceof Error ? error.message : 'Student not found';
+      toast({ title: 'Search failed', description: message, variant: 'destructive' });
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!result) return;
+    setAssigning(true);
+    try {
+      await adminStudentsApi.assignToCenter(result.student.id);
+      toast({
+        title: 'Assigned to center',
+        description: `${result.student.name} and linked parent were assigned to this center.`,
+      });
+      setResult(null);
+      setCode('');
+      await onAssigned();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to assign student';
+      toast({ title: 'Assign failed', description: message, variant: 'destructive' });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (!result) return;
+    if (!window.confirm(`Unassign ${result.student.name} from this center? Their parent will be unassigned too if they have no other students here.`)) {
+      return;
+    }
+
+    setUnassigning(true);
+    try {
+      await adminStudentsApi.unassignFromCenter(result.student.id);
+      toast({
+        title: 'Unassigned from center',
+        description: `${result.student.name} can be reassigned later using their code.`,
+      });
+      setResult(null);
+      setCode('');
+      await onAssigned();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to unassign student';
+      toast({ title: 'Unassign failed', description: message, variant: 'destructive' });
+    } finally {
+      setUnassigning(false);
     }
   };
 
   return (
-    <FormDialog
-      open
-      title={item ? `${t('crud.edit')} ${t('nav.students')}` : `${t('crud.addNew')} ${t('nav.students')}`}
-      onClose={onClose}
-      onSubmit={handleSubmit}
-      loading={saving}
-    >
-      <FormField label={t('col.name')} id="student-name" required>
-        <FormInput id="student-name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required maxLength={100} />
-      </FormField>
-
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label={t('col.email')} id="student-email">
-          <FormInput id="student-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} maxLength={255} />
-        </FormField>
-        <FormField label={t('col.password')} id="student-password">
-          <FormInput id="student-password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={item ? '••••••••' : ''} maxLength={100} />
-        </FormField>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label={t('col.gender')} id="student-gender">
-          <FormSelect title={t('col.gender')} id="student-gender" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </FormSelect>
-        </FormField>
-        <FormField label={t('col.status')} id="student-status">
-          <FormSelect title={t('col.status')} id="student-status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as Student['status'] }))}>
-            <option value="active">{t('status.active')}</option>
-            <option value="inactive">{t('status.inactive')}</option>
-            <option value="graduated">{t('status.graduated')}</option>
-            <option value="suspended">{t('status.suspended')}</option>
-          </FormSelect>
-        </FormField>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <FormField label={t('col.grade')} id="student-grade">
-          <FormSelect title={t('col.grade')} id="student-grade" value={form.grade_id} onChange={e => handleGradeChange(Number(e.target.value))}>
-            <option value={0} disabled>{t('col.grade')}</option>
-            {grades.map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </FormSelect>
-        </FormField>
-        <FormField label={t('col.class')} id="student-class">
-          <FormSelect
-            title={t('col.class')}
-            id="student-class"
-            value={form.classroom_id}
-            disabled={!form.grade_id}
-            onChange={e => handleClassChange(Number(e.target.value))}
-          >
-            <option value={0} disabled>{form.grade_id ? t('col.class') : 'Select grade first'}</option>
-            {classesByGrade.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </FormSelect>
-        </FormField>
-        <FormField label={t('col.section')} id="student-section">
-          <FormSelect
-            title={t('col.section')}
-            id="student-section"
-            value={form.section_id}
-            disabled={!form.classroom_id}
-            onChange={e => setForm(f => ({ ...f, section_id: Number(e.target.value) }))}
-          >
-            <option value={0} disabled>{form.classroom_id ? t('col.section') : 'Select class first'}</option>
-            {sectionsByClass.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </FormSelect>
-        </FormField>
-      </div>
-
-      <FormField label={t('col.parent')} id="student-parent">
-        <FormSelect title={t('col.parent')} id="student-parent" value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: Number(e.target.value) }))}>
-          <option value={0}>{t('form.noParent')}</option>
-          {parents.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </FormSelect>
-      </FormField>
-
-      <FormField label={t('col.attachments')} id="student-attachments">
-        <div className="flex items-center gap-3">
-          <label
-            htmlFor="student-attachments"
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input bg-background px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-          >
-            <Paperclip className="h-4 w-4" />
-            {t('form.addAttachments')}
-          </label>
-          <input
-            id="student-attachments"
-            type="file"
-            multiple
-            accept="image/*,.pdf,.doc,.docx"
-            className="hidden"
-            onChange={e => setAttachments(Array.from(e.target.files || []))}
+    <Card className="mb-6 mt-2">
+      <CardHeader>
+        <CardTitle className="text-lg"> {t('admin.assignStudentByCode')}</CardTitle>
+        <CardDescription>
+          {t('admin.assignStudentByCodeDescription')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <FormInput
+            id="assign-student-code"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            placeholder="STU-000001"
+            maxLength={50}
+            className="sm:max-w-xs"
           />
-          {attachments.length > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {attachments.length} {t('form.filesSelected')}
-            </span>
-          )}
+          <Button type="button" variant="secondary" onClick={handleSearch} disabled={searching}>
+            <Search className="mr-2 h-4 w-4" />
+            {searching ? t('admin.searching') : t('admin.searchForStudentByCode')}
+          </Button>
         </div>
-        {attachments.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {attachments.map((file, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
-                <Paperclip className="h-3 w-3" />
-                {file.name}
-                <button type="button" className="ml-1 text-muted-foreground hover:text-destructive" onClick={() => setAttachments(a => a.filter((_, idx) => idx !== i))}>×</button>
-              </span>
-            ))}
+
+        {result && (
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">{result.student.name}</p>
+                <p className="text-sm text-muted-foreground">Code: {result.student.code} · {result.student.email}</p>
+                {result.parent && (
+                  <p className="text-sm text-muted-foreground">Parent: {result.parent.name}</p>
+                )}
+                {result.student.is_assigned ? (
+                  <p className="mt-1 text-sm text-green-600">Already assigned to this center</p>
+                ) : (
+                  <p className="mt-1 text-sm text-amber-600">Not yet assigned to this center</p>
+                )}
+              </div>
+              {!result.student.is_assigned ? (
+                <Button type="button" onClick={handleAssign} disabled={assigning}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {assigning ? 'Assigning...' : 'Assign to Center'}
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={handleUnassign} disabled={unassigning}>
+                  <UserMinus className="mr-2 h-4 w-4" />
+                  {unassigning ? 'Unassigning...' : 'Unassign from Center'}
+                </Button>
+              )}
+            </div>
           </div>
         )}
-      </FormField>
-    </FormDialog>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -234,33 +150,29 @@ export default function AdminStudents() {
   const queryClient = useQueryClient();
   const { data: bootstrap } = useAdminBootstrap();
   const students = (bootstrap?.students || []) as Student[];
-  const grades = ((bootstrap?.grades || []) as Array<{ id: number; name: string }>).map(g => ({ id: Number(g.id), name: g.name }));
-  const classes = ((bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>).map(c => ({
-    id: Number(c.id),
-    name: c.name,
-    grade_id: Number(c.grade_id),
-  }));
-  const sections = ((bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number; grade_id: number; class_name: string; grade_name: string; section_name: string }>).map(s => ({
-    id: Number(s.id),
-    name: s.name,
-    class_id: Number(s.class_id),
-    grade_id: Number(s.grade_id),
-    grade_name: s.grade_name,
-    class_name: s.class_name,
-    section_name: s.section_name,
-  }));
   const parents = ((bootstrap?.parents || []) as Array<{ id: number; name: string }>).map(p => ({ id: Number(p.id), name: p.name }));
-  const saveMutation = useMutation({
-    mutationFn: ({ payload, id }: { payload: StudentSavePayload; id?: number }) => (
-      id ? adminStudentsApi.update(id, payload) : adminStudentsApi.create(payload)
-    ),
+
+  const unassignMutation = useMutation({
+    mutationFn: (id: number) => adminStudentsApi.unassignFromCenter(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+      toast({ title: 'Unassigned from center', description: 'Student can be reassigned using their code.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Unassign failed', description: error.message, variant: 'destructive' });
     },
   });
 
+  const handleUnassignStudent = async (student: Student) => {
+    if (!window.confirm(`Unassign ${student.name} from this center?`)) {
+      return;
+    }
+    await unassignMutation.mutateAsync(student.id);
+  };
+
   const columns: CrudColumn<Student>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
+    { key: 'code', label: 'Code', sortable: true },
     { key: 'name', label: t('col.name'), sortable: true },
     { key: 'email', label: t('col.email') },
     { key: 'gender', label: t('col.gender'), render: s => <span className="capitalize"> {t(`gender.${s.gender}`)}</span> },
@@ -272,31 +184,35 @@ export default function AdminStudents() {
       const parent = parents.find(p => p.id === s.parent_id);
       return parent ? parent.name : '—';
     }},
-    { key: 'created_at', label: t('col.enrolled'), sortable: true },
   ];
+
+  const refreshStudents = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+  };
 
   return (
     <CrudPage<Student>
       title={t('nav.students')}
       description={t('page.students.desc')}
+      topContent={<AssignByCodePanel onAssigned={refreshStudents} />}
       columns={columns}
       data={students}
-      searchKeys={['name', 'email']}
-      renderForm={(item, onClose) => (
-        <StudentForm
-          item={item}
-          onClose={onClose}
-          onSave={async (payload, id) => {
-            await saveMutation.mutateAsync({ payload, id });
-          }}
-          saving={saveMutation.isPending}
-          parents={parents}
-          grades={grades}
-          classes={classes}
-          sections={sections}
-        />
+      searchKeys={['name', 'email', 'code']}
+      canCreate={false}
+      canEdit={false}
+      canDelete={false}
+      renderExtraActions={student => (
+        <button
+          type="button"
+          onClick={() => void handleUnassignStudent(student)}
+          disabled={unassignMutation.isPending}
+          className="rounded-lg p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label={t('admin.unassignFromCenter')}
+          title={t('admin.unassignFromCenter')}
+        >
+          <UserMinus className="h-4 w-4" />
+        </button>
       )}
-      onDelete={item => console.log('delete', item.id)}
     />
   );
 }

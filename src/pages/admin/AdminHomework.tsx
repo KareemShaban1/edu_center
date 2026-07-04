@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { CalendarIcon } from 'lucide-react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
+import { FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,6 +23,9 @@ import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminLearningApi } from '@/services/endpoints/admin-learning';
 import { toast } from '@/hooks/use-toast';
+import { matchAdminScopeRow, useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
+
+type HomeworkRow = Homework & { submissions_count?: number };
 
 export default function AdminHomework() {
   const { t } = useLocale();
@@ -28,8 +34,7 @@ export default function AdminHomework() {
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
-  const [data, setData] = useState<Homework[]>([]);
-  const [viewItem, setViewItem] = useState<Homework | null>(null);
+  const [data, setData] = useState<HomeworkRow[]>([]);
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date'>; id?: number }) => (
       id ? adminLearningApi.updateHomework(id, payload) : adminLearningApi.createHomework(payload)
@@ -40,12 +45,50 @@ export default function AdminHomework() {
   });
 
   useEffect(() => {
-    setData((bootstrap?.homework || []) as Homework[]);
+    setData((bootstrap?.homework || []) as HomeworkRow[]);
   }, [bootstrap]);
 
-  const columns: CrudColumn<Homework>[] = [
+  const {
+    gradeFilter,
+    classFilter,
+    sectionFilter,
+    dateFilter,
+    setDateFilter,
+    setSectionFilter,
+    grades: gradeOptions,
+    classesByGrade,
+    sectionsByClass,
+    filteredRows: filteredData,
+    appliedCount,
+    clearFilters,
+    handleGradeChange,
+    handleClassChange,
+  } = useAdminScopeFilters(
+    grades,
+    classes,
+    sections,
+    data,
+    undefined,
+    (row, filters) => {
+      if (!matchAdminScopeRow(row, filters, classes, sections)) return false;
+      if (filters.dateFilter) {
+        const due = String(row.due_date || '').slice(0, 10);
+        const start = String(row.start_date || '').slice(0, 10);
+        if (due !== filters.dateFilter && start !== filters.dateFilter) return false;
+      }
+      return true;
+    },
+  );
+
+  const columns: CrudColumn<HomeworkRow>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
-    { key: 'title', label: t('col.title'), sortable: true },
+    { key: 'title', label: t('col.title'), sortable: true,
+      render: (h) => (
+        <Link to={`/admin/homework/${h.id}/review`} className="font-medium text-primary hover:underline">
+          {h.title}
+        </Link>
+      ),
+    },
     {
       key: 'grade_id', label: t('col.grade'), sortable: true,
       render: (h) => grades.find(g => g.id === h.grade_id)?.name ?? '—',
@@ -60,67 +103,83 @@ export default function AdminHomework() {
     },
     { key: 'start_date', label: t('col.startDate'), sortable: true },
     { key: 'due_date', label: t('col.dueDate'), sortable: true },
-    { key: 'show', label: t('crud.show'), render: (h) => <button title={t('crud.show')} onClick={() => setViewItem(h)} className="text-primary hover:underline">{t('attendance.view')}</button> },
+    {
+      key: 'submissions_count',
+      label: t('homework.submissions'),
+      render: h => String(h.submissions_count ?? 0),
+    },
+    {
+      key: 'review',
+      label: t('homework.review'),
+      render: h => (
+        <Link
+          to={`/admin/homework/${h.id}/review`}
+          className="text-primary hover:underline"
+        >
+          {t('homework.reviewSubmissions')}
+        </Link>
+      ),
+    },
   ];
 
   return (
-    <>
-      <CrudPage
-        title={t('nav.homework')}
-        description={t('page.homeworkAdmin.desc')}
-        columns={columns}
-        data={data}
-        searchKeys={['title']}
-        onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
-        renderForm={(item, onClose) => (
-          <HomeworkForm
-            item={item}
-            grades={grades}
-            classes={classes}
-            sections={sections}
-            onClose={onClose}
-            onSave={async (hw) => {
-              try {
-                await saveMutation.mutateAsync({
-                  payload: {
-                    title: hw.title,
-                    content: hw.content,
-                    grade_id: hw.grade_id,
-                    classroom_id: hw.classroom_id,
-                    section_id: hw.section_id,
-                    start_date: hw.start_date,
-                    due_date: hw.due_date,
-                  },
-                  id: item?.id,
-                });
-                onClose();
-              } catch (error) {
-                const message = error instanceof Error ? error.message : 'Failed to save homework';
-                toast({ title: 'Save failed', description: message, variant: 'destructive' });
-              }
-            }}
-            saving={saveMutation.isPending}
-          />
-        )}
-      />
-      {viewItem && (
-        <Dialog open onOpenChange={v => !v && setViewItem(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{viewItem.title}</DialogTitle>
-              <DialogDescription>{viewItem.content || '—'}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-1 text-sm">
-              <p><strong>{t('col.grade')}:</strong> {grades.find(g => g.id === viewItem.grade_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.class')}:</strong> {classes.find(c => c.id === viewItem.classroom_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.section')}:</strong> {sections.find(s => s.id === viewItem.section_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.startDate')}:</strong> {viewItem.start_date}</p>
-              <p><strong>{t('col.dueDate')}:</strong> {viewItem.due_date}</p>
-            </div>
-          </DialogContent>
-        </Dialog>
+    <CrudPage
+      title={t('nav.homework')}
+      description={t('page.homeworkAdmin.desc')}
+      columns={columns}
+      data={filteredData}
+      searchKeys={['title']}
+      topContent={(
+        <AdminScopeFilterBar
+          grades={gradeOptions}
+          classesByGrade={classesByGrade}
+          sectionsByClass={sectionsByClass}
+          gradeFilter={gradeFilter}
+          classFilter={classFilter}
+          sectionFilter={sectionFilter}
+          dateFilter={dateFilter}
+          showDate
+          onGradeChange={handleGradeChange}
+          onClassChange={handleClassChange}
+          onSectionChange={setSectionFilter}
+          onDateChange={setDateFilter}
+          appliedCount={appliedCount}
+          onClear={clearFilters}
+          resultCount={filteredData.length}
+        />
       )}
-    </>
+      onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
+      renderForm={(item, onClose) => (
+        <HomeworkForm
+          item={item}
+          grades={grades}
+          classes={classes}
+          sections={sections}
+          onClose={onClose}
+          onSave={async (hw) => {
+            try {
+              await saveMutation.mutateAsync({
+                payload: {
+                  title: hw.title,
+                  content: hw.content,
+                  grade_id: hw.grade_id,
+                  classroom_id: hw.classroom_id,
+                  section_id: hw.section_id,
+                  start_date: hw.start_date,
+                  due_date: hw.due_date,
+                },
+                id: item?.id,
+              });
+              onClose();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Failed to save homework';
+              toast({ title: 'Save failed', description: message, variant: 'destructive' });
+            }
+          }}
+          saving={saveMutation.isPending}
+        />
+      )}
+    />
   );
 }
 
@@ -150,18 +209,14 @@ function HomeworkForm({
   const [startDate, setStartDate] = useState<Date | undefined>(item?.start_date ? new Date(item.start_date) : undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(item?.due_date ? new Date(item.due_date) : undefined);
 
-  // Cascading filters
-  const filteredClasses = useMemo(() => 
+  const filteredClasses = useMemo(() =>
     gradeId ? classes.filter(c => c.grade_id === gradeId) : [],
-    [gradeId, classes]
-  );
+  [gradeId, classes]);
 
-  const filteredSections = useMemo(() => 
+  const filteredSections = useMemo(() =>
     classroomId ? sections.filter(s => s.class_id === classroomId) : [],
-    [classroomId, sections]
-  );
+  [classroomId, sections]);
 
-  // Reset dependent selects when parent changes
   const handleGradeChange = (id: number) => {
     setGradeId(id);
     setClassroomId(undefined);
@@ -198,7 +253,6 @@ function HomeworkForm({
           <DialogDescription>{t('page.homeworkAdmin.desc')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
           <div>
             <label className="mb-1.5 block text-sm font-medium">{t('col.title')} <span className="text-destructive">*</span></label>
             <input
@@ -208,7 +262,6 @@ function HomeworkForm({
             />
           </div>
 
-          {/* Content */}
           <div>
             <label className="mb-1.5 block text-sm font-medium">{t('col.content')}</label>
             <textarea
@@ -218,7 +271,6 @@ function HomeworkForm({
             />
           </div>
 
-          {/* Grade Select */}
           <div>
             <label className="mb-1.5 block text-sm font-medium">{t('col.grade')} <span className="text-destructive">*</span></label>
             <select
@@ -231,7 +283,6 @@ function HomeworkForm({
             </select>
           </div>
 
-          {/* Class Select (based on grade) */}
           <div>
             <label className="mb-1.5 block text-sm font-medium">{t('col.class')} <span className="text-destructive">*</span></label>
             <select
@@ -245,7 +296,6 @@ function HomeworkForm({
             </select>
           </div>
 
-          {/* Section Select (based on class) */}
           <div>
             <label className="mb-1.5 block text-sm font-medium">{t('col.section')} <span className="text-destructive">*</span></label>
             <select
@@ -259,9 +309,7 @@ function HomeworkForm({
             </select>
           </div>
 
-          {/* Date Pickers */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
             <div>
               <label className="mb-1.5 block text-sm font-medium">{t('col.startDate')} <span className="text-destructive">*</span></label>
               <Popover>
@@ -269,10 +317,10 @@ function HomeworkForm({
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                    className={cn('w-full justify-start text-left font-normal', !startDate && 'text-muted-foreground')}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -281,13 +329,12 @@ function HomeworkForm({
                     selected={startDate}
                     onSelect={setStartDate}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
+                    className={cn('p-3 pointer-events-auto')}
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            {/* Due Date */}
             <div>
               <label className="mb-1.5 block text-sm font-medium">{t('col.dueDate')} <span className="text-destructive">*</span></label>
               <Popover>
@@ -295,10 +342,10 @@ function HomeworkForm({
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
+                    className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                    {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -307,7 +354,7 @@ function HomeworkForm({
                     selected={dueDate}
                     onSelect={setDueDate}
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
+                    className={cn('p-3 pointer-events-auto')}
                   />
                 </PopoverContent>
               </Popover>

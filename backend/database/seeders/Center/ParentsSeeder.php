@@ -1,39 +1,46 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Database\Seeders\Center;
 
 use App\Models\Parents;
-use App\Models\Platform\CenterMembership;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class ParentsSeeder extends Seeder
 {
     use ClearsCenterMembershipProfiles;
+    use CenterSeederSupport;
 
-    public function run()
+    private const PARENT_COUNT = 50;
+
+    public function run(): void
     {
-        $this->clearProfilesForCenter('parents', \App\Models\Parents::class);
+        $this->clearProfilesForCenter('parents', Parents::class);
 
-        // default parent
-        $parent = new Parents();
-        $parent->email = 'parent@educenter.com';
-        $parent->password = Hash::make('password');
-        $parent->parent_name = 'شعبان عبد المنعم';
-        $parent->parent_phone = '01222796987';
-        $parent->parent_job = 'مدرس';
-        $parent->parent_address = 'بنها';
-        $parent->save();
+        $defaultParent = new Parents();
+        $defaultParent->email = $this->defaultEmail('parent');
+        $defaultParent->password = Hash::make('password');
+        $defaultParent->parent_name = 'شعبان عبد المنعم';
+        $defaultParent->parent_phone = $this->parentPhone(1);
+        $defaultParent->parent_job = 'مهندس';
+        $defaultParent->parent_address = 'بنها';
+        $defaultParent->save();
+        $this->registerParentMembership((int) $defaultParent->id);
 
         $faker = \Faker\Factory::create('ar_SA');
-        for ($i = 0; $i < 100; $i++) {
+
+        for ($i = 2; $i <= self::PARENT_COUNT; $i++) {
             $parent = new Parents();
-            $parent->email = $faker->unique()->safeEmail;
+            $parent->email = $faker->unique()->safeEmail();
             $parent->password = Hash::make('password');
-            $parent->parent_name = $faker->name;
-            $parent->parent_phone = $faker->unique()->phoneNumber;
-            $parent->parent_job = $faker->jobTitle;
-            $parent->parent_address = $faker->city;
+            $parent->parent_name = $faker->name();
+            $parent->parent_phone = $this->parentPhone($i);
+            $parent->parent_job = $faker->jobTitle();
+            $parent->parent_address = $faker->city();
             $parent->save();
+            $this->registerParentMembership((int) $parent->id);
         }
     }
 }

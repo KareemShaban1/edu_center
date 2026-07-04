@@ -4,16 +4,24 @@ declare(strict_types=1);
 
 namespace Database\Seeders\Center;
 
+use App\Centers\CenterContext;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
+    use CenterSeederSupport;
+
     public function run(): void
     {
-        $user = User::updateOrCreate(
-            ['email' => 'admin@educenter.com'],
+        $centerId = CenterContext::id();
+
+        $user = User::withoutGlobalScopes()->updateOrCreate(
+            [
+                'email' => $this->defaultEmail('admin'),
+                'center_id' => $centerId,
+            ],
             [
                 'name' => 'Center Admin',
                 'password' => Hash::make('password'),

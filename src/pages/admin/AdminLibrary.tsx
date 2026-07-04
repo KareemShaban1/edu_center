@@ -1,13 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
+import MediaPreviewList, { formatMediaSize } from '@/components/MediaPreviewList';
 import { toast } from '@/hooks/use-toast';
-import { Download, Eye, FileText, X } from 'lucide-react';
+import { Download, Eye, Upload, X } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
+import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminLibraryApi, type LibraryItemPayload, type LibrarySavePayload } from '@/services/endpoints/admin-library';
+import type { MediaFile } from '@/types/models';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 function LibraryForm({
@@ -28,6 +32,7 @@ function LibraryForm({
   sections: Array<{ id: number; name: string; class_id: number }>;
 }) {
   const { t } = useLocale();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     title: item?.title || '',
     grade_id: item?.grade_id || 0,
@@ -41,8 +46,36 @@ function LibraryForm({
   const classesByGrade = useMemo(() => classes.filter(c => c.grade_id === form.grade_id), [classes, form.grade_id]);
   const sectionsByClass = useMemo(() => sections.filter(s => s.class_id === form.class_id), [sections, form.class_id]);
 
+  const existingMedia = useMemo(
+    () => (item?.media || []).filter(m => !removeMediaIds.includes(Number(m.id))),
+    [item?.media, removeMediaIds],
+  );
+
+  const pendingMedia = useMemo<MediaFile[]>(
+    () => files.map((file, index) => ({
+      id: `pending-${index}-${file.name}`,
+      name: file.name,
+      file_name: file.name,
+      size: file.size,
+      type: file.type,
+      mime_type: file.type,
+      url: URL.createObjectURL(file),
+    })),
+    [files],
+  );
+
   const toggleRemoveMedia = (id: number) => {
     setRemoveMediaIds(prev => (prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]));
+  };
+
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    setFiles(prev => [...prev, ...picked]);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const removePendingFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -114,19 +147,20 @@ function LibraryForm({
         <FormInput id="lib-notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
       </FormField>
 
-      {item && item.media.length > 0 && (
+      {item && (item.media?.length || 0) > 0 && (
         <div>
-          <label className="mb-2 block text-sm font-medium">Existing Files</label>
-          <div className="space-y-2 rounded-lg border border-border p-3 max-h-40 overflow-auto">
-            {item.media.map(m => {
-              const marked = removeMediaIds.includes(m.id);
+          <label className="mb-2 block text-sm font-medium">{t('col.media')}</label>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            {(item.media || []).map(m => {
+              const mediaId = Number(m.id);
+              const marked = removeMediaIds.includes(mediaId);
               return (
-                <div key={m.id} className={`flex items-center justify-between rounded-md px-2 py-1.5 ${marked ? 'bg-destructive/10' : 'bg-muted/30'}`}>
-                  <a href={m.url} target="_blank" rel="noreferrer" className="text-sm hover:underline truncate">{m.file_name}</a>
+                <div key={String(m.id)} className={`flex items-center justify-between rounded-md px-2 py-1.5 ${marked ? 'bg-destructive/10' : 'bg-muted/30'}`}>
+                  <span className="truncate text-sm">{m.file_name || m.name}</span>
                   <button
                     type="button"
-                    title={marked ? 'Undo remove' : 'Remove file'}
-                    onClick={() => toggleRemoveMedia(m.id)}
+                    title={marked ? 'Undo remove' : t('crud.delete')}
+                    onClick={() => toggleRemoveMedia(mediaId)}
                     className={`rounded p-1 ${marked ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -138,23 +172,50 @@ function LibraryForm({
         </div>
       )}
 
-      <FormField label="Upload Files (multiple media types)" id="lib-files">
+      <div>
+        <label className="text-sm font-medium">{t('col.addFiles')}</label>
         <input
-          id="lib-files"
-          title="Library files"
-          aria-label="Library files"
+          ref={fileRef}
+          title={t('col.media')}
           type="file"
           multiple
-          onChange={e => setFiles(Array.from(e.target.files || []))}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+          className="hidden"
+          onChange={handleFiles}
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
         />
-        {files.length > 0 && (
-          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-            {files.map((f, idx) => <p key={`${f.name}-${idx}`}>{f.name}</p>)}
-          </div>
-        )}
-      </FormField>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted/50"
+        >
+          <Upload className="h-4 w-4" /> {t('col.addFiles')}
+        </button>
+      </div>
+
+      {(existingMedia.length > 0 || pendingMedia.length > 0) && (
+        <div>
+          <label className="mb-2 block text-sm font-medium">{t('crud.view')}</label>
+          <MediaPreviewList media={[...existingMedia, ...pendingMedia]} />
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((file, index) => (
+                <li key={`${file.name}-${index}`} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="truncate">{file.name} · {formatMediaSize(file.size)}</span>
+                  <button
+                    type="button"
+                    title={t('crud.delete')}
+                    aria-label={t('crud.delete')}
+                    onClick={() => removePendingFile(index)}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </FormDialog>
   );
 }
@@ -188,6 +249,23 @@ export default function AdminLibrary() {
     },
   });
 
+  const {
+    gradeFilter,
+    classFilter,
+    sectionFilter,
+    dateFilter,
+    setDateFilter,
+    setSectionFilter,
+    grades: gradeOptions,
+    classesByGrade,
+    sectionsByClass,
+    filteredRows,
+    appliedCount,
+    clearFilters,
+    handleGradeChange,
+    handleClassChange,
+  } = useAdminScopeFilters(grades, classes, sections, library, row => row.created_at);
+
   const columns: CrudColumn<LibraryItemPayload>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'title', label: t('col.title'), sortable: true },
@@ -195,6 +273,11 @@ export default function AdminLibrary() {
     { key: 'grade_name', label: t('col.grade') },
     { key: 'class_name', label: t('col.class') },
     { key: 'section_name', label: t('col.section') },
+    {
+      key: 'media' as keyof LibraryItemPayload,
+      label: t('col.media'),
+      render: l => <span className="text-muted-foreground">{l.media?.length || 0} files</span>,
+    },
     { key: 'created_at', label: t('col.date'), sortable: true },
     {
       key: 'show',
@@ -228,8 +311,27 @@ export default function AdminLibrary() {
         title={t('nav.library')}
         description={t('page.library.desc')}
         columns={columns}
-        data={library}
+        data={filteredRows}
         searchKeys={['title', 'type', 'grade_name', 'class_name', 'section_name']}
+        topContent={(
+          <AdminScopeFilterBar
+            grades={gradeOptions}
+            classesByGrade={classesByGrade}
+            sectionsByClass={sectionsByClass}
+            gradeFilter={gradeFilter}
+            classFilter={classFilter}
+            sectionFilter={sectionFilter}
+            dateFilter={dateFilter}
+            showDate
+            onGradeChange={handleGradeChange}
+            onClassChange={handleClassChange}
+            onSectionChange={setSectionFilter}
+            onDateChange={setDateFilter}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+          />
+        )}
         renderForm={(item, onClose) => (
           <LibraryForm
             item={item}
@@ -250,31 +352,20 @@ export default function AdminLibrary() {
 
       {viewItem && (
         <Dialog open onOpenChange={v => !v && setViewItem(null)}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>{viewItem.title}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2 text-sm">
-              <p><strong>{t('col.type')}:</strong> {viewItem.type}</p>
+            <div className="space-y-4 text-sm">
+              <p><strong>{t('col.type')}:</strong> <span className="capitalize">{viewItem.type}</span></p>
               <p><strong>{t('col.grade')}:</strong> {viewItem.grade_name || '—'}</p>
               <p><strong>{t('col.class')}:</strong> {viewItem.class_name || '—'}</p>
               <p><strong>{t('col.section')}:</strong> {viewItem.section_name || '—'}</p>
               <p><strong>{t('col.notes')}:</strong> {viewItem.notes || '—'}</p>
               <p><strong>{t('col.date')}:</strong> {viewItem.created_at}</p>
               <div>
-                <strong>Media Files:</strong>
-                {viewItem.media.length === 0 ? (
-                  <p className="text-muted-foreground mt-1">No files uploaded.</p>
-                ) : (
-                  <div className="mt-2 space-y-1">
-                    {viewItem.media.map(m => (
-                      <a key={m.id} href={m.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-primary hover:underline">
-                        <FileText className="h-4 w-4" />
-                        <span>{m.file_name}</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                <p className="mb-2 font-medium">{t('col.media')}</p>
+                <MediaPreviewList media={viewItem.media || []} />
               </div>
             </div>
           </DialogContent>

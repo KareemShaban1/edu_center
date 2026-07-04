@@ -19,16 +19,23 @@ use App\Services\NotificationDispatchService;
 use App\Notifications\AnnouncementNotification;
 use App\Notifications\ParentAttendanceNotification;
 use App\Notifications\StudentAttendanceNotification;
+use App\Http\Support\AdminUploadHelper;
 use App\Http\Support\ApiBearerAuth;
 use App\Http\Support\AuthLoginHandler;
+use App\Http\Support\AuthRegisterHandler;
 use App\Http\Support\MultiCenterPortalService;
 use App\Http\Support\SectionWeekDays;
 use App\Centers\CenterMembershipService;
 use App\Models\Parents;
 use App\Models\Student;
+use App\Centers\CenterContext;
 use App\Centers\CenterContextManager;
 use App\Models\Library;
 use App\Models\Announcement;
+use App\Models\Unit;
+use App\Models\Lesson;
+use App\Models\StudentHomework;
+use App\Models\Platform\CenterMembership;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /*
@@ -308,16 +315,73 @@ Route::middleware([
 
         $units = $tenantDb->table('units')
             ->select('id', 'name', 'class_id', 'notes')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $unit = Unit::query()->find($row->id);
+                $media = collect();
+                if ($unit) {
+                    $media = $unit->getMedia('units')->map(function ($m) {
+                        return [
+                            'id' => (int) $m->id,
+                            'name' => $m->name ?: $m->file_name,
+                            'file_name' => $m->file_name,
+                            'mime_type' => $m->mime_type,
+                            'size' => (int) $m->size,
+                            'type' => $m->mime_type ?: 'application/octet-stream',
+                            'url' => $m->getUrl(),
+                        ];
+                    })->values();
+                }
+
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'class_id' => $row->class_id,
+                    'notes' => $row->notes,
+                    'media' => $media,
+                ];
+            });
 
         $lessons = $tenantDb->table('lessons')
             ->select('id', 'name', 'unit_id', 'notes')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $lesson = Lesson::query()->find($row->id);
+                $media = collect();
+                if ($lesson) {
+                    $media = $lesson->getMedia('lessons')->map(function ($m) {
+                        return [
+                            'id' => (int) $m->id,
+                            'name' => $m->name ?: $m->file_name,
+                            'file_name' => $m->file_name,
+                            'mime_type' => $m->mime_type,
+                            'size' => (int) $m->size,
+                            'type' => $m->mime_type ?: 'application/octet-stream',
+                            'url' => $m->getUrl(),
+                        ];
+                    })->values();
+                }
+
+                return [
+                    'id' => $row->id,
+                    'name' => $row->name,
+                    'unit_id' => $row->unit_id,
+                    'notes' => $row->notes,
+                    'media' => $media,
+                ];
+            });
 
         $homeworks = $tenantDb->table('homeworks')
             ->select('id', 'title', 'content', 'grade_id', 'class_id', 'section_id', 'submit_date as start_date', 'due_date')
-            ->get()
-            ->map(function ($row) {
+            ->get();
+        $submissionCounts = collect();
+        if (Schema::connection('center')->hasTable('student_homework')) {
+            $submissionCounts = $tenantDb->table('student_homework')
+                ->select('homework_id', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('homework_id')
+                ->pluck('cnt', 'homework_id');
+        }
+        $homeworks = $homeworks->map(function ($row) use ($submissionCounts) {
                 return [
                     'id' => $row->id,
                     'title' => $row->title,
@@ -327,6 +391,7 @@ Route::middleware([
                     'section_id' => $row->section_id,
                     'start_date' => $row->start_date,
                     'due_date' => $row->due_date,
+                    'submissions_count' => (int) ($submissionCounts[$row->id] ?? 0),
                 ];
             });
 
@@ -494,6 +559,8 @@ Route::middleware([
                     return [
                         'id' => (int) $row->id,
                         'name' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? 'Section')),
+                        'grade_id' => (int) $row->grade_id,
+                        'class_id' => (int) $row->class_id,
                         'grade' => $row->grade_name ?? '',
                         'class' => $row->class_name ?? '',
                         'section' => $row->section_name ?? '',
@@ -509,15 +576,36 @@ Route::middleware([
         if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('attendances') && Schema::connection('center')->hasTable('students')) {
             $attendance = $tenantDb->table('attendances')
                 ->join('students', 'attendances.student_id', '=', 'students.id')
-                ->whereIn('students.section_id', $sectionIds)
+                ->leftJoin('sections', 'attendances.section_id', '=', 'sections.id')
+                ->leftJoin('classes', 'attendances.class_id', '=', 'classes.id')
+                ->leftJoin('grades', 'attendances.grade_id', '=', 'grades.id')
+                ->whereIn('attendances.section_id', $sectionIds)
                 ->orderByDesc('attendances.attendance_date')
                 ->limit(300)
-                ->get(['attendances.id', 'attendances.student_id', 'attendances.attendance_date', 'attendances.attendance_status', 'students.name'])
+                ->get([
+                    'attendances.id',
+                    'attendances.student_id',
+                    'attendances.attendance_date',
+                    'attendances.attendance_status',
+                    'attendances.grade_id',
+                    'attendances.class_id',
+                    'attendances.section_id',
+                    'students.name',
+                    'grades.grade_name',
+                    'classes.class_name',
+                    'sections.section_name',
+                ])
                 ->map(function ($row) {
                     $status = ((int) $row->attendance_status) === 1 ? 'present' : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
                     return [
                         'id' => (int) $row->id,
                         'student_id' => (int) $row->student_id,
+                        'grade_id' => (int) $row->grade_id,
+                        'class_id' => (int) $row->class_id,
+                        'section_id' => (int) $row->section_id,
+                        'grade' => $row->grade_name ?? '',
+                        'class' => $row->class_name ?? '',
+                        'section' => $row->section_name ?? '',
                         'date' => $row->attendance_date,
                         'status' => $status,
                         'student' => ['name' => $row->name],
@@ -534,7 +622,20 @@ Route::middleware([
                 ->leftJoin('classes', 'quiz_degrees.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'quiz_degrees.grade_id', '=', 'grades.id')
                 ->whereIn('quiz_degrees.section_id', $sectionIds)
-                ->select('quiz_degrees.id', 'quiz_degrees.quiz_date', 'quiz_degrees.degree', 'quiz_degrees.notes', 'quiz_degrees.attendance_status', 'students.name as student_name', 'grades.grade_name as grade_name', 'classes.class_name as class_name', 'sections.section_name as section_name')
+                ->select(
+                    'quiz_degrees.id',
+                    'quiz_degrees.quiz_date',
+                    'quiz_degrees.degree',
+                    'quiz_degrees.notes',
+                    'quiz_degrees.attendance_status',
+                    'quiz_degrees.grade_id',
+                    'quiz_degrees.class_id',
+                    'quiz_degrees.section_id',
+                    'students.name as student_name',
+                    'grades.grade_name as grade_name',
+                    'classes.class_name as class_name',
+                    'sections.section_name as section_name'
+                )
                 ->orderByDesc('quiz_degrees.quiz_date')
                 ->limit(200)
                 ->get()
@@ -543,7 +644,12 @@ Route::middleware([
                         'id' => (int) $row->id,
                         'name' => 'Quiz ' . $row->quiz_date,
                         'subject' => 'General',
-                        'grade' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? '')),
+                        'grade_id' => (int) ($row->grade_id ?? 0),
+                        'class_id' => (int) ($row->class_id ?? 0),
+                        'section_id' => (int) ($row->section_id ?? 0),
+                        'grade' => $row->grade_name ?? '',
+                        'class' => $row->class_name ?? '',
+                        'section' => $row->section_name ?? '',
                         'date' => $row->quiz_date,
                         'student_name' => $row->student_name ?? '',
                         'degree' => $row->degree !== null ? (float) $row->degree : null,
@@ -563,7 +669,20 @@ Route::middleware([
                 ->leftJoin('classes', 'exam_degrees.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'exam_degrees.grade_id', '=', 'grades.id')
                 ->whereIn('exam_degrees.section_id', $sectionIds)
-                ->select('exam_degrees.id', 'exam_degrees.exam_date', 'exam_degrees.degree', 'exam_degrees.notes', 'exam_degrees.attendance_status', 'students.name as student_name', 'grades.grade_name as grade_name', 'classes.class_name as class_name', 'sections.section_name as section_name')
+                ->select(
+                    'exam_degrees.id',
+                    'exam_degrees.exam_date',
+                    'exam_degrees.degree',
+                    'exam_degrees.notes',
+                    'exam_degrees.attendance_status',
+                    'exam_degrees.grade_id',
+                    'exam_degrees.class_id',
+                    'exam_degrees.section_id',
+                    'students.name as student_name',
+                    'grades.grade_name as grade_name',
+                    'classes.class_name as class_name',
+                    'sections.section_name as section_name'
+                )
                 ->orderByDesc('exam_degrees.exam_date')
                 ->limit(200)
                 ->get()
@@ -572,7 +691,12 @@ Route::middleware([
                         'id' => (int) $row->id,
                         'name' => 'Exam ' . $row->exam_date,
                         'subject' => 'General',
-                        'grade' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? '')),
+                        'grade_id' => (int) ($row->grade_id ?? 0),
+                        'class_id' => (int) ($row->class_id ?? 0),
+                        'section_id' => (int) ($row->section_id ?? 0),
+                        'grade' => $row->grade_name ?? '',
+                        'class' => $row->class_name ?? '',
+                        'section' => $row->section_name ?? '',
                         'date' => $row->exam_date,
                         'student_name' => $row->student_name ?? '',
                         'degree' => $row->degree !== null ? (float) $row->degree : null,
@@ -587,18 +711,34 @@ Route::middleware([
         $homework = collect();
         if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('homeworks')) {
             $homework = $tenantDb->table('homeworks')
+                ->leftJoin('sections', 'homeworks.section_id', '=', 'sections.id')
                 ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
                 ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
                 ->whereIn('homeworks.section_id', $sectionIds)
                 ->orderByDesc('homeworks.due_date')
                 ->limit(200)
-                ->get(['homeworks.id', 'homeworks.title', 'homeworks.due_date', 'grades.grade_name as grade_name', 'classes.class_name as class_name'])
+                ->get([
+                    'homeworks.id',
+                    'homeworks.title',
+                    'homeworks.due_date',
+                    'homeworks.grade_id',
+                    'homeworks.class_id',
+                    'homeworks.section_id',
+                    'grades.grade_name as grade_name',
+                    'classes.class_name as class_name',
+                    'sections.section_name as section_name',
+                ])
                 ->map(function ($row) {
                     return [
                         'id' => (int) $row->id,
                         'title' => $row->title,
                         'subject' => 'General',
-                        'grade' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '')),
+                        'grade_id' => (int) ($row->grade_id ?? 0),
+                        'class_id' => (int) ($row->class_id ?? 0),
+                        'section_id' => (int) ($row->section_id ?? 0),
+                        'grade' => $row->grade_name ?? '',
+                        'class' => $row->class_name ?? '',
+                        'section' => $row->section_name ?? '',
                         'due_date' => $row->due_date,
                         'submissions' => 0,
                     ];
@@ -610,11 +750,24 @@ Route::middleware([
         if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('library')) {
             $library = $tenantDb->table('library')
                 ->leftJoin('grades', 'library.grade_id', '=', 'grades.id')
+                ->leftJoin('classes', 'library.class_id', '=', 'classes.id')
+                ->leftJoin('sections', 'library.section_id', '=', 'sections.id')
                 ->whereIn('library.section_id', $sectionIds)
                 ->whereNull('library.deleted_at')
                 ->orderByDesc('library.id')
                 ->limit(200)
-                ->get(['library.id', 'library.title', 'library.type', 'grades.grade_name as grade_name'])
+                ->get([
+                    'library.id',
+                    'library.title',
+                    'library.type',
+                    'library.grade_id',
+                    'library.class_id',
+                    'library.section_id',
+                    'library.created_at',
+                    'grades.grade_name as grade_name',
+                    'classes.class_name as class_name',
+                    'sections.section_name as section_name',
+                ])
                 ->map(function ($row) {
                     $book = Library::query()->find($row->id);
                     $firstMediaUrl = $book?->getFirstMediaUrl('library') ?: null;
@@ -622,7 +775,13 @@ Route::middleware([
                         'id' => (int) $row->id,
                         'title' => $row->title,
                         'type' => $row->type ?: 'resource',
+                        'grade_id' => (int) ($row->grade_id ?? 0),
+                        'class_id' => (int) ($row->class_id ?? 0),
+                        'section_id' => (int) ($row->section_id ?? 0),
                         'grade' => $row->grade_name ?: '',
+                        'class' => $row->class_name ?: '',
+                        'section' => $row->section_name ?: '',
+                        'date' => $row->created_at ? (string) $row->created_at : '',
                         'url' => $firstMediaUrl,
                     ];
                 })
@@ -639,351 +798,7 @@ Route::middleware([
         ]);
     });
 
-    Route::get('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'teacher');
-        if ($guard !== 'teacher') {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-
-        if (!Auth::guard('teacher')->check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('center');
-
-        $teacherEmail = null;
-        if (Schema::connection('center')->hasTable('teachers')) {
-            $teacherRow = $tenantDb->table('teachers')->where('id', $teacherId)->first();
-            $teacherEmail = $teacherRow->email ?? null;
-        }
-
-        if (!$teacherEmail) {
-            return response()->json(['message' => 'Teacher email not found'], 422);
-        }
-
-        $sectionIds = collect();
-        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
-            $sectionIds = $sectionIds->merge(
-                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
-            );
-        }
-        if (Schema::connection('center')->hasTable('teacher_section')) {
-            $sectionIds = $sectionIds->merge(
-                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
-            );
-        }
-        $sectionIds = $sectionIds->unique()->values();
-
-        $sections = collect();
-        if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
-            $sections = $tenantDb->table('sections')
-                ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
-                ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
-                ->whereIn('sections.id', $sectionIds)
-                ->select(
-                    'sections.id',
-                    'sections.section_name as section_name',
-                    'classes.class_name as class_name',
-                    'grades.grade_name as grade_name'
-                )
-                ->orderBy('grades.grade_name')
-                ->orderBy('classes.class_name')
-                ->orderBy('sections.section_name')
-                ->get()
-                ->map(function ($row) {
-                    return [
-                        'id' => (int) $row->id,
-                        'name' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? 'Section')),
-                    ];
-                })
-                ->values();
-        }
-
-        // Generate upcoming occurrences (idempotent).
-        \App\Services\MeetingSeriesGenerator::generateForTeacherSeries(
-            $teacherEmail,
-            now()->subDay(),
-            now()->addDays(30)
-        );
-
-        $series = \App\Models\MeetingSeries::query()
-            ->where('created_by', $teacherEmail)
-            ->orderByDesc('start_date')
-            ->get();
-
-        $series = $series->map(function ($s) use ($tenantDb) {
-            $occ = \App\Models\Meeting::query()
-                ->where('series_id', (int) $s->id)
-                ->where('start_at', '>=', now()->subDay())
-                ->where('start_at', '<=', now()->addDays(30))
-                ->orderBy('start_at')
-                ->limit(8)
-                ->get([
-                    'id',
-                    'topic',
-                    'start_at',
-                    'duration',
-                    'provider',
-                    'room_slug',
-                    'join_url',
-                    'moderator_url',
-                    'location',
-                    'notes',
-                    'external_ref',
-                ])
-                ->map(function ($m) {
-                    $duration = (int) ($m->duration ?? 0);
-                    $isOver = \Carbon\Carbon::parse((string) $m->start_at)
-                        ->addMinutes($duration)
-                        ->lt(now());
-
-                    return [
-                        'id' => (int) $m->id,
-                        'topic' => $m->topic,
-                        'start_at' => (string) $m->start_at,
-                        'duration' => $duration,
-                        'provider' => $m->provider ?? 'jitsi',
-                        'room_slug' => $m->room_slug ?? '',
-                        'join_url' => $m->join_url ?? '',
-                        'moderator_url' => $m->moderator_url ?? '',
-                        'location' => $m->location ?? '',
-                        'notes' => $m->notes ?? '',
-                        'external_ref' => $m->external_ref ?? '',
-                        'is_over' => $isOver,
-                    ];
-                })
-                ->values();
-            $nextStartable = $occ->first(function ($o) {
-                return !(bool) ($o['is_over'] ?? false);
-            });
-
-            return [
-                'id' => (int) $s->id,
-                'topic' => $s->topic,
-                'provider' => $s->provider ?? 'offline',
-                'week_days' => is_array($s->week_days) ? array_values($s->week_days) : [],
-                'start_date' => (string) $s->start_date,
-                'end_date' => $s->end_date ? (string) $s->end_date : null,
-                'start_time' => (string) $s->start_time,
-                'duration' => (int) ($s->duration ?? 0),
-                'record_enabled' => (bool) ($s->record_enabled ?? false),
-                'location' => $s->location ?? '',
-                'notes' => $s->notes ?? '',
-                'join_url' => $s->join_url ?? '',
-                'moderator_url' => $s->moderator_url ?? '',
-                'external_ref' => $s->external_ref ?? null,
-                'next_occurrences' => $occ,
-                'next_startable_occurrence' => $nextStartable,
-            ];
-        })->values();
-
-        return response()->json([
-            'series' => $series,
-            'sections' => $sections,
-        ]);
-    });
-
-    Route::post('/teacher/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'teacher');
-        if ($guard !== 'teacher') {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-
-        if (!Auth::guard('teacher')->check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('center');
-
-        $teacherRow = Schema::connection('center')->hasTable('teachers')
-            ? $tenantDb->table('teachers')->where('id', $teacherId)->first()
-            : null;
-        $teacherEmail = $teacherRow?->email ?? null;
-        if (!$teacherEmail) {
-            return response()->json(['message' => 'Teacher email not found'], 422);
-        }
-
-        $payload = $request->validate([
-            'section_id' => ['required', 'integer'],
-            'topic' => ['required', 'string', 'max:255'],
-            'provider' => ['required', 'in:jitsi,livekit,zoom,microsoft_teams,google_meet,external,offline'],
-
-            'week_days' => ['required', 'array', 'min:1', 'max:7'],
-            'week_days.*' => ['integer', 'min:1', 'max:7'],
-
-            'start_date' => ['required', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'duration' => ['required', 'integer', 'min:15', 'max:480'],
-
-            'record_enabled' => ['nullable', 'boolean'],
-            'generate_value' => ['nullable', 'integer', 'min:1', 'max:24'],
-            'generate_unit' => ['nullable', 'in:weeks,months'],
-
-            'join_url' => ['nullable', 'string', 'max:2000'],
-            'moderator_url' => ['nullable', 'string', 'max:2000'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'external_ref' => ['nullable', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
-
-        $section = null;
-        if (Schema::connection('center')->hasTable('sections')) {
-            $section = $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first();
-        }
-        if (!$section) {
-            return response()->json(['message' => 'Section not found'], 404);
-        }
-
-        // Authorization: ensure section belongs to this teacher.
-        $allowed = false;
-        $sectionIds = collect();
-        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
-            $sectionIds = $sectionIds->merge(
-                $tenantDb->table('sections')->where('teacher_id', $teacherId)->pluck('id')
-            );
-        }
-        if (Schema::connection('center')->hasTable('teacher_section')) {
-            $sectionIds = $sectionIds->merge(
-                $tenantDb->table('teacher_section')->where('teacher_id', $teacherId)->pluck('section_id')
-            );
-        }
-        $sectionIds = $sectionIds->unique()->values();
-        if ($sectionIds->isNotEmpty()) {
-            $allowed = $sectionIds->contains((int) $payload['section_id']);
-        }
-        if (!$allowed) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $provider = (string) $payload['provider'];
-        if (in_array($provider, ['external', 'zoom', 'microsoft_teams', 'google_meet'], true)) {
-            if (empty($payload['join_url'])) {
-                return response()->json(['message' => 'join_url is required for this provider'], 422);
-            }
-        }
-        if ($provider === 'offline') {
-            if (empty($payload['location'])) {
-                return response()->json(['message' => 'location is required for offline provider'], 422);
-            }
-        }
-
-        $seriesPayload = [
-            'created_by' => $teacherEmail,
-            'grade_id' => (int) ($section->grade_id ?? 0),
-            'class_id' => (int) ($section->class_id ?? 0),
-            'section_id' => (int) $payload['section_id'],
-            'topic' => $payload['topic'],
-            'provider' => $provider,
-            'week_days' => array_values($payload['week_days']),
-            'start_date' => $payload['start_date'],
-            'end_date' => $payload['end_date'] ?? null,
-            'start_time' => $payload['start_time'],
-            'duration' => (int) $payload['duration'],
-            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'join_url' => $payload['join_url'] ?? null,
-            'moderator_url' => $payload['moderator_url'] ?? null,
-            'password' => $payload['password'] ?? null,
-            'external_ref' => $payload['external_ref'] ?? null,
-            'location' => $payload['location'] ?? null,
-            'notes' => $payload['notes'] ?? null,
-        ];
-        if (Schema::connection('center')->hasColumn('meeting_series', 'teacher_id')) {
-            $seriesPayload['teacher_id'] = $teacherId;
-        }
-        if (Schema::connection('center')->hasColumn('meeting_series', 'status')) {
-            $seriesPayload['status'] = 'started';
-        }
-        $series = \App\Models\MeetingSeries::create($seriesPayload);
-
-        $generateValue = (int) ($payload['generate_value'] ?? 8);
-        $generateUnit = (string) ($payload['generate_unit'] ?? 'weeks');
-        $generateTo = now();
-        if ($generateUnit === 'months') {
-            $generateTo = $generateTo->addMonths($generateValue);
-        } else {
-            $generateTo = $generateTo->addWeeks($generateValue);
-        }
-
-        \App\Services\MeetingSeriesGenerator::generateForSeries(
-            $series,
-            now()->subDay(),
-            $generateTo
-        );
-
-        return response()->json(['ok' => true]);
-    });
-
-    Route::delete('/teacher/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'teacher');
-        if ($guard !== 'teacher') {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-
-        if (!Auth::guard('teacher')->check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        $teacherId = (int) Auth::guard('teacher')->id();
-        $tenantDb = DB::connection('center');
-
-        $teacherRow = Schema::connection('center')->hasTable('teachers')
-            ? $tenantDb->table('teachers')->where('id', $teacherId)->first()
-            : null;
-        $teacherEmail = $teacherRow?->email ?? null;
-        if (!$teacherEmail) {
-            return response()->json(['message' => 'Teacher email not found'], 422);
-        }
-
-        $series = \App\Models\MeetingSeries::query()
-            ->where('id', $id)
-            ->where('created_by', $teacherEmail)
-            ->first();
-
-        if (!$series) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
-
-        \App\Models\Meeting::query()->where('series_id', (int) $series->id)->delete();
-        $series->delete();
-
-        return response()->json(['ok' => true]);
-    });
-
-    Route::get('/teacher/meetings/{id}/livekit-token', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/sessions/{id}/livekit-token', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1023,16 +838,16 @@ Route::middleware([
         $sectionIds = $sectionIds->unique()->values();
 
         if ($sectionIds->isEmpty()) {
-            return response()->json(['message' => 'Meeting not found'], 404);
+            return response()->json(['message' => 'Session not found'], 404);
         }
 
-        $row = $tenantDb->table('meetings')
+        $row = $tenantDb->table('sessions')
             ->where('id', $id)
             ->whereIn('section_id', $sectionIds)
             ->first();
 
         if (!$row || ($row->provider ?? '') !== 'livekit' || empty($row->room_slug)) {
-            return response()->json(['message' => 'Meeting not found'], 404);
+            return response()->json(['message' => 'Session not found'], 404);
         }
 
         $token = \App\Services\LiveKitAccessTokenService::createToken(
@@ -1044,12 +859,12 @@ Route::middleware([
 
         return response()->json([
             'token' => $token,
-            'url' => config('meetings.livekit.url'),
+            'url' => config('sessions.livekit.url'),
             'room' => $row->room_slug,
         ]);
     });
 
-    Route::get('/teacher/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/teacher/sessions', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1085,45 +900,42 @@ Route::middleware([
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
-            return response()->json(['meetings' => [], 'series_options' => []]);
+        if (!Schema::connection('center')->hasTable('sessions') || $sectionIds->isEmpty()) {
+            return response()->json(['sessions' => []]);
         }
 
-        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
 
-        $rows = $tenantDb->table('meetings')
-            ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
+        $rows = $tenantDb->table('sessions')
+            ->leftJoin('sections', 'sessions.section_id', '=', 'sections.id')
             ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
             ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
-            ->whereIn('meetings.section_id', $sectionIds)
+            ->whereIn('sessions.section_id', $sectionIds)
             ->select(
-                'meetings.id',
-                'meetings.grade_id',
-                'meetings.class_id',
-                'meetings.section_id',
-                'meetings.topic',
-                'meetings.start_at',
-                'meetings.duration',
-                'meetings.provider',
-                'meetings.room_slug',
-                'meetings.join_url',
-                'meetings.moderator_url',
-                'meetings.password',
-                'meetings.record_enabled',
-                'meetings.external_ref',
-                'meetings.created_by',
+                'sessions.id',
+                'sessions.grade_id',
+                'sessions.class_id',
+                'sessions.section_id',
+                'sessions.topic',
+                'sessions.start_at',
+                'sessions.duration',
+                'sessions.session_type',
+                'sessions.provider',
+                'sessions.room_slug',
+                'sessions.join_url',
+                'sessions.moderator_url',
+                'sessions.password',
+                'sessions.record_enabled',
+                'sessions.external_ref',
+                'sessions.created_by',
                 DB::raw("trim(concat_ws(' - ', nullif(grades.grade_name, ''), nullif(classes.class_name, ''), nullif(sections.section_name, ''))) as section_label")
             );
 
-        if ($hasSeriesCol) {
-            $rows->addSelect('meetings.series_id');
-        }
         if ($hasLocationCol) {
-            $rows->addSelect('meetings.location', 'meetings.notes');
+            $rows->addSelect('sessions.location', 'sessions.notes');
         }
 
-        $meetings = $rows->orderByDesc('meetings.start_at')->get()->map(function ($row) use ($hasSeriesCol, $hasLocationCol) {
+        $sessions = $rows->orderByDesc('sessions.start_at')->get()->map(function ($row) use ($hasLocationCol) {
             $m = [
                 'id' => (int) $row->id,
                 'grade_id' => (int) $row->grade_id,
@@ -1133,7 +945,8 @@ Route::middleware([
                 'topic' => (string) $row->topic,
                 'start_at' => $row->start_at ? (string) $row->start_at : '',
                 'duration' => (int) $row->duration,
-                'provider' => (string) ($row->provider ?? 'jitsi'),
+                'session_type' => (string) ($row->session_type ?? 'online'),
+                'provider' => (string) ($row->provider ?? ($row->session_type === 'offline' ? 'offline' : 'jitsi')),
                 'room_slug' => $row->room_slug ?? null,
                 'join_url' => $row->join_url ?? null,
                 'moderator_url' => $row->moderator_url ?? null,
@@ -1142,9 +955,6 @@ Route::middleware([
                 'external_ref' => $row->external_ref ?? null,
                 'created_by' => (string) ($row->created_by ?? ''),
             ];
-            if ($hasSeriesCol) {
-                $m['series_id'] = isset($row->series_id) && $row->series_id !== null ? (int) $row->series_id : null;
-            }
             if ($hasLocationCol) {
                 $m['location'] = $row->location ?? '';
                 $m['notes'] = $row->notes ?? '';
@@ -1153,27 +963,10 @@ Route::middleware([
             return $m;
         })->values();
 
-        $seriesOptions = collect();
-        if (Schema::connection('center')->hasTable('meeting_series')) {
-            $seriesOptions = $tenantDb->table('meeting_series')
-                ->whereIn('section_id', $sectionIds)
-                ->orderBy('topic')
-                ->get(['id', 'topic', 'section_id'])
-                ->map(fn ($s) => [
-                    'id' => (int) $s->id,
-                    'topic' => (string) $s->topic,
-                    'section_id' => (int) $s->section_id,
-                ])
-                ->values();
-        }
-
-        return response()->json([
-            'meetings' => $meetings,
-            'series_options' => $seriesOptions,
-        ]);
+        return response()->json(['sessions' => $sessions]);
     });
 
-    Route::put('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/teacher/sessions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1209,14 +1002,13 @@ Route::middleware([
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
+        if (!Schema::connection('center')->hasTable('sessions') || $sectionIds->isEmpty()) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
 
-        $existing = $tenantDb->table('meetings')->where('id', $id)->first();
+        $existing = $tenantDb->table('sessions')->where('id', $id)->first();
         if (!$existing || !$sectionIds->contains((int) ($existing->section_id ?? 0))) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -1226,8 +1018,8 @@ Route::middleware([
             'topic' => ['required', 'string', 'max:255'],
             'start_at' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
-            'series_id' => ['nullable', 'integer'],
+            'session_type' => ['nullable', 'in:offline,online,exam,others'],
+            'provider' => ['nullable', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
             'join_url' => ['nullable', 'string', 'max:2000'],
             'moderator_url' => ['nullable', 'string', 'max:2000'],
             'password' => ['nullable', 'string', 'max:255'],
@@ -1249,26 +1041,13 @@ Route::middleware([
         $gradeId = (int) ($section->grade_id ?? 0);
         $classId = (int) ($section->class_id ?? 0);
 
-        $provider = (string) $payload['provider'];
+        [$sessionType, $provider] = \App\Http\Support\SessionTypeHelper::resolveFromPayload($payload);
         $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
-        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+        if ($sessionType === 'online' && in_array((string) $provider, $urlProviders, true) && empty($payload['join_url'])) {
             return response()->json(['message' => 'join_url is required for this provider'], 422);
         }
-        if ($provider === 'offline' && empty($payload['location'])) {
-            return response()->json(['message' => 'location is required for offline provider'], 422);
-        }
-
-        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
-        if ($hasSeriesCol && $seriesId) {
-            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
-            if (!$seriesRow) {
-                return response()->json(['message' => 'Meeting series not found'], 404);
-            }
-            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
-                return response()->json(['message' => 'series_id does not belong to this section'], 422);
-            }
-        } elseif ($seriesId) {
-            $seriesId = null;
+        if ($sessionType === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline sessions'], 422);
         }
 
         $update = [
@@ -1280,18 +1059,16 @@ Route::middleware([
             'duration' => (int) $payload['duration'],
             'password' => $payload['password'] ?? null,
             'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'provider' => $provider,
+            'session_type' => $sessionType,
+            'provider' => $sessionType === 'online' ? $provider : null,
             'updated_at' => now(),
         ];
         if ($hasLocationCol) {
             $update['location'] = $payload['location'] ?? null;
             $update['notes'] = $payload['notes'] ?? null;
         }
-        if ($hasSeriesCol) {
-            $update['series_id'] = $seriesId ?: null;
-        }
 
-        if ($provider === 'offline') {
+        if ($sessionType === 'offline') {
             $update['room_slug'] = null;
             $update['join_url'] = '#';
             $update['moderator_url'] = null;
@@ -1299,7 +1076,7 @@ Route::middleware([
             $update['password'] = null;
         } elseif ($provider === 'jitsi') {
             if (($existing->provider ?? '') !== 'jitsi' || empty($existing->room_slug)) {
-                $links = \App\Services\MeetingLinkService::forJitsi();
+                $links = \App\Services\SessionLinkService::forJitsi();
                 $update['room_slug'] = $links['room_slug'];
                 $update['join_url'] = $links['join_url'];
                 $update['moderator_url'] = $links['moderator_url'];
@@ -1310,8 +1087,8 @@ Route::middleware([
                 return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
             }
             if (($existing->provider ?? '') !== 'livekit' || empty($existing->room_slug)) {
-                $slug = \App\Services\MeetingLinkService::generateRoomSlug();
-                $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+                $slug = \App\Services\SessionLinkService::generateRoomSlug();
+                $links = \App\Services\SessionLinkService::forLiveKit($slug);
                 $update['room_slug'] = $slug;
                 $update['join_url'] = $links['join_url'];
                 $update['moderator_url'] = $links['moderator_url'];
@@ -1325,10 +1102,10 @@ Route::middleware([
         }
 
         try {
-            $tenantDb->table('meetings')->where('id', $id)->update($update);
+            $tenantDb->table('sessions')->where('id', $id)->update($update);
         } catch (QueryException $e) {
             if (str_contains((string) $e->getMessage(), 'Duplicate')) {
-                return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+                return response()->json(['message' => 'A session with this series and start time already exists.'], 422);
             }
             throw $e;
         }
@@ -1336,7 +1113,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/teacher/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/teacher/sessions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'teacher');
         if ($guard !== 'teacher') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1372,11 +1149,11 @@ Route::middleware([
         }
         $sectionIds = $sectionIds->unique()->values();
 
-        if (!Schema::connection('center')->hasTable('meetings') || $sectionIds->isEmpty()) {
+        if (!Schema::connection('center')->hasTable('sessions') || $sectionIds->isEmpty()) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $deleted = $tenantDb->table('meetings')
+        $deleted = $tenantDb->table('sessions')
             ->where('id', $id)
             ->whereIn('section_id', $sectionIds)
             ->delete();
@@ -1387,7 +1164,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::get('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::get('/admin/sessions', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1403,298 +1180,42 @@ Route::middleware([
         }
         $ensureTenantInitialized($tenant);
 
-        $tenantDb = DB::connection('center');
-        if (!Schema::connection('center')->hasTable('meeting_series')) {
-            return response()->json(['series' => [], 'teachers' => [], 'sections_by_teacher' => new \stdClass()]);
-        }
-
-        $teachers = collect();
-        if (Schema::connection('center')->hasTable('teachers')) {
-            $teachers = $tenantDb->table('teachers')
-                ->orderBy('name')
-                ->get(['id', 'name', 'email'])
-                ->map(fn ($t) => [
-                    'id' => (int) $t->id,
-                    'name' => (string) $t->name,
-                    'email' => (string) ($t->email ?? ''),
-                ])
-                ->values();
-        }
-
-        $sectionsByTeacher = [];
-        foreach ($teachers as $teacher) {
-            $sectionIds = collect();
-            if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
-                $sectionIds = $sectionIds->merge(
-                    $tenantDb->table('sections')->where('teacher_id', (int) $teacher['id'])->pluck('id')
-                );
-            }
-            if (Schema::connection('center')->hasTable('teacher_section')) {
-                $sectionIds = $sectionIds->merge(
-                    $tenantDb->table('teacher_section')->where('teacher_id', (int) $teacher['id'])->pluck('section_id')
-                );
-            }
-            $sectionIds = $sectionIds->unique()->values();
-
-            $sections = collect();
-            if ($sectionIds->isNotEmpty() && Schema::connection('center')->hasTable('sections')) {
-                $sections = $tenantDb->table('sections')
-                    ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
-                    ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
-                    ->whereIn('sections.id', $sectionIds)
-                    ->select(
-                        'sections.id',
-                        'sections.section_name as section_name',
-                        'classes.class_name as class_name',
-                        'grades.grade_name as grade_name'
-                    )
-                    ->orderBy('grades.grade_name')
-                    ->orderBy('classes.class_name')
-                    ->orderBy('sections.section_name')
-                    ->get()
-                    ->map(function ($row) {
-                        return [
-                            'id' => (int) $row->id,
-                            'name' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? 'Section')),
-                        ];
-                    })
-                    ->values();
-            }
-            $sectionsByTeacher[(string) $teacher['id']] = $sections;
-        }
-
-        $series = \App\Models\MeetingSeries::query()
-            ->orderByDesc('start_date')
-            ->get()
-            ->map(function ($s) use ($teachers, $sectionsByTeacher) {
-                $teacher = $teachers->first(fn ($t) => ($t['email'] ?? '') === ($s->created_by ?? ''));
-                $teacherId = (int) ($teacher['id'] ?? 0);
-                $sectionName = collect($sectionsByTeacher[(string) $teacherId] ?? [])->firstWhere('id', (int) $s->section_id)['name'] ?? ('Section '.$s->section_id);
-                return [
-                    'id' => (int) $s->id,
-                    'topic' => (string) $s->topic,
-                    'provider' => (string) ($s->provider ?? 'offline'),
-                    'teacher_id' => $teacherId,
-                    'teacher_name' => (string) ($teacher['name'] ?? 'Teacher'),
-                    'section_id' => (int) $s->section_id,
-                    'section_name' => (string) $sectionName,
-                    'week_days' => is_array($s->week_days) ? array_values($s->week_days) : [],
-                    'start_date' => (string) $s->start_date,
-                    'end_date' => $s->end_date ? (string) $s->end_date : null,
-                    'start_time' => (string) $s->start_time,
-                    'duration' => (int) ($s->duration ?? 0),
-                    'record_enabled' => (bool) ($s->record_enabled ?? false),
-                    'location' => $s->location ?? '',
-                    'notes' => $s->notes ?? '',
-                ];
-            })
-            ->values();
-
-        return response()->json([
-            'series' => $series,
-            'teachers' => $teachers,
-            'sections_by_teacher' => $sectionsByTeacher,
-        ]);
-    });
-
-    Route::post('/admin/meeting-series', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'web');
-        if (!in_array($guard, ['web', 'admin'], true)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-        $tenantDb = DB::connection('center');
-
-        $payload = $request->validate([
-            'teacher_id' => ['required', 'integer'],
-            'section_id' => ['required', 'integer'],
-            'topic' => ['required', 'string', 'max:255'],
-            'provider' => ['required', 'in:jitsi,livekit,zoom,microsoft_teams,google_meet,external,offline'],
-            'week_days' => ['required', 'array', 'min:1', 'max:7'],
-            'week_days.*' => ['integer', 'min:1', 'max:7'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'record_enabled' => ['nullable', 'boolean'],
-            'generate_value' => ['nullable', 'integer', 'min:1', 'max:24'],
-            'generate_unit' => ['nullable', 'in:weeks,months'],
-            'join_url' => ['nullable', 'string', 'max:2000'],
-            'moderator_url' => ['nullable', 'string', 'max:2000'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'external_ref' => ['nullable', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
-
-        $teacher = Schema::connection('center')->hasTable('teachers')
-            ? $tenantDb->table('teachers')->where('id', (int) $payload['teacher_id'])->first()
-            : null;
-        if (!$teacher || empty($teacher->email)) {
-            return response()->json(['message' => 'Teacher not found'], 404);
-        }
-        $teacherEmail = (string) $teacher->email;
-
-        $section = Schema::connection('center')->hasTable('sections')
-            ? $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first()
-            : null;
-        if (!$section) {
-            return response()->json(['message' => 'Section not found'], 404);
-        }
-
-        $assignedIds = collect();
-        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
-            $assignedIds = $assignedIds->merge(
-                $tenantDb->table('sections')->where('teacher_id', (int) $payload['teacher_id'])->pluck('id')
-            );
-        }
-        if (Schema::connection('center')->hasTable('teacher_section')) {
-            $assignedIds = $assignedIds->merge(
-                $tenantDb->table('teacher_section')->where('teacher_id', (int) $payload['teacher_id'])->pluck('section_id')
-            );
-        }
-        $assignedIds = $assignedIds->unique()->values();
-        if (!$assignedIds->contains((int) $payload['section_id'])) {
-            return response()->json(['message' => 'Section is not assigned to this teacher'], 422);
-        }
-
-        $provider = (string) $payload['provider'];
-        if (in_array($provider, ['external', 'zoom', 'microsoft_teams', 'google_meet'], true) && empty($payload['join_url'])) {
-            return response()->json(['message' => 'join_url is required for this provider'], 422);
-        }
-        if ($provider === 'offline' && empty($payload['location'])) {
-            return response()->json(['message' => 'location is required for offline provider'], 422);
-        }
-
-        $seriesPayload = [
-            'created_by' => $teacherEmail,
-            'grade_id' => (int) ($section->grade_id ?? 0),
-            'class_id' => (int) ($section->class_id ?? 0),
-            'section_id' => (int) $payload['section_id'],
-            'topic' => (string) $payload['topic'],
-            'provider' => $provider,
-            'week_days' => array_values($payload['week_days']),
-            'start_date' => $payload['start_date'],
-            'end_date' => $payload['end_date'] ?? null,
-            'start_time' => $payload['start_time'],
-            'duration' => (int) $payload['duration'],
-            'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'join_url' => $payload['join_url'] ?? null,
-            'moderator_url' => $payload['moderator_url'] ?? null,
-            'password' => $payload['password'] ?? null,
-            'external_ref' => $payload['external_ref'] ?? null,
-            'location' => $payload['location'] ?? null,
-            'notes' => $payload['notes'] ?? null,
-        ];
-        if (Schema::connection('center')->hasColumn('meeting_series', 'teacher_id')) {
-            $seriesPayload['teacher_id'] = (int) $payload['teacher_id'];
-        }
-        if (Schema::connection('center')->hasColumn('meeting_series', 'status')) {
-            $seriesPayload['status'] = 'started';
-        }
-        $series = \App\Models\MeetingSeries::create($seriesPayload);
-
-        $generateValue = (int) ($payload['generate_value'] ?? 8);
-        $generateUnit = (string) ($payload['generate_unit'] ?? 'weeks');
-        $generateTo = now();
-        if ($generateUnit === 'months') {
-            $generateTo = $generateTo->addMonths($generateValue);
-        } else {
-            $generateTo = $generateTo->addWeeks($generateValue);
-        }
-        \App\Services\MeetingSeriesGenerator::generateForSeries($series, now()->subDay(), $generateTo);
-
-        return response()->json(['ok' => true]);
-    });
-
-    Route::delete('/admin/meeting-series/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'web');
-        if (!in_array($guard, ['web', 'admin'], true)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-
-        $series = \App\Models\MeetingSeries::query()->where('id', $id)->first();
-        if (!$series) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
-        \App\Models\Meeting::query()->where('series_id', (int) $series->id)->delete();
-        $series->delete();
-        return response()->json(['ok' => true]);
-    });
-
-    Route::get('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
-        $guard = $request->session()->get('api_auth_guard', 'web');
-        if (!in_array($guard, ['web', 'admin'], true)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug')
-            ?? $request->header('X-Tenant-Slug')
-            ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
-        if (!$tenant) {
-            return response()->json(['message' => 'Tenant not found'], 422);
-        }
-        $ensureTenantInitialized($tenant);
-
-        if (!Schema::connection('center')->hasTable('meetings')) {
-            return response()->json(['meetings' => [], 'series_options' => []]);
+        if (!Schema::connection('center')->hasTable('sessions')) {
+            return response()->json(['sessions' => []]);
         }
 
         $tenantDb = DB::connection('center');
-        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
 
-        $rows = $tenantDb->table('meetings')
-            ->leftJoin('sections', 'meetings.section_id', '=', 'sections.id')
+        $rows = $tenantDb->table('sessions')
+            ->leftJoin('sections', 'sessions.section_id', '=', 'sections.id')
             ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
             ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
             ->select(
-                'meetings.id',
-                'meetings.grade_id',
-                'meetings.class_id',
-                'meetings.section_id',
-                'meetings.topic',
-                'meetings.start_at',
-                'meetings.duration',
-                'meetings.provider',
-                'meetings.room_slug',
-                'meetings.join_url',
-                'meetings.moderator_url',
-                'meetings.password',
-                'meetings.record_enabled',
-                'meetings.external_ref',
-                'meetings.created_by',
+                'sessions.id',
+                'sessions.grade_id',
+                'sessions.class_id',
+                'sessions.section_id',
+                'sessions.topic',
+                'sessions.start_at',
+                'sessions.duration',
+                'sessions.session_type',
+                'sessions.provider',
+                'sessions.room_slug',
+                'sessions.join_url',
+                'sessions.moderator_url',
+                'sessions.password',
+                'sessions.record_enabled',
+                'sessions.external_ref',
+                'sessions.created_by',
                 DB::raw("trim(concat_ws(' - ', nullif(grades.grade_name, ''), nullif(classes.class_name, ''), nullif(sections.section_name, ''))) as section_label")
             );
 
-        if ($hasSeriesCol) {
-            $rows->addSelect('meetings.series_id');
-        }
         if ($hasLocationCol) {
-            $rows->addSelect('meetings.location', 'meetings.notes');
+            $rows->addSelect('sessions.location', 'sessions.notes');
         }
 
-        $meetings = $rows->orderByDesc('meetings.start_at')->get()->map(function ($row) use ($hasSeriesCol, $hasLocationCol) {
+        $sessions = $rows->orderByDesc('sessions.start_at')->get()->map(function ($row) use ($hasLocationCol) {
             $m = [
                 'id' => (int) $row->id,
                 'grade_id' => (int) $row->grade_id,
@@ -1704,7 +1225,8 @@ Route::middleware([
                 'topic' => (string) $row->topic,
                 'start_at' => $row->start_at ? (string) $row->start_at : '',
                 'duration' => (int) $row->duration,
-                'provider' => (string) ($row->provider ?? 'jitsi'),
+                'session_type' => (string) ($row->session_type ?? 'online'),
+                'provider' => (string) ($row->provider ?? ($row->session_type === 'offline' ? 'offline' : 'jitsi')),
                 'room_slug' => $row->room_slug ?? null,
                 'join_url' => $row->join_url ?? null,
                 'moderator_url' => $row->moderator_url ?? null,
@@ -1713,9 +1235,6 @@ Route::middleware([
                 'external_ref' => $row->external_ref ?? null,
                 'created_by' => (string) ($row->created_by ?? ''),
             ];
-            if ($hasSeriesCol) {
-                $m['series_id'] = isset($row->series_id) && $row->series_id !== null ? (int) $row->series_id : null;
-            }
             if ($hasLocationCol) {
                 $m['location'] = $row->location ?? '';
                 $m['notes'] = $row->notes ?? '';
@@ -1724,26 +1243,10 @@ Route::middleware([
             return $m;
         })->values();
 
-        $seriesOptions = collect();
-        if (Schema::connection('center')->hasTable('meeting_series')) {
-            $seriesOptions = $tenantDb->table('meeting_series')
-                ->orderBy('topic')
-                ->get(['id', 'topic', 'section_id'])
-                ->map(fn ($s) => [
-                    'id' => (int) $s->id,
-                    'topic' => (string) $s->topic,
-                    'section_id' => (int) $s->section_id,
-                ])
-                ->values();
-        }
-
-        return response()->json([
-            'meetings' => $meetings,
-            'series_options' => $seriesOptions,
-        ]);
+        return response()->json(['sessions' => $sessions]);
     });
 
-    Route::post('/admin/meetings', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::post('/admin/sessions', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1759,21 +1262,20 @@ Route::middleware([
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('center')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('sessions')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
         $tenantDb = DB::connection('center');
-        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
 
         $payload = $request->validate([
             'section_id' => ['required', 'integer'],
             'topic' => ['required', 'string', 'max:255'],
             'start_at' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
-            'series_id' => ['nullable', 'integer'],
+            'session_type' => ['nullable', 'in:offline,online,exam,others'],
+            'provider' => ['nullable', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
             'join_url' => ['nullable', 'string', 'max:2000'],
             'moderator_url' => ['nullable', 'string', 'max:2000'],
             'password' => ['nullable', 'string', 'max:255'],
@@ -1791,26 +1293,13 @@ Route::middleware([
         $classId = (int) ($section->class_id ?? 0);
         $sectionId = (int) $payload['section_id'];
 
-        $provider = (string) $payload['provider'];
+        [$sessionType, $provider] = \App\Http\Support\SessionTypeHelper::resolveFromPayload($payload);
         $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
-        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+        if ($sessionType === 'online' && in_array((string) $provider, $urlProviders, true) && empty($payload['join_url'])) {
             return response()->json(['message' => 'join_url is required for this provider'], 422);
         }
-        if ($provider === 'offline' && empty($payload['location'])) {
-            return response()->json(['message' => 'location is required for offline provider'], 422);
-        }
-
-        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
-        if ($hasSeriesCol && $seriesId) {
-            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
-            if (!$seriesRow) {
-                return response()->json(['message' => 'Meeting series not found'], 404);
-            }
-            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
-                return response()->json(['message' => 'series_id does not belong to this section'], 422);
-            }
-        } elseif ($seriesId) {
-            $seriesId = null;
+        if ($sessionType === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline sessions'], 422);
         }
 
         $createdBy = (string) (optional(Auth::guard('web')->user())->email ?? 'Admin');
@@ -1825,7 +1314,8 @@ Route::middleware([
             'duration' => (int) $payload['duration'],
             'password' => $payload['password'] ?? null,
             'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'provider' => $provider,
+            'session_type' => $sessionType,
+            'provider' => $sessionType === 'online' ? $provider : null,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -1833,24 +1323,21 @@ Route::middleware([
             $base['location'] = $payload['location'] ?? null;
             $base['notes'] = $payload['notes'] ?? null;
         }
-        if ($hasSeriesCol) {
-            $base['series_id'] = $seriesId ?: null;
-        }
 
         $insertRow = function (array $extra) use ($tenantDb, $base) {
             try {
-                $tenantDb->table('meetings')->insert(array_merge($base, $extra));
+                $tenantDb->table('sessions')->insert(array_merge($base, $extra));
 
                 return response()->json(['ok' => true]);
             } catch (QueryException $e) {
                 if (str_contains((string) $e->getMessage(), 'Duplicate')) {
-                    return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+                    return response()->json(['message' => 'A session with this series and start time already exists.'], 422);
                 }
                 throw $e;
             }
         };
 
-        if ($provider === 'offline') {
+        if ($sessionType === 'offline') {
             return $insertRow([
                 'room_slug' => null,
                 'join_url' => '#',
@@ -1859,8 +1346,16 @@ Route::middleware([
                 'password' => null,
             ]);
         }
+        if (in_array($sessionType, ['exam', 'others'], true)) {
+            return $insertRow([
+                'room_slug' => null,
+                'join_url' => (string) ($payload['join_url'] ?? '#'),
+                'moderator_url' => $payload['moderator_url'] ?? null,
+                'external_ref' => $payload['external_ref'] ?? null,
+            ]);
+        }
         if ($provider === 'jitsi') {
-            $links = \App\Services\MeetingLinkService::forJitsi();
+            $links = \App\Services\SessionLinkService::forJitsi();
 
             return $insertRow([
                 'room_slug' => $links['room_slug'],
@@ -1873,8 +1368,8 @@ Route::middleware([
             if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
                 return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
             }
-            $slug = \App\Services\MeetingLinkService::generateRoomSlug();
-            $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+            $slug = \App\Services\SessionLinkService::generateRoomSlug();
+            $links = \App\Services\SessionLinkService::forLiveKit($slug);
 
             return $insertRow([
                 'room_slug' => $slug,
@@ -1892,7 +1387,7 @@ Route::middleware([
         ]);
     });
 
-    Route::put('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::put('/admin/sessions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1908,15 +1403,14 @@ Route::middleware([
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('center')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('sessions')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
         $tenantDb = DB::connection('center');
-        $hasSeriesCol = Schema::connection('center')->hasColumn('meetings', 'series_id');
-        $hasLocationCol = Schema::connection('center')->hasColumn('meetings', 'location');
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
 
-        $existing = $tenantDb->table('meetings')->where('id', $id)->first();
+        $existing = $tenantDb->table('sessions')->where('id', $id)->first();
         if (!$existing) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -1926,8 +1420,8 @@ Route::middleware([
             'topic' => ['required', 'string', 'max:255'],
             'start_at' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:15', 'max:480'],
-            'provider' => ['required', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
-            'series_id' => ['nullable', 'integer'],
+            'session_type' => ['nullable', 'in:offline,online,exam,others'],
+            'provider' => ['nullable', 'in:jitsi,livekit,external,offline,zoom,microsoft_teams,google_meet'],
             'join_url' => ['nullable', 'string', 'max:2000'],
             'moderator_url' => ['nullable', 'string', 'max:2000'],
             'password' => ['nullable', 'string', 'max:255'],
@@ -1945,26 +1439,13 @@ Route::middleware([
         $classId = (int) ($section->class_id ?? 0);
         $sectionId = (int) $payload['section_id'];
 
-        $provider = (string) $payload['provider'];
+        [$sessionType, $provider] = \App\Http\Support\SessionTypeHelper::resolveFromPayload($payload);
         $urlProviders = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
-        if (in_array($provider, $urlProviders, true) && empty($payload['join_url'])) {
+        if ($sessionType === 'online' && in_array((string) $provider, $urlProviders, true) && empty($payload['join_url'])) {
             return response()->json(['message' => 'join_url is required for this provider'], 422);
         }
-        if ($provider === 'offline' && empty($payload['location'])) {
-            return response()->json(['message' => 'location is required for offline provider'], 422);
-        }
-
-        $seriesId = isset($payload['series_id']) ? (int) $payload['series_id'] : null;
-        if ($hasSeriesCol && $seriesId) {
-            $seriesRow = $tenantDb->table('meeting_series')->where('id', $seriesId)->first();
-            if (!$seriesRow) {
-                return response()->json(['message' => 'Meeting series not found'], 404);
-            }
-            if ((int) ($seriesRow->section_id ?? 0) !== $sectionId) {
-                return response()->json(['message' => 'series_id does not belong to this section'], 422);
-            }
-        } elseif ($seriesId) {
-            $seriesId = null;
+        if ($sessionType === 'offline' && empty($payload['location'])) {
+            return response()->json(['message' => 'location is required for offline sessions'], 422);
         }
 
         $update = [
@@ -1976,18 +1457,16 @@ Route::middleware([
             'duration' => (int) $payload['duration'],
             'password' => $payload['password'] ?? null,
             'record_enabled' => (bool) ($payload['record_enabled'] ?? false),
-            'provider' => $provider,
+            'session_type' => $sessionType,
+            'provider' => $sessionType === 'online' ? $provider : null,
             'updated_at' => now(),
         ];
         if ($hasLocationCol) {
             $update['location'] = $payload['location'] ?? null;
             $update['notes'] = $payload['notes'] ?? null;
         }
-        if ($hasSeriesCol) {
-            $update['series_id'] = $seriesId ?: null;
-        }
 
-        if ($provider === 'offline') {
+        if ($sessionType === 'offline') {
             $update['room_slug'] = null;
             $update['join_url'] = '#';
             $update['moderator_url'] = null;
@@ -1995,7 +1474,7 @@ Route::middleware([
             $update['password'] = null;
         } elseif ($provider === 'jitsi') {
             if (($existing->provider ?? '') !== 'jitsi' || empty($existing->room_slug)) {
-                $links = \App\Services\MeetingLinkService::forJitsi();
+                $links = \App\Services\SessionLinkService::forJitsi();
                 $update['room_slug'] = $links['room_slug'];
                 $update['join_url'] = $links['join_url'];
                 $update['moderator_url'] = $links['moderator_url'];
@@ -2006,8 +1485,8 @@ Route::middleware([
                 return response()->json(['message' => 'LiveKit is not configured on the server'], 422);
             }
             if (($existing->provider ?? '') !== 'livekit' || empty($existing->room_slug)) {
-                $slug = \App\Services\MeetingLinkService::generateRoomSlug();
-                $links = \App\Services\MeetingLinkService::forLiveKit($slug);
+                $slug = \App\Services\SessionLinkService::generateRoomSlug();
+                $links = \App\Services\SessionLinkService::forLiveKit($slug);
                 $update['room_slug'] = $slug;
                 $update['join_url'] = $links['join_url'];
                 $update['moderator_url'] = $links['moderator_url'];
@@ -2021,10 +1500,10 @@ Route::middleware([
         }
 
         try {
-            $tenantDb->table('meetings')->where('id', $id)->update($update);
+            $tenantDb->table('sessions')->where('id', $id)->update($update);
         } catch (QueryException $e) {
             if (str_contains((string) $e->getMessage(), 'Duplicate')) {
-                return response()->json(['message' => 'A meeting with this series and start time already exists.'], 422);
+                return response()->json(['message' => 'A session with this series and start time already exists.'], 422);
             }
             throw $e;
         }
@@ -2032,7 +1511,7 @@ Route::middleware([
         return response()->json(['ok' => true]);
     });
 
-    Route::delete('/admin/meetings/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+    Route::delete('/admin/sessions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if (!in_array($guard, ['web', 'admin'], true)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -2048,11 +1527,11 @@ Route::middleware([
         }
         $ensureTenantInitialized($tenant);
 
-        if (!Schema::connection('center')->hasTable('meetings')) {
+        if (!Schema::connection('center')->hasTable('sessions')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
-        $deleted = DB::connection('center')->table('meetings')->where('id', $id)->delete();
+        $deleted = DB::connection('center')->table('sessions')->where('id', $id)->delete();
         if (!$deleted) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -2103,202 +1582,7 @@ Route::middleware([
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $tenantDb = DB::connection('center');
-        $hasTable = function (string $table): bool {
-            return Schema::connection('center')->hasTable($table);
-        };
-
-        $children = collect();
-        if ($hasTable('students')) {
-            $children = $tenantDb->table('students')
-                ->leftJoin('grades', 'students.grade_id', '=', 'grades.id')
-                ->leftJoin('classes', 'students.class_id', '=', 'classes.id')
-                ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
-                ->where('students.parent_id', $authParentId)
-                ->select(
-                    'students.id',
-                    'students.name',
-                    'students.grade_id',
-                    'students.class_id',
-                    'students.section_id',
-                    'grades.grade_name as grade_name',
-                    'classes.class_name as class_name',
-                    'sections.section_name as section_name'
-                )
-                ->orderBy('students.name')
-                ->get()
-                ->map(function ($row) {
-                    return [
-                        'id' => (int) $row->id,
-                        'name' => $row->name,
-                        'grade' => $row->grade_name ?: ('Grade ' . ($row->grade_id ?? '-')),
-                        'class' => $row->class_name ?: ('Class ' . ($row->class_id ?? '-')),
-                        'section' => $row->section_name ?: ('Section ' . ($row->section_id ?? '-')),
-                    ];
-                })
-                ->values();
-        }
-        $childrenIds = $children->pluck('id')->values();
-
-        $attendance = collect();
-        if ($childrenIds->isNotEmpty() && $hasTable('attendances')) {
-            $attendance = $tenantDb->table('attendances')
-                ->join('students', 'attendances.student_id', '=', 'students.id')
-                ->whereIn('attendances.student_id', $childrenIds)
-                ->orderByDesc('attendances.attendance_date')
-                ->limit(500)
-                ->get(['attendances.id', 'attendances.student_id', 'attendances.attendance_date', 'attendances.attendance_status', 'students.name as student_name'])
-                ->map(function ($row) {
-                    $status = ((int) $row->attendance_status) === 1 ? 'present' : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
-                    return [
-                        'id' => (int) $row->id,
-                        'student_id' => (int) $row->student_id,
-                        'student_name' => $row->student_name ?? '',
-                        'date' => $row->attendance_date,
-                        'status' => $status,
-                    ];
-                })
-                ->values();
-        }
-
-        $fees = collect();
-        if ($childrenIds->isNotEmpty() && $hasTable('payments')) {
-            $fees = $tenantDb->table('payments')
-                ->join('students', 'payments.student_id', '=', 'students.id')
-                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
-                ->whereIn('payments.student_id', $childrenIds)
-                ->orderByDesc('payments.payment_date')
-                ->orderByDesc('payments.id')
-                ->limit(500)
-                ->get([
-                    'payments.id',
-                    'payments.student_id',
-                    'payments.payment_date',
-                    'payments.payment_status',
-                    'payments.amount',
-                    'payments.month',
-                    'students.name as student_name',
-                    'fees.title as fee_title',
-                ])
-                ->map(function ($row) {
-                    $statusRaw = strtolower((string) ($row->payment_status ?? ''));
-                    $status = in_array($statusRaw, ['paid', 'unpaid'], true) ? $statusRaw : 'pending';
-                    return [
-                        'id' => (int) $row->id,
-                        'student_id' => (int) $row->student_id,
-                        'student_name' => $row->student_name ?? '',
-                        'item' => $row->fee_title ?: ('Fee ' . ($row->month ?? '')),
-                        'amount' => (float) ($row->amount ?? 0),
-                        'status' => $status,
-                        'due_date' => $row->payment_date ?? now()->toDateString(),
-                        'month' => $row->month ?? '',
-                    ];
-                })
-                ->values();
-        }
-
-        $quizzes = collect();
-        if ($childrenIds->isNotEmpty() && $hasTable('quiz_degrees')) {
-            $quizzes = $tenantDb->table('quiz_degrees')
-                ->join('students', 'quiz_degrees.student_id', '=', 'students.id')
-                ->leftJoin('sections', 'quiz_degrees.section_id', '=', 'sections.id')
-                ->leftJoin('classes', 'quiz_degrees.class_id', '=', 'classes.id')
-                ->leftJoin('grades', 'quiz_degrees.grade_id', '=', 'grades.id')
-                ->whereIn('quiz_degrees.student_id', $childrenIds)
-                ->orderByDesc('quiz_degrees.quiz_date')
-                ->limit(500)
-                ->get([
-                    'quiz_degrees.id',
-                    'quiz_degrees.student_id',
-                    'quiz_degrees.quiz_date',
-                    'quiz_degrees.degree',
-                    'quiz_degrees.notes',
-                    'quiz_degrees.attendance_status',
-                    'students.name as student_name',
-                    'grades.grade_name as grade_name',
-                    'classes.class_name as class_name',
-                    'sections.section_name as section_name',
-                ])
-                ->map(function ($row) {
-                    return [
-                        'id' => (int) $row->id,
-                        'student_id' => (int) $row->student_id,
-                        'student_name' => $row->student_name ?? '',
-                        'date' => $row->quiz_date,
-                        'degree' => $row->degree !== null ? (float) $row->degree : null,
-                        'attendance_status' => in_array($row->attendance_status, ['present', 'absent', 'late'], true) ? $row->attendance_status : 'present',
-                        'notes' => $row->notes ?? '',
-                        'grade' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? '')),
-                    ];
-                })
-                ->values();
-        }
-
-        $exams = collect();
-        if ($childrenIds->isNotEmpty() && $hasTable('exam_degrees')) {
-            $exams = $tenantDb->table('exam_degrees')
-                ->join('students', 'exam_degrees.student_id', '=', 'students.id')
-                ->leftJoin('sections', 'exam_degrees.section_id', '=', 'sections.id')
-                ->leftJoin('classes', 'exam_degrees.class_id', '=', 'classes.id')
-                ->leftJoin('grades', 'exam_degrees.grade_id', '=', 'grades.id')
-                ->whereIn('exam_degrees.student_id', $childrenIds)
-                ->orderByDesc('exam_degrees.exam_date')
-                ->limit(500)
-                ->get([
-                    'exam_degrees.id',
-                    'exam_degrees.student_id',
-                    'exam_degrees.exam_date',
-                    'exam_degrees.degree',
-                    'exam_degrees.notes',
-                    'exam_degrees.attendance_status',
-                    'students.name as student_name',
-                    'grades.grade_name as grade_name',
-                    'classes.class_name as class_name',
-                    'sections.section_name as section_name',
-                ])
-                ->map(function ($row) {
-                    return [
-                        'id' => (int) $row->id,
-                        'student_id' => (int) $row->student_id,
-                        'student_name' => $row->student_name ?? '',
-                        'date' => $row->exam_date,
-                        'degree' => $row->degree !== null ? (float) $row->degree : null,
-                        'attendance_status' => in_array($row->attendance_status, ['present', 'absent', 'late'], true) ? $row->attendance_status : 'present',
-                        'notes' => $row->notes ?? '',
-                        'grade' => trim(($row->grade_name ? $row->grade_name . ' - ' : '') . ($row->class_name ?? '') . ' - ' . ($row->section_name ?? '')),
-                    ];
-                })
-                ->values();
-        }
-
-        $reports = $children->map(function ($child) use ($attendance, $fees, $quizzes, $exams) {
-            $childAttendance = $attendance->where('student_id', $child['id'])->values();
-            $presentCount = $childAttendance->whereIn('status', ['present', 'late'])->count();
-            $attendanceRate = $childAttendance->count() > 0 ? round(($presentCount / $childAttendance->count()) * 100, 1) : 0;
-            $quizAvg = round((float) $quizzes->where('student_id', $child['id'])->whereNotNull('degree')->avg('degree'), 1);
-            $examAvg = round((float) $exams->where('student_id', $child['id'])->whereNotNull('degree')->avg('degree'), 1);
-            $paidAmount = (float) $fees->where('student_id', $child['id'])->where('status', 'paid')->sum('amount');
-            $pendingAmount = (float) $fees->where('student_id', $child['id'])->whereIn('status', ['pending', 'unpaid'])->sum('amount');
-            return [
-                'student_id' => $child['id'],
-                'student_name' => $child['name'],
-                'grade' => trim(($child['grade'] ?? '') . ' - ' . ($child['class'] ?? '') . ' - ' . ($child['section'] ?? '')),
-                'attendance_rate' => $attendanceRate,
-                'quiz_average' => $quizAvg > 0 ? $quizAvg : null,
-                'exam_average' => $examAvg > 0 ? $examAvg : null,
-                'paid_amount' => $paidAmount,
-                'pending_amount' => $pendingAmount,
-            ];
-        })->values();
-
-        return response()->json([
-            'children' => $children,
-            'attendance' => $attendance,
-            'fees' => $fees,
-            'quizzes' => $quizzes,
-            'exams' => $exams,
-            'reports' => $reports,
-        ]);
+        return response()->json(app(MultiCenterPortalService::class)->parentBootstrap((int) $authParentId));
     });
 
     $resolveStudentContext = function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -2306,25 +1590,120 @@ Route::middleware([
         if ($guard !== 'student') {
             return ['error' => response()->json(['message' => 'Forbidden'], 403)];
         }
+
+        $bearer = ApiBearerAuth::resolve($request);
+        $portalMode = $request->session()->get('api_portal_mode') || ($bearer['portal'] ?? false);
+
         $tenantId = $request->session()->get('api_tenant_id');
         $tenantSlug = $request->session()->get('api_tenant_slug')
             ?? $request->header('X-Tenant-Slug')
             ?? $request->query('tenant_slug');
-        $tenant = $resolveTenant($tenantId, $tenantSlug);
+
+        if ($bearer) {
+            $tenantId = $bearer['tenant_id'] ?: $tenantId;
+            $tenantSlug = $bearer['tenant_slug'] ?: $tenantSlug;
+        }
+
+        $centerIdHint = $request->input('center_id')
+            ?? $request->header('X-Center-Id')
+            ?? $request->query('center_id');
+        $centerSlugHint = $request->input('center_slug')
+            ?? $request->header('X-Center-Slug')
+            ?? $request->query('center_slug')
+            ?? $tenantSlug;
+
+        $resolvePortalMemberships = function () use ($request, $bearer, $portalMode): \Illuminate\Support\Collection {
+            if (!$portalMode) {
+                return collect();
+            }
+
+            $email = $request->session()->get('api_profile_email') ?: ($bearer['profile_email'] ?? null);
+            $userType = $request->session()->get('api_profile_user_type', Student::class)
+                ?: ($bearer['user_type'] ?? Student::class);
+            if (!is_string($email) || trim($email) === '') {
+                return collect();
+            }
+
+            $profileIds = DB::connection('center')->table('students')
+                ->where('email', $email)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if ($profileIds === []) {
+                return collect();
+            }
+
+            return CenterMembership::query()
+                ->where('user_type', $userType)
+                ->whereIn('user_id', $profileIds)
+                ->where('status', CenterMembership::STATUS_ASSIGNED)
+                ->get();
+        };
+
+        $tenant = $resolveTenant($tenantId, is_string($centerSlugHint) && $centerSlugHint !== '' ? $centerSlugHint : $tenantSlug);
+        $studentId = null;
+
+        if (!$tenant && $centerIdHint) {
+            $tenant = Center::query()->find((int) $centerIdHint);
+        }
+
+        if (!$tenant && $portalMode) {
+            $memberships = $resolvePortalMemberships();
+            if ($centerIdHint) {
+                $memberships = $memberships->where('center_id', (int) $centerIdHint)->values();
+            } elseif (is_string($centerSlugHint) && $centerSlugHint !== '') {
+                $centerBySlug = Center::query()->where('slug', $centerSlugHint)->first();
+                if (!$centerBySlug) {
+                    return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
+                }
+                $memberships = $memberships->where('center_id', $centerBySlug->id)->values();
+            }
+
+            if ($memberships->isEmpty()) {
+                return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
+            }
+            if ($memberships->count() > 1) {
+                return ['error' => response()->json([
+                    'message' => 'Center context required',
+                    'requires_center_selection' => true,
+                ], 422)];
+            }
+
+            $membership = $memberships->first();
+            $tenant = Center::query()->find($membership->center_id);
+            $studentId = (int) $membership->user_id;
+        }
+
         if (!$tenant) {
             return ['error' => response()->json(['message' => 'Tenant not found'], 422)];
         }
         $ensureTenantInitialized($tenant);
 
-        $studentId = Auth::guard('student')->id() ?? $request->session()->get('api_auth_user_id');
+        if ($studentId === null) {
+            $studentId = Auth::guard('student')->id() ?? $request->session()->get('api_auth_user_id');
+        }
+        if (!$studentId && $portalMode) {
+            $memberships = $resolvePortalMemberships()->where('center_id', $tenant->id)->values();
+            if ($memberships->count() === 1) {
+                $studentId = (int) $memberships->first()->user_id;
+            } elseif ($memberships->count() > 1 && $centerIdHint) {
+                $membership = $memberships->firstWhere('center_id', (int) $centerIdHint);
+                if ($membership) {
+                    $studentId = (int) $membership->user_id;
+                }
+            }
+        }
         if (!$studentId) {
             return ['error' => response()->json(['message' => 'Unauthenticated'], 401)];
         }
+
         $tenantDb = DB::connection('center');
         $student = $tenantDb->table('students')->where('id', $studentId)->first();
         if (!$student) {
             return ['error' => response()->json(['message' => 'Student not found'], 404)];
         }
+
         return ['error' => null, 'tenantDb' => $tenantDb, 'studentId' => (int) $studentId, 'student' => $student];
     };
 
@@ -2363,10 +1742,10 @@ Route::middleware([
         $classId = (int) ($student->class_id ?? 0);
         $sectionId = (int) ($student->section_id ?? 0);
 
-        $meetings = collect();
-        if (Schema::connection('center')->hasTable('meetings')) {
-            $livekitUrl = (string) config('meetings.livekit.url');
-            $meetings = $tenantDb->table('meetings')
+        $sessions = collect();
+        if (Schema::connection('center')->hasTable('sessions')) {
+            $livekitUrl = (string) config('sessions.livekit.url');
+            $sessions = $tenantDb->table('sessions')
                 ->where('grade_id', $gradeId)
                 ->where('class_id', $classId)
                 ->where('section_id', $sectionId)
@@ -2473,6 +1852,24 @@ Route::middleware([
                 $submissions = $tenantDb->table('student_homework')->where('student_id', $studentId)->get()->keyBy('homework_id');
                 $homework = $homeworks->map(function ($row) use ($submissions) {
                     $submission = $submissions->get($row->id);
+                    $fileUrl = null;
+                    $fileName = null;
+                    $correctionUrl = null;
+                    $correctionName = null;
+                    if ($submission) {
+                        $submissionModel = StudentHomework::query()->find($submission->id);
+                        $media = $submissionModel?->getFirstMedia('homework');
+                        $correction = $submissionModel?->getFirstMedia('correction');
+                        if ($media) {
+                            $fileUrl = \App\Http\Support\MediaUrlHelper::publicPath($media);
+                            $fileName = $media->file_name;
+                        }
+                        if ($correction) {
+                            $correctionUrl = \App\Http\Support\MediaUrlHelper::publicPath($correction);
+                            $correctionName = $correction->file_name;
+                        }
+                    }
+
                     return [
                         'id' => $submission ? (int) $submission->id : ('h-' . $row->id),
                         'submission_id' => $submission ? (int) $submission->id : null,
@@ -2484,6 +1881,13 @@ Route::middleware([
                         'grade' => $submission->degree ?? '—',
                         'student_notes' => $submission->student_notes ?? '',
                         'response' => $submission->response ?? '',
+                        'file_url' => $fileUrl,
+                        'file_name' => $fileName,
+                        'correction_url' => $correctionUrl,
+                        'correction_name' => $correctionName,
+                        'upload_date' => $submission && $submission->upload_date_time
+                            ? (string) $submission->upload_date_time
+                            : '',
                     ];
                 })->values();
             } else {
@@ -2526,7 +1930,7 @@ Route::middleware([
         }
 
         return response()->json([
-            'meetings' => $meetings,
+            'sessions' => $sessions,
             'attendance' => $attendance,
             'grades' => $grades,
             'homework' => $homework,
@@ -2535,35 +1939,35 @@ Route::middleware([
         ]);
     });
 
-    Route::post('/student/meetings', function () {
-        return response()->json(['message' => 'Students can only view meetings.'], 403);
+    Route::post('/student/sessions', function () {
+        return response()->json(['message' => 'Students can only view sessions.'], 403);
     });
 
-    Route::put('/student/meetings/{id}', function () {
-        return response()->json(['message' => 'Students can only view meetings.'], 403);
+    Route::put('/student/sessions/{id}', function () {
+        return response()->json(['message' => 'Students can only view sessions.'], 403);
     });
 
-    Route::delete('/student/meetings/{id}', function () {
-        return response()->json(['message' => 'Students can only view meetings.'], 403);
+    Route::delete('/student/sessions/{id}', function () {
+        return response()->json(['message' => 'Students can only view sessions.'], 403);
     });
 
-    Route::get('/student/meetings/{id}/livekit-token', function (Request $request, int $id) use ($resolveStudentContext) {
+    Route::get('/student/sessions/{id}/livekit-token', function (Request $request, int $id) use ($resolveStudentContext) {
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
         $tenantDb = $ctx['tenantDb'];
         $student = $ctx['student'];
-        if (!Schema::connection('center')->hasTable('meetings')) return response()->json(['message' => 'Module unavailable'], 422);
+        if (!Schema::connection('center')->hasTable('sessions')) return response()->json(['message' => 'Module unavailable'], 422);
         if (! \App\Services\LiveKitAccessTokenService::isConfigured()) {
             return response()->json(['message' => 'LiveKit is not configured'], 422);
         }
-        $row = $tenantDb->table('meetings')
+        $row = $tenantDb->table('sessions')
             ->where('id', $id)
             ->where('grade_id', (int) $student->grade_id)
             ->where('class_id', (int) $student->class_id)
             ->where('section_id', (int) $student->section_id)
             ->first();
         if (!$row || ($row->provider ?? '') !== 'livekit' || empty($row->room_slug)) {
-            return response()->json(['message' => 'Meeting not found'], 404);
+            return response()->json(['message' => 'Session not found'], 404);
         }
         $identity = 'student-'.$ctx['studentId'];
         $token = \App\Services\LiveKitAccessTokenService::createToken(
@@ -2575,7 +1979,7 @@ Route::middleware([
 
         return response()->json([
             'token' => $token,
-            'url' => config('meetings.livekit.url'),
+            'url' => config('sessions.livekit.url'),
             'room' => $row->room_slug,
         ]);
     });
@@ -2707,58 +2111,140 @@ Route::middleware([
         if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'homework_id' => ['required', 'integer', 'exists:center.homeworks,id'],
-            'status' => ['required', 'in:not_submitted,submitted,late,approved,rejected'],
             'student_notes' => ['nullable', 'string'],
-            'response' => ['nullable', 'string'],
-            'degree' => ['nullable', 'string', 'max:100'],
-            'rate' => ['nullable', 'string', 'max:100'],
         ]);
-        $tenantDb->table('student_homework')->insert([
-            'student_id' => $ctx['studentId'],
-            'homework_id' => (int) $payload['homework_id'],
-            'upload_date_time' => now(),
-            'status' => $payload['status'],
-            'degree' => $payload['degree'] ?? null,
-            'rate' => $payload['rate'] ?? null,
-            'student_notes' => $payload['student_notes'] ?? null,
-            'response' => $payload['response'] ?? null,
-            'created_at' => now(),
-            'updated_at' => now(),
+        $student = $ctx['student'];
+        $homework = $tenantDb->table('homeworks')->where('id', (int) $payload['homework_id'])->first();
+        if (!$homework
+            || (int) $homework->grade_id !== (int) ($student->grade_id ?? 0)
+            || (int) $homework->class_id !== (int) ($student->class_id ?? 0)
+            || (int) $homework->section_id !== (int) ($student->section_id ?? 0)) {
+            return response()->json(['message' => 'Homework not available for your class'], 422);
+        }
+        $exists = $tenantDb->table('student_homework')
+            ->where('student_id', $ctx['studentId'])
+            ->where('homework_id', (int) $payload['homework_id'])
+            ->exists();
+        if ($exists) {
+            return response()->json(['message' => 'Submission already exists. Use update instead.'], 422);
+        }
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+        if ($uploadedFiles === [] && empty($payload['student_notes'])) {
+            return response()->json(['message' => 'Upload a file or add notes before submitting.'], 422);
+        }
+        $dueDate = $homework->due_date ? (string) $homework->due_date : null;
+        $status = ($dueDate && now()->toDateString() > $dueDate) ? 'late' : 'submitted';
+        $centerId = CenterContext::id()
+            ?? ($request->input('center_id') ? (int) $request->input('center_id') : null)
+            ?? ($request->session()->get('api_tenant_id') ? (int) $request->session()->get('api_tenant_id') : null);
+        $submission = new StudentHomework();
+        $submission->student_id = $ctx['studentId'];
+        $submission->homework_id = (int) $payload['homework_id'];
+        $submission->upload_date_time = now();
+        $submission->status = $status;
+        $submission->student_notes = $payload['student_notes'] ?? null;
+        if ($centerId && Schema::connection('center')->hasColumn('student_homework', 'center_id')) {
+            $submission->center_id = $centerId;
+        }
+        $submission->save();
+        foreach ($uploadedFiles as $file) {
+            $submission->addMedia($file)->toMediaCollection('homework');
+        }
+        return response()->json(['ok' => true, 'id' => (int) $submission->id]);
+    });
+    Route::post('/student/homework/submissions/{id}', function (Request $request, int $id) use ($resolveStudentContext) {
+        $ctx = $resolveStudentContext($request);
+        if ($ctx['error']) return $ctx['error'];
+        if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
+        $payload = $request->validate([
+            'homework_id' => ['required', 'integer', 'exists:center.homeworks,id'],
+            'student_notes' => ['nullable', 'string'],
         ]);
+        $submission = StudentHomework::query()
+            ->where('id', $id)
+            ->where('student_id', $ctx['studentId'])
+            ->first();
+        if (!$submission) return response()->json(['message' => 'Not found'], 404);
+        if ($submission->status === 'approved') {
+            return response()->json(['message' => 'Approved submissions cannot be edited'], 422);
+        }
+        $student = $ctx['student'];
+        $homework = DB::connection('center')->table('homeworks')->where('id', (int) $payload['homework_id'])->first();
+        if (!$homework
+            || (int) $homework->grade_id !== (int) ($student->grade_id ?? 0)
+            || (int) $homework->class_id !== (int) ($student->class_id ?? 0)
+            || (int) $homework->section_id !== (int) ($student->section_id ?? 0)) {
+            return response()->json(['message' => 'Homework not available for your class'], 422);
+        }
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+        $dueDate = $homework->due_date ? (string) $homework->due_date : null;
+        $status = in_array($submission->status, ['approved', 'rejected'], true)
+            ? $submission->status
+            : (($dueDate && now()->toDateString() > $dueDate) ? 'late' : 'submitted');
+        $submission->homework_id = (int) $payload['homework_id'];
+        $submission->status = $status;
+        $submission->student_notes = $payload['student_notes'] ?? null;
+        $submission->upload_date_time = now();
+        $centerId = CenterContext::id()
+            ?? ($request->input('center_id') ? (int) $request->input('center_id') : null)
+            ?? ($request->session()->get('api_tenant_id') ? (int) $request->session()->get('api_tenant_id') : null);
+        if ($centerId && Schema::connection('center')->hasColumn('student_homework', 'center_id') && empty($submission->center_id)) {
+            $submission->center_id = $centerId;
+        }
+        $submission->save();
+        foreach ($uploadedFiles as $file) {
+            $submission->addMedia($file)->toMediaCollection('homework');
+        }
         return response()->json(['ok' => true]);
     });
     Route::put('/student/homework/submissions/{id}', function (Request $request, int $id) use ($resolveStudentContext) {
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
-        $tenantDb = $ctx['tenantDb'];
         if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
         $payload = $request->validate([
             'homework_id' => ['required', 'integer', 'exists:center.homeworks,id'],
-            'status' => ['required', 'in:not_submitted,submitted,late,approved,rejected'],
             'student_notes' => ['nullable', 'string'],
-            'response' => ['nullable', 'string'],
-            'degree' => ['nullable', 'string', 'max:100'],
-            'rate' => ['nullable', 'string', 'max:100'],
         ]);
-        $updated = $tenantDb->table('student_homework')->where('id', $id)->where('student_id', $ctx['studentId'])->update([
-            'homework_id' => (int) $payload['homework_id'],
-            'status' => $payload['status'],
-            'degree' => $payload['degree'] ?? null,
-            'rate' => $payload['rate'] ?? null,
-            'student_notes' => $payload['student_notes'] ?? null,
-            'response' => $payload['response'] ?? null,
-            'updated_at' => now(),
-        ]);
-        if (!$updated) return response()->json(['message' => 'Not found'], 404);
+        $submission = StudentHomework::query()
+            ->where('id', $id)
+            ->where('student_id', $ctx['studentId'])
+            ->first();
+        if (!$submission) return response()->json(['message' => 'Not found'], 404);
+        if ($submission->status === 'approved') {
+            return response()->json(['message' => 'Approved submissions cannot be edited'], 422);
+        }
+        $homework = DB::connection('center')->table('homeworks')->where('id', (int) $payload['homework_id'])->first();
+        $dueDate = $homework?->due_date ? (string) $homework->due_date : null;
+        $status = in_array($submission->status, ['approved', 'rejected'], true)
+            ? $submission->status
+            : (($dueDate && now()->toDateString() > $dueDate) ? 'late' : 'submitted');
+        $submission->homework_id = (int) $payload['homework_id'];
+        $submission->status = $status;
+        $submission->student_notes = $payload['student_notes'] ?? null;
+        $submission->upload_date_time = now();
+        $centerId = CenterContext::id()
+            ?? ($request->input('center_id') ? (int) $request->input('center_id') : null)
+            ?? ($request->session()->get('api_tenant_id') ? (int) $request->session()->get('api_tenant_id') : null);
+        if ($centerId && Schema::connection('center')->hasColumn('student_homework', 'center_id') && empty($submission->center_id)) {
+            $submission->center_id = $centerId;
+        }
+        $submission->save();
         return response()->json(['ok' => true]);
     });
     Route::delete('/student/homework/submissions/{id}', function (Request $request, int $id) use ($resolveStudentContext) {
         $ctx = $resolveStudentContext($request);
         if ($ctx['error']) return $ctx['error'];
-        $tenantDb = $ctx['tenantDb'];
         if (!Schema::connection('center')->hasTable('student_homework')) return response()->json(['message' => 'Module unavailable'], 422);
-        $deleted = $tenantDb->table('student_homework')->where('id', $id)->where('student_id', $ctx['studentId'])->delete();
-        if (!$deleted) return response()->json(['message' => 'Not found'], 404);
+        $submission = StudentHomework::query()
+            ->where('id', $id)
+            ->where('student_id', $ctx['studentId'])
+            ->first();
+        if (!$submission) return response()->json(['message' => 'Not found'], 404);
+        if ($submission->status === 'approved') {
+            return response()->json(['message' => 'Approved submissions cannot be deleted'], 422);
+        }
+        $submission->clearMediaCollection('homework');
+        $submission->delete();
         return response()->json(['ok' => true]);
     });
 
@@ -3309,8 +2795,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:50', 'unique:tenant.students,code'],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.students,email'],
+            'code' => ['required', 'string', 'max:50', 'unique:mysql.students,code'],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.students,email'],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:mysql.students,phone'],
             'password' => ['required', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'string'],
@@ -3338,6 +2825,9 @@ Route::middleware([
         ];
         if ($studentsHasIsActive) {
             $insert['is_active'] = (($payload['status'] ?? 'active') !== 'inactive');
+        }
+        if (Schema::connection('center')->hasColumn('students', 'phone') && ! empty($payload['phone'])) {
+            $insert['phone'] = preg_replace('/\s+/', '', trim((string) $payload['phone']));
         }
 
         $id = DB::connection('center')->table('students')->insertGetId($insert);
@@ -3397,8 +2887,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:50', 'unique:tenant.students,code,'.$id],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.students,email,'.$id],
+            'code' => ['required', 'string', 'max:50', 'unique:mysql.students,code,'.$id],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.students,email,'.$id],
+            'phone' => ['nullable', 'string', 'max:20', 'unique:mysql.students,phone,'.$id],
             'password' => ['nullable', 'string', 'min:6', 'max:100'],
             'gender' => ['required', 'in:male,female'],
             'status' => ['nullable', 'string'],
@@ -3421,6 +2912,11 @@ Route::middleware([
         ];
         if (Schema::connection('center')->hasColumn('students', 'is_active')) {
             $update['is_active'] = (($payload['status'] ?? 'active') !== 'inactive');
+        }
+        if (Schema::connection('center')->hasColumn('students', 'phone')) {
+            $update['phone'] = ! empty($payload['phone'])
+                ? preg_replace('/\s+/', '', trim((string) $payload['phone']))
+                : null;
         }
         if (!empty($payload['password'])) {
             $update['password'] = Hash::make($payload['password']);
@@ -3477,7 +2973,7 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.teachers,email'],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.teachers,email'],
             'password' => ['required', 'string', 'min:6', 'max:100'],
             'specialization' => ['nullable', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
@@ -3568,7 +3064,7 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.teachers,email,'.$id],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.teachers,email,'.$id],
             'password' => ['nullable', 'string', 'min:6', 'max:100'],
             'specialization' => ['nullable', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
@@ -3653,9 +3149,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.parents,email'],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.parents,email'],
             'password' => ['required', 'string', 'min:6', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', 'unique:mysql.parents,parent_phone'],
             'job_title' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:active,inactive'],
             'address' => ['nullable', 'string', 'max:300'],
@@ -3723,9 +3219,9 @@ Route::middleware([
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:tenant.parents,email,'.$id],
+            'email' => ['required', 'email', 'max:255', 'unique:mysql.parents,email,'.$id],
             'password' => ['nullable', 'string', 'min:6', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', 'unique:mysql.parents,parent_phone,'.$id],
             'job_title' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:active,inactive'],
             'address' => ['nullable', 'string', 'max:300'],
@@ -3991,6 +3487,223 @@ Route::middleware([
         ]]);
     });
 
+    Route::get('/admin/sections/{sectionId}/sessions', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if (!in_array($guard, ['web', 'admin'], true)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        if (!Schema::connection('center')->hasTable('sessions')) {
+            return response()->json(['section' => null, 'sessions' => []]);
+        }
+
+        $tenantDb = DB::connection('center');
+        $section = $tenantDb->table('sections')
+            ->leftJoin('grades', 'sections.grade_id', '=', 'grades.id')
+            ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
+            ->where('sections.id', $sectionId)
+            ->select(
+                'sections.id',
+                'sections.section_name as name',
+                'sections.grade_id',
+                'sections.class_id',
+                'grades.grade_name as grade_name',
+                'classes.class_name as class_name'
+            )
+            ->first();
+
+        if (!$section) {
+            return response()->json(['message' => 'Section not found'], 404);
+        }
+
+        $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasSessionOnAttendance = Schema::connection('center')->hasColumn('attendances', 'session_id');
+        $hasSessionOnExam = Schema::connection('center')->hasColumn('exam_degrees', 'session_id');
+        $hasSessionOnQuiz = Schema::connection('center')->hasColumn('quiz_degrees', 'session_id');
+        $examHasAttendance = Schema::connection('center')->hasColumn('exam_degrees', 'attendance_status');
+        $quizHasAttendance = Schema::connection('center')->hasColumn('quiz_degrees', 'attendance_status');
+
+        $mapAttendanceStatus = function ($value): string {
+            $n = (int) $value;
+            if ($n === 0) {
+                return 'absent';
+            }
+            if ($n === 2) {
+                return 'late';
+            }
+
+            return 'present';
+        };
+
+        $sessionRows = $tenantDb->table('sessions')
+            ->where('section_id', $sectionId)
+            ->orderByDesc('start_at')
+            ->get();
+
+        $sessionIds = $sessionRows->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $attendanceBySession = collect();
+        if ($hasSessionOnAttendance && !empty($sessionIds)) {
+            $attendanceBySession = $tenantDb->table('attendances')
+                ->leftJoin('students', 'attendances.student_id', '=', 'students.id')
+                ->whereIn('attendances.session_id', $sessionIds)
+                ->select(
+                    'attendances.session_id',
+                    'attendances.student_id',
+                    'students.name as student_name',
+                    'attendances.attendance_date',
+                    'attendances.attendance_status',
+                    'attendances.notes'
+                )
+                ->get()
+                ->groupBy('session_id');
+        }
+
+        $examsBySession = collect();
+        if ($hasSessionOnExam && !empty($sessionIds)) {
+            $examCols = ['exam_degrees.session_id', 'exam_degrees.student_id', 'students.name as student_name', 'exam_degrees.exam_date', 'exam_degrees.degree', 'exam_degrees.notes'];
+            if ($examHasAttendance) {
+                $examCols[] = 'exam_degrees.attendance_status';
+            }
+            $examsBySession = $tenantDb->table('exam_degrees')
+                ->leftJoin('students', 'exam_degrees.student_id', '=', 'students.id')
+                ->whereIn('exam_degrees.session_id', $sessionIds)
+                ->select($examCols)
+                ->get()
+                ->groupBy('session_id');
+        }
+
+        $quizzesBySession = collect();
+        if ($hasSessionOnQuiz && !empty($sessionIds)) {
+            $quizCols = ['quiz_degrees.session_id', 'quiz_degrees.student_id', 'students.name as student_name', 'quiz_degrees.quiz_date', 'quiz_degrees.degree', 'quiz_degrees.notes'];
+            if ($quizHasAttendance) {
+                $quizCols[] = 'quiz_degrees.attendance_status';
+            }
+            $quizzesBySession = $tenantDb->table('quiz_degrees')
+                ->leftJoin('students', 'quiz_degrees.student_id', '=', 'students.id')
+                ->whereIn('quiz_degrees.session_id', $sessionIds)
+                ->select($quizCols)
+                ->get()
+                ->groupBy('session_id');
+        }
+
+        $sessions = $sessionRows->map(function ($row) use (
+            $hasLocationCol,
+            $attendanceBySession,
+            $examsBySession,
+            $quizzesBySession,
+            $mapAttendanceStatus,
+            $examHasAttendance,
+            $quizHasAttendance
+        ) {
+            $sessionId = (int) $row->id;
+            $attendanceRecords = ($attendanceBySession->get($sessionId) ?? collect())->map(function ($r) use ($mapAttendanceStatus) {
+                return [
+                    'student_id' => (int) $r->student_id,
+                    'student_name' => (string) ($r->student_name ?? ''),
+                    'date' => $r->attendance_date ? (string) $r->attendance_date : '',
+                    'status' => $mapAttendanceStatus($r->attendance_status),
+                    'notes' => $r->notes ?? '',
+                ];
+            })->values();
+
+            $examRecords = ($examsBySession->get($sessionId) ?? collect())->map(function ($r) use ($examHasAttendance) {
+                $status = 'present';
+                if ($examHasAttendance && isset($r->attendance_status) && in_array($r->attendance_status, ['present', 'absent', 'late'], true)) {
+                    $status = $r->attendance_status;
+                } elseif (strtoupper((string) $r->degree) === 'ABSENT') {
+                    $status = 'absent';
+                }
+
+                return [
+                    'student_id' => (int) $r->student_id,
+                    'student_name' => (string) ($r->student_name ?? ''),
+                    'date' => $r->exam_date ? (string) $r->exam_date : '',
+                    'degree' => (string) ($r->degree ?? ''),
+                    'status' => $status,
+                    'notes' => $r->notes ?? '',
+                ];
+            })->values();
+
+            $quizRecords = ($quizzesBySession->get($sessionId) ?? collect())->map(function ($r) use ($quizHasAttendance) {
+                $status = 'present';
+                if ($quizHasAttendance && isset($r->attendance_status) && in_array($r->attendance_status, ['present', 'absent', 'late'], true)) {
+                    $status = $r->attendance_status;
+                } elseif (strtoupper((string) $r->degree) === 'ABSENT') {
+                    $status = 'absent';
+                }
+
+                return [
+                    'student_id' => (int) $r->student_id,
+                    'student_name' => (string) ($r->student_name ?? ''),
+                    'date' => $r->quiz_date ? (string) $r->quiz_date : '',
+                    'degree' => (string) ($r->degree ?? ''),
+                    'status' => $status,
+                    'notes' => $r->notes ?? '',
+                ];
+            })->values();
+
+            $present = $attendanceRecords->where('status', 'present')->count();
+            $absent = $attendanceRecords->where('status', 'absent')->count();
+            $late = $attendanceRecords->where('status', 'late')->count();
+
+            $session = [
+                'id' => $sessionId,
+                'topic' => (string) $row->topic,
+                'start_at' => $row->start_at ? (string) $row->start_at : '',
+                'duration' => (int) $row->duration,
+                'session_type' => (string) ($row->session_type ?? 'online'),
+                'provider' => $row->provider,
+                'join_url' => $row->join_url ?? null,
+                'location' => $hasLocationCol ? ($row->location ?? '') : '',
+                'notes' => $hasLocationCol ? ($row->notes ?? '') : '',
+                'created_by' => (string) ($row->created_by ?? ''),
+                'attendance' => [
+                    'total' => $attendanceRecords->count(),
+                    'present' => $present,
+                    'absent' => $absent,
+                    'late' => $late,
+                    'records' => $attendanceRecords,
+                ],
+                'exams' => [
+                    'total' => $examRecords->count(),
+                    'records' => $examRecords,
+                ],
+                'quizzes' => [
+                    'total' => $quizRecords->count(),
+                    'records' => $quizRecords,
+                ],
+            ];
+
+            return $session;
+        })->values();
+
+        return response()->json([
+            'section' => [
+                'id' => (int) $section->id,
+                'name' => (string) $section->name,
+                'grade_id' => (int) $section->grade_id,
+                'class_id' => (int) $section->class_id,
+                'grade_name' => (string) ($section->grade_name ?? ''),
+                'class_name' => (string) ($section->class_name ?? ''),
+            ],
+            'sessions' => $sessions,
+        ]);
+    });
+
     Route::post('/admin/units', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
@@ -4006,14 +3719,115 @@ Route::middleware([
             'class_id' => ['required', 'integer', 'exists:center.classes,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        $id = DB::connection('center')->table('units')->insertGetId([
-            'name' => $payload['name'],
-            'class_id' => $payload['class_id'],
-            'notes' => $payload['notes'] ?? '',
-            'created_at' => now(),
-            'updated_at' => now(),
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+
+        $unit = new Unit();
+        $unit->name = $payload['name'];
+        $unit->class_id = (int) $payload['class_id'];
+        $unit->notes = $payload['notes'] ?? '';
+        if (Schema::connection('center')->hasColumn('units', 'center_id')) {
+            $unit->center_id = $tenant->id;
+        }
+        $unit->save();
+
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
+                $unit->addMedia($file)->toMediaCollection('units');
+            }
+        }
+
+        $media = $unit->getMedia('units')->map(function ($m) {
+            return [
+                'id' => (int) $m->id,
+                'name' => $m->name ?: $m->file_name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'size' => (int) $m->size,
+                'type' => $m->mime_type ?: 'application/octet-stream',
+                'url' => $m->getUrl(),
+            ];
+        })->values();
+
+        return response()->json([
+            'unit' => [
+                'id' => $unit->id,
+                'name' => $unit->name,
+                'class_id' => $unit->class_id,
+                'notes' => $unit->notes,
+                'media' => $media,
+            ],
+        ], 201);
+    });
+
+    Route::post('/admin/units/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        $payload = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'notes' => ['nullable', 'string'],
+            'remove_media_ids' => ['nullable', 'array'],
+            'remove_media_ids.*' => ['integer'],
         ]);
-        return response()->json(['unit' => ['id' => $id, 'name' => $payload['name'], 'class_id' => $payload['class_id'], 'notes' => $payload['notes'] ?? '']], 201);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+
+        $unit = Unit::query()->find($id);
+        if (! $unit) return response()->json(['message' => 'Unit not found'], 404);
+
+        $unit->name = $payload['name'];
+        $unit->class_id = (int) $payload['class_id'];
+        $unit->notes = $payload['notes'] ?? '';
+        if (Schema::connection('center')->hasColumn('units', 'center_id') && ! $unit->center_id) {
+            $unit->center_id = $tenant->id;
+        }
+        $unit->save();
+
+        $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
+        if ($removeIds->isNotEmpty()) {
+            Media::query()
+                ->whereIn('id', $removeIds)
+                ->where('model_type', Unit::class)
+                ->where('model_id', $unit->id)
+                ->get()
+                ->each(fn ($m) => $m->delete());
+        }
+
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
+                $unit->addMedia($file)->toMediaCollection('units');
+            }
+        }
+
+        $media = $unit->getMedia('units')->map(function ($m) {
+            return [
+                'id' => (int) $m->id,
+                'name' => $m->name ?: $m->file_name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'size' => (int) $m->size,
+                'type' => $m->mime_type ?: 'application/octet-stream',
+                'url' => $m->getUrl(),
+            ];
+        })->values();
+
+        return response()->json([
+            'unit' => [
+                'id' => $unit->id,
+                'name' => $unit->name,
+                'class_id' => $unit->class_id,
+                'notes' => $unit->notes,
+                'media' => $media,
+            ],
+        ]);
     });
 
     Route::put('/admin/units/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -4058,14 +3872,115 @@ Route::middleware([
             'unit_id' => ['required', 'integer', 'exists:center.units,id'],
             'notes' => ['nullable', 'string'],
         ]);
-        $id = DB::connection('center')->table('lessons')->insertGetId([
-            'name' => $payload['name'],
-            'unit_id' => $payload['unit_id'],
-            'notes' => $payload['notes'] ?? '',
-            'created_at' => now(),
-            'updated_at' => now(),
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+
+        $lesson = new Lesson();
+        $lesson->name = $payload['name'];
+        $lesson->unit_id = (int) $payload['unit_id'];
+        $lesson->notes = $payload['notes'] ?? '';
+        if (Schema::connection('center')->hasColumn('lessons', 'center_id')) {
+            $lesson->center_id = $tenant->id;
+        }
+        $lesson->save();
+
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
+                $lesson->addMedia($file)->toMediaCollection('lessons');
+            }
+        }
+
+        $media = $lesson->getMedia('lessons')->map(function ($m) {
+            return [
+                'id' => (int) $m->id,
+                'name' => $m->name ?: $m->file_name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'size' => (int) $m->size,
+                'type' => $m->mime_type ?: 'application/octet-stream',
+                'url' => $m->getUrl(),
+            ];
+        })->values();
+
+        return response()->json([
+            'lesson' => [
+                'id' => $lesson->id,
+                'name' => $lesson->name,
+                'unit_id' => $lesson->unit_id,
+                'notes' => $lesson->notes,
+                'media' => $media,
+            ],
+        ], 201);
+    });
+
+    Route::post('/admin/lessons/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        $payload = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
+            'notes' => ['nullable', 'string'],
+            'remove_media_ids' => ['nullable', 'array'],
+            'remove_media_ids.*' => ['integer'],
         ]);
-        return response()->json(['lesson' => ['id' => $id, 'name' => $payload['name'], 'unit_id' => $payload['unit_id'], 'notes' => $payload['notes'] ?? '']], 201);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+
+        $lesson = Lesson::query()->find($id);
+        if (! $lesson) return response()->json(['message' => 'Lesson not found'], 404);
+
+        $lesson->name = $payload['name'];
+        $lesson->unit_id = (int) $payload['unit_id'];
+        $lesson->notes = $payload['notes'] ?? '';
+        if (Schema::connection('center')->hasColumn('lessons', 'center_id') && ! $lesson->center_id) {
+            $lesson->center_id = $tenant->id;
+        }
+        $lesson->save();
+
+        $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
+        if ($removeIds->isNotEmpty()) {
+            Media::query()
+                ->whereIn('id', $removeIds)
+                ->where('model_type', Lesson::class)
+                ->where('model_id', $lesson->id)
+                ->get()
+                ->each(fn ($m) => $m->delete());
+        }
+
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
+                $lesson->addMedia($file)->toMediaCollection('lessons');
+            }
+        }
+
+        $media = $lesson->getMedia('lessons')->map(function ($m) {
+            return [
+                'id' => (int) $m->id,
+                'name' => $m->name ?: $m->file_name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'size' => (int) $m->size,
+                'type' => $m->mime_type ?: 'application/octet-stream',
+                'url' => $m->getUrl(),
+            ];
+        })->values();
+
+        return response()->json([
+            'lesson' => [
+                'id' => $lesson->id,
+                'name' => $lesson->name,
+                'unit_id' => $lesson->unit_id,
+                'notes' => $lesson->notes,
+                'media' => $media,
+            ],
+        ]);
     });
 
     Route::put('/admin/lessons/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -4185,6 +4100,223 @@ Route::middleware([
         ]]);
     });
 
+    Route::get('/admin/homework/{id}/submissions', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        $tenantDb = DB::connection('center');
+        if (!Schema::connection('center')->hasTable('homeworks')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $homework = $tenantDb->table('homeworks')
+            ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
+            ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
+            ->leftJoin('sections', 'homeworks.section_id', '=', 'sections.id')
+            ->where('homeworks.id', $id)
+            ->first([
+                'homeworks.id',
+                'homeworks.title',
+                'homeworks.content',
+                'homeworks.grade_id',
+                'homeworks.class_id',
+                'homeworks.section_id',
+                'homeworks.submit_date as start_date',
+                'homeworks.due_date',
+                'grades.grade_name',
+                'classes.class_name',
+                'sections.section_name',
+            ]);
+        if (!$homework) return response()->json(['message' => 'Homework not found'], 404);
+
+        $studentsQuery = $tenantDb->table('students')->where('section_id', (int) $homework->section_id);
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $studentsQuery->whereNull('deleted_at');
+        }
+        $students = $studentsQuery->orderBy('name')->get(['id', 'name']);
+
+        $submissionsByStudent = collect();
+        if (Schema::connection('center')->hasTable('student_homework')) {
+            $submissionsByStudent = StudentHomework::query()
+                ->where('homework_id', $id)
+                ->get()
+                ->keyBy('student_id');
+        }
+
+        $rows = $students->map(function ($student) use ($submissionsByStudent) {
+            $submission = $submissionsByStudent->get($student->id);
+            if (!$submission) {
+                return [
+                    'student_id' => (int) $student->id,
+                    'student_name' => (string) $student->name,
+                    'submission_id' => null,
+                    'status' => 'not_submitted',
+                    'degree' => '',
+                    'rate' => '',
+                    'student_notes' => '',
+                    'response' => '',
+                    'upload_date' => '',
+                    'file_url' => null,
+                    'file_name' => null,
+                    'correction_url' => null,
+                    'correction_name' => null,
+                ];
+            }
+
+            return $submission->toAdminSubmissionArray((string) $student->name);
+        })->values();
+
+        return response()->json([
+            'homework' => [
+                'id' => (int) $homework->id,
+                'title' => (string) $homework->title,
+                'content' => (string) ($homework->content ?? ''),
+                'grade_id' => (int) $homework->grade_id,
+                'classroom_id' => (int) $homework->class_id,
+                'section_id' => (int) $homework->section_id,
+                'grade_name' => (string) ($homework->grade_name ?? ''),
+                'class_name' => (string) ($homework->class_name ?? ''),
+                'section_name' => (string) ($homework->section_name ?? ''),
+                'start_date' => (string) $homework->start_date,
+                'due_date' => (string) $homework->due_date,
+            ],
+            'submissions' => $rows,
+        ]);
+    });
+
+    Route::put('/admin/homework/submissions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        if (!Schema::connection('center')->hasTable('student_homework')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $payload = $request->validate([
+            'status' => ['required', 'in:submitted,late,approved,rejected'],
+            'degree' => ['nullable', 'string', 'max:100'],
+            'rate' => ['nullable', 'string', 'max:100'],
+            'response' => ['nullable', 'string'],
+        ]);
+
+        $submission = StudentHomework::query()->find($id);
+        if (!$submission) return response()->json(['message' => 'Submission not found'], 404);
+
+        $submission->status = $payload['status'];
+        $submission->degree = $payload['degree'] ?? null;
+        $submission->rate = $payload['rate'] ?? null;
+        $submission->response = $payload['response'] ?? null;
+        $submission->save();
+
+        $student = DB::connection('center')->table('students')->where('id', $submission->student_id)->first();
+
+        return response()->json([
+            'submission' => $submission->toAdminSubmissionArray((string) ($student->name ?? '')),
+        ]);
+    });
+
+    Route::get('/admin/homework/submissions/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        if (!Schema::connection('center')->hasTable('student_homework')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $submission = StudentHomework::query()->find($id);
+        if (!$submission) return response()->json(['message' => 'Submission not found'], 404);
+
+        $tenantDb = DB::connection('center');
+        $homework = $tenantDb->table('homeworks')
+            ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
+            ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
+            ->leftJoin('sections', 'homeworks.section_id', '=', 'sections.id')
+            ->where('homeworks.id', $submission->homework_id)
+            ->first([
+                'homeworks.id',
+                'homeworks.title',
+                'homeworks.content',
+                'homeworks.grade_id',
+                'homeworks.class_id',
+                'homeworks.section_id',
+                'homeworks.submit_date as start_date',
+                'homeworks.due_date',
+                'grades.grade_name',
+                'classes.class_name',
+                'sections.section_name',
+            ]);
+        if (!$homework) return response()->json(['message' => 'Homework not found'], 404);
+
+        $student = $tenantDb->table('students')->where('id', $submission->student_id)->first();
+
+        return response()->json([
+            'homework' => [
+                'id' => (int) $homework->id,
+                'title' => (string) $homework->title,
+                'content' => (string) ($homework->content ?? ''),
+                'grade_id' => (int) $homework->grade_id,
+                'classroom_id' => (int) $homework->class_id,
+                'section_id' => (int) $homework->section_id,
+                'grade_name' => (string) ($homework->grade_name ?? ''),
+                'class_name' => (string) ($homework->class_name ?? ''),
+                'section_name' => (string) ($homework->section_name ?? ''),
+                'start_date' => (string) $homework->start_date,
+                'due_date' => (string) $homework->due_date,
+            ],
+            'submission' => $submission->toAdminSubmissionArray((string) ($student->name ?? '')),
+        ]);
+    });
+
+    Route::post('/admin/homework/submissions/{id}/correction', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        if (!Schema::connection('center')->hasTable('student_homework')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $request->validate([
+            'correction' => ['required', 'file', 'mimes:pdf,png,jpg,jpeg', 'max:20480'],
+        ]);
+
+        $submission = StudentHomework::query()->find($id);
+        if (!$submission) return response()->json(['message' => 'Submission not found'], 404);
+
+        $submission->clearMediaCollection('correction');
+        $submission->addMedia($request->file('correction'))->toMediaCollection('correction');
+        $submission->refresh();
+
+        $student = DB::connection('center')->table('students')->where('id', $submission->student_id)->first();
+
+        return response()->json([
+            'submission' => $submission->toAdminSubmissionArray((string) ($student->name ?? '')),
+        ]);
+    });
+
     Route::post('/admin/fees', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
@@ -4219,6 +4351,9 @@ Route::middleware([
             'created_at' => now(),
             'updated_at' => now(),
         ];
+        if (Schema::connection('center')->hasColumn('fees', 'center_id')) {
+            $insert['center_id'] = $tenant->id;
+        }
         if (Schema::connection('center')->hasColumn('fees', 'fee_type')) {
             $insert['fee_type'] = $payload['type'];
         } elseif (Schema::connection('center')->hasColumn('fees', 'Fee_type')) {
@@ -4277,6 +4412,12 @@ Route::middleware([
             'month' => $payload['month'],
             'updated_at' => now(),
         ];
+        if (Schema::connection('center')->hasColumn('fees', 'center_id')) {
+            $existingCenterId = DB::connection('center')->table('fees')->where('id', $id)->value('center_id');
+            if (! $existingCenterId) {
+                $update['center_id'] = $tenant->id;
+            }
+        }
         if (Schema::connection('center')->hasColumn('fees', 'fee_type')) {
             $update['fee_type'] = $payload['type'];
         } elseif (Schema::connection('center')->hasColumn('fees', 'Fee_type')) {
@@ -4748,6 +4889,7 @@ Route::middleware([
                             'file_name' => $m->file_name,
                             'mime_type' => $m->mime_type,
                             'size' => (int) $m->size,
+                            'type' => $m->mime_type ?: 'application/octet-stream',
                             'url' => $m->getUrl(),
                         ];
                     })->values();
@@ -4791,9 +4933,9 @@ Route::middleware([
             'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
             'notes' => ['nullable', 'string'],
-            'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:51200'],
         ]);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
 
         $library = new Library();
         $library->title = $payload['title'];
@@ -4802,15 +4944,48 @@ Route::middleware([
         $library->section_id = (int) $payload['section_id'];
         $library->type = $payload['type'];
         $library->notes = $payload['notes'] ?? null;
+        if (Schema::connection('center')->hasColumn('library', 'center_id')) {
+            $library->center_id = $tenant->id;
+        }
         $library->save();
 
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
                 $library->addMedia($file)->toMediaCollection('library');
             }
         }
 
-        return response()->json(['id' => (int) $library->id], 201);
+        $tenantDb = DB::connection('center');
+        $gradeName = $tenantDb->table('grades')->where('id', $library->grade_id)->value('grade_name');
+        $className = $tenantDb->table('classes')->where('id', $library->class_id)->value('class_name');
+        $sectionName = $tenantDb->table('sections')->where('id', $library->section_id)->value('section_name');
+
+        return response()->json([
+            'library' => [
+                'id' => (int) $library->id,
+                'title' => $library->title,
+                'grade_id' => (int) $library->grade_id,
+                'class_id' => (int) $library->class_id,
+                'section_id' => (int) $library->section_id,
+                'type' => $library->type,
+                'notes' => $library->notes ?? '',
+                'grade_name' => $gradeName ?: '',
+                'class_name' => $className ?: '',
+                'section_name' => $sectionName ?: '',
+                'created_at' => optional($library->created_at)->format('Y-m-d') ?? now()->toDateString(),
+                'media' => $library->getMedia('library')->map(function ($m) {
+                    return [
+                        'id' => (int) $m->id,
+                        'name' => $m->name ?: $m->file_name,
+                        'file_name' => $m->file_name,
+                        'mime_type' => $m->mime_type,
+                        'size' => (int) $m->size,
+                        'type' => $m->mime_type ?: 'application/octet-stream',
+                        'url' => $m->getUrl(),
+                    ];
+                })->values(),
+            ],
+        ], 201);
     });
 
     Route::post('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -4831,11 +5006,11 @@ Route::middleware([
             'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:textbook,manual,workbook,reference,resource'],
             'notes' => ['nullable', 'string'],
-            'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:51200'],
             'remove_media_ids' => ['nullable', 'array'],
             'remove_media_ids.*' => ['integer'],
         ]);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
 
         $library = Library::query()->find($id);
         if (!$library) return response()->json(['message' => 'Library item not found'], 404);
@@ -4846,6 +5021,9 @@ Route::middleware([
         $library->section_id = (int) $payload['section_id'];
         $library->type = $payload['type'];
         $library->notes = $payload['notes'] ?? null;
+        if (Schema::connection('center')->hasColumn('library', 'center_id') && ! $library->center_id) {
+            $library->center_id = $tenant->id;
+        }
         $library->save();
 
         $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
@@ -4858,13 +5036,43 @@ Route::middleware([
                 ->each(fn ($m) => $m->delete());
         }
 
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
                 $library->addMedia($file)->toMediaCollection('library');
             }
         }
 
-        return response()->json(['message' => 'Library item updated']);
+        $tenantDb = DB::connection('center');
+        $gradeName = $tenantDb->table('grades')->where('id', $library->grade_id)->value('grade_name');
+        $className = $tenantDb->table('classes')->where('id', $library->class_id)->value('class_name');
+        $sectionName = $tenantDb->table('sections')->where('id', $library->section_id)->value('section_name');
+
+        return response()->json([
+            'library' => [
+                'id' => (int) $library->id,
+                'title' => $library->title,
+                'grade_id' => (int) $library->grade_id,
+                'class_id' => (int) $library->class_id,
+                'section_id' => (int) $library->section_id,
+                'type' => $library->type,
+                'notes' => $library->notes ?? '',
+                'grade_name' => $gradeName ?: '',
+                'class_name' => $className ?: '',
+                'section_name' => $sectionName ?: '',
+                'created_at' => optional($library->created_at)->format('Y-m-d') ?? now()->toDateString(),
+                'media' => $library->getMedia('library')->map(function ($m) {
+                    return [
+                        'id' => (int) $m->id,
+                        'name' => $m->name ?: $m->file_name,
+                        'file_name' => $m->file_name,
+                        'mime_type' => $m->mime_type,
+                        'size' => (int) $m->size,
+                        'type' => $m->mime_type ?: 'application/octet-stream',
+                        'url' => $m->getUrl(),
+                    ];
+                })->values(),
+            ],
+        ]);
     });
 
     Route::delete('/admin/library/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -4929,6 +5137,7 @@ Route::middleware([
                             'file_name' => $m->file_name,
                             'mime_type' => $m->mime_type,
                             'size' => (int) $m->size,
+                            'type' => $m->mime_type ?: 'application/octet-stream',
                             'url' => $m->getUrl(),
                         ];
                     })->values();
@@ -4973,9 +5182,9 @@ Route::middleware([
             'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:quiz,exam,others'],
             'time' => ['nullable', 'date'],
-            'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:51200'],
         ]);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
 
         $announcement = new Announcement();
         $announcement->title = $payload['title'];
@@ -4985,10 +5194,13 @@ Route::middleware([
         $announcement->section_id = (int) $payload['section_id'];
         $announcement->announcement_type = $payload['type'];
         $announcement->time = $payload['time'] ?? null;
+        if (Schema::connection('center')->hasColumn('announcements', 'center_id')) {
+            $announcement->center_id = $tenant->id;
+        }
         $announcement->save();
 
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
                 $announcement->addMedia($file)->toMediaCollection('announcements');
             }
         }
@@ -5006,7 +5218,38 @@ Route::middleware([
             $dispatcher->dispatch($entry['model'], $announceNotification, true);
         }
 
-        return response()->json(['id' => (int) $announcement->id], 201);
+        $tenantDb = DB::connection('center');
+        $gradeName = $tenantDb->table('grades')->where('id', $announcement->grade_id)->value('grade_name');
+        $className = $tenantDb->table('classes')->where('id', $announcement->class_id)->value('class_name');
+        $sectionName = $tenantDb->table('sections')->where('id', $announcement->section_id)->value('section_name');
+
+        return response()->json([
+            'announcement' => [
+                'id' => (int) $announcement->id,
+                'grade_id' => (int) $announcement->grade_id,
+                'class_id' => (int) $announcement->class_id,
+                'section_id' => (int) $announcement->section_id,
+                'title' => $announcement->title,
+                'content' => $announcement->body,
+                'time' => $announcement->time ? \Illuminate\Support\Carbon::parse($announcement->time)->format('Y-m-d\TH:i') : null,
+                'type' => $announcement->announcement_type ?: 'others',
+                'grade_name' => $gradeName ?: '',
+                'class_name' => $className ?: '',
+                'section_name' => $sectionName ?: '',
+                'created_at' => optional($announcement->created_at)->format('Y-m-d') ?? now()->toDateString(),
+                'media' => $announcement->getMedia('announcements')->map(function ($m) {
+                    return [
+                        'id' => (int) $m->id,
+                        'name' => $m->name ?: $m->file_name,
+                        'file_name' => $m->file_name,
+                        'mime_type' => $m->mime_type,
+                        'size' => (int) $m->size,
+                        'type' => $m->mime_type ?: 'application/octet-stream',
+                        'url' => $m->getUrl(),
+                    ];
+                })->values(),
+            ],
+        ], 201);
     });
 
     Route::post('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -5028,11 +5271,11 @@ Route::middleware([
             'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'type' => ['required', 'in:quiz,exam,others'],
             'time' => ['nullable', 'date'],
-            'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:51200'],
             'remove_media_ids' => ['nullable', 'array'],
             'remove_media_ids.*' => ['integer'],
         ]);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
 
         $announcement = Announcement::query()->find($id);
         if (!$announcement) return response()->json(['message' => 'Announcement not found'], 404);
@@ -5044,6 +5287,9 @@ Route::middleware([
         $announcement->section_id = (int) $payload['section_id'];
         $announcement->announcement_type = $payload['type'];
         $announcement->time = $payload['time'] ?? null;
+        if (Schema::connection('center')->hasColumn('announcements', 'center_id') && ! $announcement->center_id) {
+            $announcement->center_id = $tenant->id;
+        }
         $announcement->save();
 
         $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
@@ -5056,13 +5302,44 @@ Route::middleware([
                 ->each(fn ($m) => $m->delete());
         }
 
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $file) {
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
                 $announcement->addMedia($file)->toMediaCollection('announcements');
             }
         }
 
-        return response()->json(['message' => 'Announcement updated']);
+        $tenantDb = DB::connection('center');
+        $gradeName = $tenantDb->table('grades')->where('id', $announcement->grade_id)->value('grade_name');
+        $className = $tenantDb->table('classes')->where('id', $announcement->class_id)->value('class_name');
+        $sectionName = $tenantDb->table('sections')->where('id', $announcement->section_id)->value('section_name');
+
+        return response()->json([
+            'announcement' => [
+                'id' => (int) $announcement->id,
+                'grade_id' => (int) $announcement->grade_id,
+                'class_id' => (int) $announcement->class_id,
+                'section_id' => (int) $announcement->section_id,
+                'title' => $announcement->title,
+                'content' => $announcement->body,
+                'time' => $announcement->time ? \Illuminate\Support\Carbon::parse($announcement->time)->format('Y-m-d\TH:i') : null,
+                'type' => $announcement->announcement_type ?: 'others',
+                'grade_name' => $gradeName ?: '',
+                'class_name' => $className ?: '',
+                'section_name' => $sectionName ?: '',
+                'created_at' => optional($announcement->created_at)->format('Y-m-d') ?? now()->toDateString(),
+                'media' => $announcement->getMedia('announcements')->map(function ($m) {
+                    return [
+                        'id' => (int) $m->id,
+                        'name' => $m->name ?: $m->file_name,
+                        'file_name' => $m->file_name,
+                        'mime_type' => $m->mime_type,
+                        'size' => (int) $m->size,
+                        'type' => $m->mime_type ?: 'application/octet-stream',
+                        'url' => $m->getUrl(),
+                    ];
+                })->values(),
+            ],
+        ]);
     });
 
     Route::delete('/admin/announcements/{id}', function (Request $request, int $id) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -5210,6 +5487,250 @@ Route::middleware([
         ]);
     });
 
+    Route::get('/admin/reports/{type}', function (Request $request, string $type) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        if (! in_array($type, ['attendance', 'exams', 'quizzes', 'payments'], true)) {
+            return response()->json(['message' => 'Invalid report type'], 422);
+        }
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenant = $resolveTenant($tenantId, $tenantSlug);
+        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        $ensureTenantInitialized($tenant);
+        $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
+        if (!$authUserId) return response()->json(['message' => 'Unauthenticated'], 401);
+
+        $tenantDb = DB::connection('center');
+        $hasTable = fn (string $table) => Schema::connection('center')->hasTable($table);
+        $hasColumn = fn (string $table, string $column) => Schema::connection('center')->hasTable($table) && Schema::connection('center')->hasColumn($table, $column);
+
+        if ($type === 'attendance') {
+            $total = $hasTable('attendances') ? (int) $tenantDb->table('attendances')->count() : 0;
+            $present = 0;
+            $absent = 0;
+            if ($hasTable('attendances')) {
+                $present = (int) $tenantDb->table('attendances')->where('attendance_status', 1)->count();
+                $absent = max(0, $total - $present);
+            }
+            $rate = $total > 0 ? round(($present / $total) * 100, 2) : 0.0;
+
+            $byGrade = collect();
+            if ($hasTable('attendances') && $hasTable('grades')) {
+                $byGrade = $tenantDb->table('attendances')
+                    ->join('grades', 'attendances.grade_id', '=', 'grades.id')
+                    ->select(
+                        'grades.id as grade_id',
+                        'grades.grade_name as grade_name',
+                        DB::raw('COUNT(attendances.id) as total'),
+                        DB::raw('SUM(CASE WHEN attendances.attendance_status = 1 THEN 1 ELSE 0 END) as attended')
+                    )
+                    ->groupBy('grades.id', 'grades.grade_name')
+                    ->get()
+                    ->map(fn ($r) => [
+                        'grade_id' => (int) $r->grade_id,
+                        'grade_name' => $r->grade_name,
+                        'total' => (int) $r->total,
+                        'rate' => ((int) $r->total) > 0 ? round(((int) $r->attended / (int) $r->total) * 100, 2) : 0,
+                    ])
+                    ->values();
+            }
+
+            $recent = collect();
+            if ($hasTable('attendances') && $hasTable('students')) {
+                $recent = $tenantDb->table('attendances')
+                    ->leftJoin('students', 'attendances.student_id', '=', 'students.id')
+                    ->leftJoin('grades', 'attendances.grade_id', '=', 'grades.id')
+                    ->leftJoin('classes', 'attendances.class_id', '=', 'classes.id')
+                    ->leftJoin('sections', 'attendances.section_id', '=', 'sections.id')
+                    ->select(
+                        'attendances.id',
+                        'students.name as student_name',
+                        'grades.grade_name',
+                        'classes.class_name',
+                        'sections.section_name',
+                        'attendances.attendance_date as date',
+                        'attendances.attendance_status as status'
+                    )
+                    ->orderByDesc('attendances.attendance_date')
+                    ->limit(25)
+                    ->get()
+                    ->map(fn ($r) => [
+                        'id' => (int) $r->id,
+                        'student_name' => $r->student_name ?: '—',
+                        'grade_name' => $r->grade_name ?: '—',
+                        'class_name' => $r->class_name ?: '—',
+                        'section_name' => $r->section_name ?: '—',
+                        'date' => $r->date,
+                        'status' => (int) $r->status === 1 ? 'present' : 'absent',
+                    ])
+                    ->values();
+            }
+
+            return response()->json([
+                'type' => 'attendance',
+                'stats' => [
+                    ['key' => 'total_records', 'value' => $total],
+                    ['key' => 'attendance_rate', 'value' => $rate],
+                    ['key' => 'present_count', 'value' => $present],
+                    ['key' => 'absent_count', 'value' => $absent],
+                ],
+                'by_grade' => $byGrade,
+                'recent' => $recent,
+            ]);
+        }
+
+        if ($type === 'exams' || $type === 'quizzes') {
+            $table = $type === 'exams' ? 'exam_degrees' : 'quiz_degrees';
+            $dateCol = $type === 'exams' ? 'exam_date' : 'quiz_date';
+            $total = $hasTable($table) ? (int) $tenantDb->table($table)->count() : 0;
+
+            $avgDegree = 0.0;
+            if ($hasTable($table)) {
+                $degrees = $tenantDb->table($table)->pluck('degree');
+                $numeric = $degrees->map(fn ($d) => is_numeric($d) ? (float) $d : null)->filter();
+                $avgDegree = $numeric->isNotEmpty() ? round($numeric->avg(), 2) : 0.0;
+            }
+
+            $byGrade = collect();
+            if ($hasTable($table) && $hasTable('grades')) {
+                $rows = $tenantDb->table($table)
+                    ->join('grades', "$table.grade_id", '=', 'grades.id')
+                    ->select('grades.id as grade_id', 'grades.grade_name as grade_name', DB::raw("COUNT($table.id) as total"))
+                    ->groupBy('grades.id', 'grades.grade_name')
+                    ->get();
+                $byGrade = $rows->map(function ($r) use ($tenantDb, $table) {
+                    $degrees = $tenantDb->table($table)->where('grade_id', $r->grade_id)->pluck('degree');
+                    $numeric = $degrees->map(fn ($d) => is_numeric($d) ? (float) $d : null)->filter();
+                    return [
+                        'grade_id' => (int) $r->grade_id,
+                        'grade_name' => $r->grade_name,
+                        'total' => (int) $r->total,
+                        'rate' => $numeric->isNotEmpty() ? round($numeric->avg(), 2) : 0,
+                    ];
+                })->values();
+            }
+
+            $recent = collect();
+            if ($hasTable($table) && $hasTable('students')) {
+                $recent = $tenantDb->table($table)
+                    ->leftJoin('students', "$table.student_id", '=', 'students.id')
+                    ->leftJoin('grades', "$table.grade_id", '=', 'grades.id')
+                    ->leftJoin('classes', "$table.class_id", '=', 'classes.id')
+                    ->leftJoin('sections', "$table.section_id", '=', 'sections.id')
+                    ->select(
+                        "$table.id",
+                        'students.name as student_name',
+                        'grades.grade_name',
+                        'classes.class_name',
+                        'sections.section_name',
+                        "$table.$dateCol as date",
+                        "$table.degree as degree",
+                        "$table.attendance_status as status"
+                    )
+                    ->orderByDesc("$table.$dateCol")
+                    ->limit(25)
+                    ->get()
+                    ->map(fn ($r) => [
+                        'id' => (int) $r->id,
+                        'student_name' => $r->student_name ?: '—',
+                        'grade_name' => $r->grade_name ?: '—',
+                        'class_name' => $r->class_name ?: '—',
+                        'section_name' => $r->section_name ?: '—',
+                        'date' => $r->date,
+                        'degree' => $r->degree,
+                        'status' => $r->status ?: '—',
+                    ])
+                    ->values();
+            }
+
+            return response()->json([
+                'type' => $type,
+                'stats' => [
+                    ['key' => 'total_records', 'value' => $total],
+                    ['key' => 'average_degree', 'value' => $avgDegree],
+                ],
+                'by_grade' => $byGrade,
+                'recent' => $recent,
+            ]);
+        }
+
+        // payments
+        $paymentsCount = $hasTable('payments') ? (int) $tenantDb->table('payments')->count() : 0;
+        $collectedAmount = $hasTable('payments')
+            ? (float) ($tenantDb->table('payments')->where('payment_status', 1)->sum('amount') ?? 0)
+            : 0.0;
+        $unpaidCount = $hasTable('payments')
+            ? (int) $tenantDb->table('payments')->where('payment_status', 0)->count()
+            : 0;
+        $feesTotal = $hasTable('fees') ? (float) ($tenantDb->table('fees')->sum('amount') ?? 0) : 0.0;
+
+        $byFeeType = collect();
+        if ($hasTable('fees') && $hasTable('payments')) {
+            $feeTypeExpr = $hasColumn('fees', 'fee_type')
+                ? 'fees.fee_type'
+                : ($hasColumn('fees', 'Fee_type') ? 'fees.Fee_type' : "'other'");
+            $byFeeType = $tenantDb->table('payments')
+                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
+                ->select(
+                    DB::raw("$feeTypeExpr as type"),
+                    DB::raw('SUM(CASE WHEN payments.payment_status = 1 THEN COALESCE(payments.amount,0) ELSE 0 END) as collected'),
+                    DB::raw('COUNT(payments.id) as total')
+                )
+                ->groupBy(DB::raw($feeTypeExpr))
+                ->get()
+                ->map(fn ($r) => [
+                    'grade_name' => ucfirst(str_replace('_', ' ', (string) ($r->type ?: 'other'))),
+                    'total' => (int) $r->total,
+                    'rate' => round((float) $r->collected, 2),
+                ])
+                ->sortByDesc('rate')
+                ->values();
+        }
+
+        $recent = collect();
+        if ($hasTable('payments') && $hasTable('students')) {
+            $recent = $tenantDb->table('payments')
+                ->leftJoin('students', 'payments.student_id', '=', 'students.id')
+                ->leftJoin('grades', 'payments.grade_id', '=', 'grades.id')
+                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
+                ->select(
+                    'payments.id',
+                    'students.name as student_name',
+                    'grades.grade_name',
+                    'payments.payment_date as date',
+                    'payments.amount',
+                    'payments.payment_status as status',
+                    'payments.month'
+                )
+                ->orderByDesc('payments.payment_date')
+                ->limit(25)
+                ->get()
+                ->map(fn ($r) => [
+                    'id' => (int) $r->id,
+                    'student_name' => $r->student_name ?: '—',
+                    'grade_name' => $r->grade_name ?: '—',
+                    'date' => $r->date,
+                    'degree' => $r->amount !== null ? number_format((float) $r->amount, 2) : '—',
+                    'status' => (int) $r->status === 1 ? 'paid' : 'unpaid',
+                    'class_name' => $r->month ?: '—',
+                ])
+                ->values();
+        }
+
+        return response()->json([
+            'type' => 'payments',
+            'stats' => [
+                ['key' => 'collected_amount', 'value' => round($collectedAmount, 2)],
+                ['key' => 'payments_count', 'value' => $paymentsCount],
+                ['key' => 'unpaid_count', 'value' => $unpaidCount],
+                ['key' => 'fees_total', 'value' => round($feesTotal, 2)],
+            ],
+            'by_grade' => $byFeeType,
+            'recent' => $recent,
+        ]);
+    });
+
     Route::get('/admin/payments/section/{sectionId}/date/{date}', function (Request $request, int $sectionId, string $date) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
@@ -5230,21 +5751,37 @@ Route::middleware([
         $feeTypeSelect = $feesHasFeeType
             ? 'fee_type as type'
             : ($feesHasLegacyType ? 'Fee_type as type' : DB::raw("'monthly' as type"));
-        $fees = $tenantDb->table('fees')
-            ->where('grade_id', $section->grade_id)
-            ->where('class_id', $section->class_id)
-            ->where('section_id', $section->id)
-            ->select('id', 'title', 'amount', 'month', 'year', $feeTypeSelect)
-            ->get()
-            ->map(fn ($f) => [
-                'id' => (int) $f->id,
-                'title' => $f->title,
-                'amount' => (float) $f->amount,
-                'month' => $f->month,
-                'year' => $f->year,
-                'type' => $f->type,
-            ])
-            ->values();
+        $mapFees = fn ($rows) => collect($rows)->map(fn ($f) => [
+            'id' => (int) $f->id,
+            'title' => $f->title,
+            'amount' => (float) $f->amount,
+            'month' => $f->month,
+            'year' => $f->year,
+            'type' => $f->type,
+        ])->values();
+
+        $feeSelect = ['id', 'title', 'amount', 'month', 'year', $feeTypeSelect];
+        $fees = $mapFees(
+            $tenantDb->table('fees')
+                ->where(function ($query) use ($section) {
+                    $query->where('section_id', $section->id)
+                        ->orWhere(function ($q) use ($section) {
+                            $q->where('grade_id', $section->grade_id)
+                                ->where('class_id', $section->class_id);
+                        });
+                })
+                ->select($feeSelect)
+                ->get()
+        );
+
+        if ($fees->isEmpty()) {
+            $fees = $mapFees(
+                $tenantDb->table('fees')
+                    ->where('grade_id', $section->grade_id)
+                    ->select($feeSelect)
+                    ->get()
+            );
+        }
 
         $requestedFeeId = $request->query('fee_id');
         $requestedFeeId = is_numeric($requestedFeeId) ? (int) $requestedFeeId : null;
@@ -5439,9 +5976,15 @@ Route::middleware([
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
         $students = $tenantDb->table('students')->where('section_id', $sectionId)->whereNull('deleted_at')->get(['id', 'name']);
         $examHasAttendance = Schema::connection('center')->hasColumn('exam_degrees', 'attendance_status');
+        $examHasSession = Schema::connection('center')->hasColumn('exam_degrees', 'session_id');
+        $filterSessionId = $request->query('session_id') ? (int) $request->query('session_id') : null;
         $examCols = ['student_id', 'degree', 'notes'];
         if ($examHasAttendance) $examCols[] = 'attendance_status';
-        $records = $tenantDb->table('exam_degrees')->where('section_id', $sectionId)->whereDate('exam_date', $date)->get($examCols)->keyBy('student_id');
+        $recordsQuery = $tenantDb->table('exam_degrees')->where('section_id', $sectionId)->whereDate('exam_date', $date);
+        if ($filterSessionId && $examHasSession) {
+            $recordsQuery->where('session_id', $filterSessionId);
+        }
+        $records = $recordsQuery->get($examCols)->keyBy('student_id');
         $rows = $students->map(function ($s) use ($records) {
             $r = $records->get($s->id);
             $status = 'present';
@@ -5458,7 +6001,30 @@ Route::middleware([
                 'notes' => $r?->notes ?? '',
             ];
         })->values();
-        return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'rows' => $rows]);
+        $sessionOptions = collect();
+        if (Schema::connection('center')->hasTable('sessions')) {
+            $sessionOptions = $tenantDb->table('sessions')
+                ->where('section_id', $sectionId)
+                ->orderByDesc('start_at')
+                ->limit(100)
+                ->get(['id', 'topic', 'start_at', 'session_type'])
+                ->map(fn ($s) => [
+                    'id' => (int) $s->id,
+                    'topic' => (string) $s->topic,
+                    'start_at' => (string) $s->start_at,
+                    'session_type' => (string) ($s->session_type ?? 'online'),
+                ])->values();
+        }
+        $sessionId = $filterSessionId;
+        if (!$sessionId && $examHasSession) {
+            $linked = $tenantDb->table('exam_degrees')
+                ->where('section_id', $sectionId)
+                ->whereDate('exam_date', $date)
+                ->whereNotNull('session_id')
+                ->value('session_id');
+            $sessionId = $linked ? (int) $linked : null;
+        }
+        return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'session_id' => $sessionId, 'session_options' => $sessionOptions, 'rows' => $rows]);
     });
 
     Route::get('/admin/exams/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -5492,6 +6058,7 @@ Route::middleware([
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
         $payload = $request->validate([
+            'session_id' => ['nullable', 'integer', 'exists:center.sessions,id'],
             'rows' => ['required', 'array', 'min:1'],
             'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
@@ -5499,7 +6066,15 @@ Route::middleware([
             'rows.*.notes' => ['nullable', 'string'],
         ]);
         $tenantDb = DB::connection('center');
+        $sessionId = isset($payload['session_id']) ? (int) $payload['session_id'] : null;
+        if ($sessionId) {
+            $sessionRow = $tenantDb->table('sessions')->where('id', $sessionId)->where('section_id', $sectionId)->first();
+            if (!$sessionRow) {
+                return response()->json(['message' => 'session_id does not belong to this section'], 422);
+            }
+        }
         $examHasAttendance = Schema::connection('center')->hasColumn('exam_degrees', 'attendance_status');
+        $examHasSession = Schema::connection('center')->hasColumn('exam_degrees', 'session_id');
         $students = $tenantDb->table('students')->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())->get(['id', 'grade_id', 'class_id', 'section_id'])->keyBy('id');
         foreach ($payload['rows'] as $row) {
             $s = $students->get($row['student_id']);
@@ -5517,6 +6092,9 @@ Route::middleware([
             ];
             if ($examHasAttendance) {
                 $data['attendance_status'] = $row['status'];
+            }
+            if ($examHasSession) {
+                $data['session_id'] = $sessionId;
             }
             if ($exists) {
                 $tenantDb->table('exam_degrees')->where('student_id', $row['student_id'])->whereDate('exam_date', $date)->update($data);
@@ -5544,9 +6122,15 @@ Route::middleware([
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
         $students = $tenantDb->table('students')->where('section_id', $sectionId)->whereNull('deleted_at')->get(['id', 'name']);
         $quizHasAttendance = Schema::connection('center')->hasColumn('quiz_degrees', 'attendance_status');
+        $quizHasSession = Schema::connection('center')->hasColumn('quiz_degrees', 'session_id');
+        $filterSessionId = $request->query('session_id') ? (int) $request->query('session_id') : null;
         $quizCols = ['student_id', 'degree', 'notes'];
         if ($quizHasAttendance) $quizCols[] = 'attendance_status';
-        $records = $tenantDb->table('quiz_degrees')->where('section_id', $sectionId)->whereDate('quiz_date', $date)->get($quizCols)->keyBy('student_id');
+        $recordsQuery = $tenantDb->table('quiz_degrees')->where('section_id', $sectionId)->whereDate('quiz_date', $date);
+        if ($filterSessionId && $quizHasSession) {
+            $recordsQuery->where('session_id', $filterSessionId);
+        }
+        $records = $recordsQuery->get($quizCols)->keyBy('student_id');
         $rows = $students->map(function ($s) use ($records) {
             $r = $records->get($s->id);
             $status = 'present';
@@ -5563,7 +6147,30 @@ Route::middleware([
                 'notes' => $r?->notes ?? '',
             ];
         })->values();
-        return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'rows' => $rows]);
+        $sessionOptions = collect();
+        if (Schema::connection('center')->hasTable('sessions')) {
+            $sessionOptions = $tenantDb->table('sessions')
+                ->where('section_id', $sectionId)
+                ->orderByDesc('start_at')
+                ->limit(100)
+                ->get(['id', 'topic', 'start_at', 'session_type'])
+                ->map(fn ($s) => [
+                    'id' => (int) $s->id,
+                    'topic' => (string) $s->topic,
+                    'start_at' => (string) $s->start_at,
+                    'session_type' => (string) ($s->session_type ?? 'online'),
+                ])->values();
+        }
+        $sessionId = $filterSessionId;
+        if (!$sessionId && $quizHasSession) {
+            $linked = $tenantDb->table('quiz_degrees')
+                ->where('section_id', $sectionId)
+                ->whereDate('quiz_date', $date)
+                ->whereNotNull('session_id')
+                ->value('session_id');
+            $sessionId = $linked ? (int) $linked : null;
+        }
+        return response()->json(['date' => $date, 'section' => ['id' => (int) $section->id, 'grade_id' => (int) $section->grade_id, 'class_id' => (int) $section->class_id], 'session_id' => $sessionId, 'session_options' => $sessionOptions, 'rows' => $rows]);
     });
 
     Route::get('/admin/quizzes/section/{sectionId}/history', function (Request $request, int $sectionId) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized, $centralConnection) {
@@ -5597,6 +6204,7 @@ Route::middleware([
         $ensureTenantInitialized($tenant);
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
         $payload = $request->validate([
+            'session_id' => ['nullable', 'integer', 'exists:center.sessions,id'],
             'rows' => ['required', 'array', 'min:1'],
             'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
@@ -5604,7 +6212,15 @@ Route::middleware([
             'rows.*.notes' => ['nullable', 'string'],
         ]);
         $tenantDb = DB::connection('center');
+        $sessionId = isset($payload['session_id']) ? (int) $payload['session_id'] : null;
+        if ($sessionId) {
+            $sessionRow = $tenantDb->table('sessions')->where('id', $sessionId)->where('section_id', $sectionId)->first();
+            if (!$sessionRow) {
+                return response()->json(['message' => 'session_id does not belong to this section'], 422);
+            }
+        }
         $quizHasAttendance = Schema::connection('center')->hasColumn('quiz_degrees', 'attendance_status');
+        $quizHasSession = Schema::connection('center')->hasColumn('quiz_degrees', 'session_id');
         $students = $tenantDb->table('students')->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())->get(['id', 'grade_id', 'class_id', 'section_id'])->keyBy('id');
         foreach ($payload['rows'] as $row) {
             $s = $students->get($row['student_id']);
@@ -5622,6 +6238,9 @@ Route::middleware([
             ];
             if ($quizHasAttendance) {
                 $data['attendance_status'] = $row['status'];
+            }
+            if ($quizHasSession) {
+                $data['session_id'] = $sessionId;
             }
             if ($exists) {
                 $tenantDb->table('quiz_degrees')->where('student_id', $row['student_id'])->whereDate('quiz_date', $date)->update($data);
@@ -5657,9 +6276,15 @@ Route::middleware([
             ->whereNull('deleted_at')
             ->get(['id', 'name', 'grade_id', 'class_id', 'section_id']);
 
-        $attendanceByStudent = $tenantDb->table('attendances')
+        $hasSessionOnAttendance = Schema::connection('center')->hasColumn('attendances', 'session_id');
+        $filterSessionId = $request->query('session_id') ? (int) $request->query('session_id') : null;
+        $attendanceQuery = $tenantDb->table('attendances')
             ->where('section_id', $sectionId)
-            ->whereDate('attendance_date', $date)
+            ->whereDate('attendance_date', $date);
+        if ($filterSessionId && $hasSessionOnAttendance) {
+            $attendanceQuery->where('session_id', $filterSessionId);
+        }
+        $attendanceByStudent = $attendanceQuery
             ->get(['student_id', 'attendance_status', 'notes'])
             ->keyBy('student_id');
 
@@ -5682,6 +6307,30 @@ Route::middleware([
             ];
         })->values();
 
+        $sessionOptions = collect();
+        if (Schema::connection('center')->hasTable('sessions')) {
+            $sessionOptions = $tenantDb->table('sessions')
+                ->where('section_id', $sectionId)
+                ->orderByDesc('start_at')
+                ->limit(100)
+                ->get(['id', 'topic', 'start_at', 'session_type'])
+                ->map(fn ($s) => [
+                    'id' => (int) $s->id,
+                    'topic' => (string) $s->topic,
+                    'start_at' => (string) $s->start_at,
+                    'session_type' => (string) ($s->session_type ?? 'online'),
+                ])->values();
+        }
+        $sessionId = $filterSessionId;
+        if (!$sessionId && $hasSessionOnAttendance) {
+            $linked = $tenantDb->table('attendances')
+                ->where('section_id', $sectionId)
+                ->whereDate('attendance_date', $date)
+                ->whereNotNull('session_id')
+                ->value('session_id');
+            $sessionId = $linked ? (int) $linked : null;
+        }
+
         return response()->json([
             'date' => $date,
             'section' => [
@@ -5689,6 +6338,8 @@ Route::middleware([
                 'grade_id' => (int) $section->grade_id,
                 'class_id' => (int) $section->class_id,
             ],
+            'session_id' => $sessionId,
+            'session_options' => $sessionOptions,
             'rows' => $rows,
         ]);
     });
@@ -5757,6 +6408,7 @@ Route::middleware([
         if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
 
         $payload = $request->validate([
+            'session_id' => ['nullable', 'integer', 'exists:center.sessions,id'],
             'rows' => ['required', 'array', 'min:1'],
             'rows.*.student_id' => ['required', 'integer', 'exists:center.students,id'],
             'rows.*.status' => ['required', 'in:present,absent,late'],
@@ -5767,12 +6419,21 @@ Route::middleware([
         $section = $tenantDb->table('sections')->where('id', $sectionId)->first();
         if (!$section) return response()->json(['message' => 'Section not found'], 404);
 
+        $sessionId = isset($payload['session_id']) ? (int) $payload['session_id'] : null;
+        if ($sessionId) {
+            $sessionRow = $tenantDb->table('sessions')->where('id', $sessionId)->where('section_id', $sectionId)->first();
+            if (!$sessionRow) {
+                return response()->json(['message' => 'session_id does not belong to this section'], 422);
+            }
+        }
+
         $students = $tenantDb->table('students')
             ->whereIn('id', collect($payload['rows'])->pluck('student_id')->all())
             ->get(['id', 'grade_id', 'class_id', 'section_id'])
             ->keyBy('id');
 
         $statusMap = ['present' => 1, 'absent' => 0, 'late' => 2];
+        $hasSessionCol = Schema::connection('center')->hasColumn('attendances', 'session_id');
 
         foreach ($payload['rows'] as $row) {
             $student = $students->get($row['student_id']);
@@ -5795,6 +6456,9 @@ Route::middleware([
                 'notes' => $row['notes'] ?? null,
                 'updated_at' => now(),
             ];
+            if ($hasSessionCol) {
+                $data['session_id'] = $sessionId;
+            }
 
             if ($exists) {
                 $tenantDb->table('attendances')
@@ -5837,6 +6501,28 @@ Route::middleware([
 
     Route::post('/login', function (Request $request) use ($guardMap, $roleMap, $tenantGuards) {
         return app(AuthLoginHandler::class)->login($request, $guardMap, $roleMap, $tenantGuards);
+    });
+
+    Route::post('/register/parent', function (Request $request) {
+        return app(AuthRegisterHandler::class)->registerParent($request);
+    });
+
+    Route::post('/register/student', function (Request $request) {
+        return app(AuthRegisterHandler::class)->registerStudent($request);
+    });
+
+    Route::get('/public/centers', function () {
+        return response()->json(
+            Center::query()
+                ->orderBy('name')
+                ->get(['id', 'slug', 'name'])
+                ->map(fn ($center) => [
+                    'id' => $center->id,
+                    'slug' => $center->slug,
+                    'name' => $center->name,
+                ])
+                ->values()
+        );
     });
 
     Route::get('/auth/memberships', function (Request $request) use ($guardMap) {

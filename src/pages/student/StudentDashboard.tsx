@@ -36,7 +36,7 @@ export default function StudentDashboard() {
       : '—';
     const pending = homework.filter(h => h.status !== 'submitted' && h.status !== 'graded').length;
     return [
-      { id: 'meetings', title: t('nav.myMeetings'), value: String(bootstrap.meetings?.length || 0), icon: 'book-open' as const },
+      { id: 'sessions', title: t('nav.mySessions'), value: String(bootstrap.sessions?.length || 0), icon: 'book-open' as const },
       { id: 'attendance', title: t('stat.attendanceRate'), value: attendanceRate, icon: 'calendar-check' as const, variant: 'attendance' as const },
       { id: 'gpa', title: t('stat.gpa'), value: gpa, icon: 'trophy' as const },
       { id: 'homework', title: t('stat.pendingHomework'), value: String(pending), icon: 'clipboard-list' as const },
@@ -77,7 +77,7 @@ export default function StudentDashboard() {
 
       <DashboardHomeLinks
         mainLinks={[
-          { labelKey: 'nav.myMeetings', path: '/student/meetings' },
+          { labelKey: 'nav.mySessions', path: '/student/sessions' },
           { labelKey: 'nav.attendance', path: '/student/attendance' },
           { labelKey: 'nav.myGrades', path: '/student/grades' },
         ]}
@@ -97,7 +97,7 @@ export default function StudentDashboard() {
           </>
         ) : portalMode ? (
           <>
-            <StatCard title={t('nav.myMeetings')} value={stats[0]?.value || '0'} icon={BookOpen} />
+            <StatCard title={t('nav.mySessions')} value={stats[0]?.value || '0'} icon={BookOpen} />
             <StatCard title={t('stat.attendanceRate')} value={stats[1]?.value || '—'} icon={CalendarCheck} variant="attendance" />
             <StatCard title={t('stat.gpa')} value={stats[2]?.value || '—'} icon={Trophy} />
             <StatCard title={t('stat.pendingHomework')} value={stats[3]?.value || '0'} icon={ClipboardList} />

@@ -2,6 +2,7 @@ import type { LandingPage, LandingTemplate } from '@/types/landing';
 import type { TeacherSubjectKey } from './constants';
 import { SUBJECT_LABELS, TEACHER_SUBJECT_TEMPLATES } from './constants';
 import { createDefaultSection, createEmptyPage, lt } from './defaults';
+import { ARABIC_TEACHER_PREMIUM_TEMPLATE } from './templates/arabic-teacher-premium';
 
 function buildTeacherTemplate(subjectKey: TeacherSubjectKey): LandingTemplate {
   const label = SUBJECT_LABELS[subjectKey];
@@ -72,6 +73,7 @@ function buildTeacherTemplate(subjectKey: TeacherSubjectKey): LandingTemplate {
 }
 
 export const LANDING_TEMPLATES: LandingTemplate[] = [
+  ARABIC_TEACHER_PREMIUM_TEMPLATE,
   ...TEACHER_SUBJECT_TEMPLATES.map(buildTeacherTemplate),
   {
     id: 'course-general',

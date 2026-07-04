@@ -1,14 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import type { Fee } from '@/types/models';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
+import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminFeesApi, type FeePayload } from '@/services/endpoints/admin-fees';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const FEE_MONTHS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
 
 function FeeForm({
   item,
@@ -41,7 +48,7 @@ function FeeForm({
   });
   const classesByGrade = useMemo(() => classes.filter(c => c.grade_id === form.grade_id), [classes, form.grade_id]);
   const sectionsByClass = useMemo(() => sections.filter(s => s.class_id === form.classroom_id), [sections, form.classroom_id]);
-  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  const months = FEE_MONTHS;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,6 +143,7 @@ export default function AdminFees() {
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
   const [viewItem, setViewItem] = useState<Fee | null>(null);
+  const [monthFilter, setMonthFilter] = useState('');
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: FeePayload; id?: number }) => (
       id ? adminFeesApi.update(id, payload) : adminFeesApi.create(payload)
@@ -151,13 +159,39 @@ export default function AdminFees() {
     },
   });
 
+  const {
+    gradeFilter,
+    classFilter,
+    sectionFilter,
+    setSectionFilter,
+    grades: gradeOptions,
+    classesByGrade,
+    sectionsByClass,
+    filteredRows: scopeFilteredRows,
+    appliedCount: scopeAppliedCount,
+    clearFilters: clearScopeFilters,
+    handleGradeChange,
+    handleClassChange,
+  } = useAdminScopeFilters(grades, classes, sections, fees);
+
+  const filteredRows = useMemo(() => {
+    if (!monthFilter) return scopeFilteredRows;
+    return scopeFilteredRows.filter(f => f.month === monthFilter);
+  }, [scopeFilteredRows, monthFilter]);
+
+  const appliedCount = scopeAppliedCount + (monthFilter ? 1 : 0);
+  const clearFilters = () => {
+    clearScopeFilters();
+    setMonthFilter('');
+  };
+
   const columns: CrudColumn<Fee>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'title', label: t('col.title'), sortable: true },
-    { key: 'amount', label: t('col.amount'), render: f => `$${f.amount.toLocaleString()}` },
+    { key: 'amount', label: t('col.amount'), render: f => `${f.amount.toLocaleString()}` },
     { key: 'type', label: t('col.type'), render: f => <span className="capitalize">{f.type}</span> },
     { key: 'year', label: t('col.year'), sortable: true },
-    { key: 'month', label: 'Month', sortable: true },
+    { key: 'month', label: t('col.month'), sortable: true },
     { key: 'show', label: t('crud.show'), render: f => <button title={t('crud.show')} onClick={() => setViewItem(f)} className="text-primary hover:underline">{t('attendance.view')}</button> },
   ];
   return (
@@ -166,8 +200,28 @@ export default function AdminFees() {
         title={t('nav.fees')}
         description={t('page.fees.desc')}
         columns={columns}
-        data={fees}
+        data={filteredRows}
         searchKeys={['title', 'type', 'month']}
+        topContent={(
+          <AdminScopeFilterBar
+            grades={gradeOptions}
+            classesByGrade={classesByGrade}
+            sectionsByClass={sectionsByClass}
+            gradeFilter={gradeFilter}
+            classFilter={classFilter}
+            sectionFilter={sectionFilter}
+            monthFilter={monthFilter}
+            showMonth
+            monthOptions={FEE_MONTHS}
+            onMonthChange={setMonthFilter}
+            onGradeChange={handleGradeChange}
+            onClassChange={handleClassChange}
+            onSectionChange={setSectionFilter}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+          />
+        )}
         renderForm={(item, onClose) => (
           <FeeForm
             item={item}
@@ -192,13 +246,13 @@ export default function AdminFees() {
               <DialogTitle>{viewItem.title}</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 text-sm">
-              <p><strong>{t('col.amount')}:</strong> ${viewItem.amount}</p>
+              <p><strong>{t('col.amount')}:</strong> {viewItem.amount}</p>
               <p><strong>{t('col.grade')}:</strong> {grades.find(g => g.id === viewItem.grade_id)?.name ?? '—'}</p>
               <p><strong>{t('col.class')}:</strong> {classes.find(c => c.id === viewItem.classroom_id)?.name ?? '—'}</p>
               <p><strong>{t('col.section')}:</strong> {sections.find(s => s.id === viewItem.section_id)?.name ?? '—'}</p>
               <p><strong>{t('col.type')}:</strong> {viewItem.type}</p>
               <p><strong>{t('col.year')}:</strong> {viewItem.year || '—'}</p>
-              <p><strong>Month:</strong> {viewItem.month || '—'}</p>
+              <p><strong> {t('col.month')}:</strong> {viewItem.month || '—'}</p>
               <p><strong>{t('col.description')}:</strong> {viewItem.description || '—'}</p>
             </div>
           </DialogContent>

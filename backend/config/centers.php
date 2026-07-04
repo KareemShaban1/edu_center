@@ -38,8 +38,7 @@ return [
         'months',
         'genders',
         'rooms',
-        'meetings',
-        'meeting_series',
+        'sessions',
         'notes',
         'units',
         'lessons',
@@ -94,8 +93,7 @@ return [
         'attendances',
         'events',
         'rooms',
-        'meeting_series',
-        'meetings',
+        'sessions',
         'online_classes',
         'homeworks',
         'student_homework',
@@ -184,11 +182,10 @@ return [
             'class_id' => 'classes',
             'section_id' => 'sections',
         ],
-        'meetings' => [
+        'sessions' => [
             'grade_id' => 'grades',
             'class_id' => 'classes',
             'section_id' => 'sections',
-            'meeting_series_id' => 'meeting_series',
         ],
         'online_classes' => [
             'grade_id' => 'grades',

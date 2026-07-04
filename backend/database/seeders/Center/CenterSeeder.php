@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Database\Seeders\Center;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Artisan;
-use App\Centers\CenterContext;
 
 class CenterSeeder extends Seeder
 {
@@ -28,12 +26,7 @@ class CenterSeeder extends Seeder
             ParentsSeeder::class,
             StudentsSeeder::class,
             TeacherSeeder::class,
+            DashboardDataSeeder::class,
         ]);
-
-        if ($centerId = CenterContext::id()) {
-            Artisan::call('centers:sync-global-users', [
-                '--center' => $centerId,
-            ]);
-        }
     }
 }

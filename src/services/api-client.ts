@@ -9,7 +9,7 @@ function resolveApiBaseUrl(): string {
 }
 
 const DEFAULT_BASE_URL = resolveApiBaseUrl();
-const DEFAULT_LOCALE = import.meta.env.VITE_DEFAULT_LOCALE || 'en';
+const DEFAULT_LOCALE = import.meta.env.VITE_DEFAULT_LOCALE || 'ar';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const TENANT_STORAGE_KEY = 'edu_tenant_context';
 

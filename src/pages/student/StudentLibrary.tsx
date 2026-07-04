@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import { Download } from 'lucide-react';
-import FormDialog from '@/components/FormDialog';
-import { FormField, FormInput, FormSelect, FormTextarea } from '@/components/FormFields';
+import StudentPageFilterBar, { uniqueSorted } from '@/components/student/StudentPageFilterBar';
+import StudentFilterField from '@/components/student/StudentFilterField';
+import { FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import { studentSelfApi, type StudentLibraryPayload } from '@/services/endpoints/student-self';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -17,7 +17,7 @@ function LibraryShowDialog({ item, onClose }: { item: LibRow; onClose: () => voi
   const { t } = useLocale();
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{t('crud.view')} {t('nav.library')}</DialogTitle></DialogHeader>
         <div className="space-y-2 text-sm">
           <p><strong>{t('col.title')}:</strong> {item.title}</p>
@@ -37,32 +37,89 @@ export default function StudentLibrary() {
   const { data } = useStudentBootstrap();
   const rows = (data?.library || []) as LibRow[];
   const [showItem, setShowItem] = useState<LibRow | null>(null);
-  const saveMutation = useMutation({
-    mutationFn: ({ payload, id }: { payload: StudentLibraryPayload; id?: number }) => id ? studentSelfApi.updateLibrary(id, payload) : studentSelfApi.createLibrary(payload),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
-  });
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const types = useMemo(() => uniqueSorted(rows.map(r => r.type)), [rows]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter(row => {
+      if (typeFilter && row.type !== typeFilter) return false;
+      return true;
+    });
+  }, [rows, typeFilter]);
+
+  const appliedFilters = typeFilter ? 1 : 0;
+
+  const clearFilters = () => setTypeFilter('');
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => studentSelfApi.deleteLibrary(id),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
   });
+
   const columns: CrudColumn<LibRow>[] = [
-    { key: 'title', label: t('col.title'), sortable: true },
-    { key: 'type', label: t('col.type') },
-    { key: 'notes', label: t('col.notes'), render: l => l.notes || '—' },
-    { key: 'download', label: '', render: l => (
-      l.url ? <a href={l.url} target="_blank" rel="noreferrer" className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground inline-block"><Download className="h-4 w-4" /></a> : '—'
-    )},
-    { key: '_show', label: t('crud.view'), render: l => <button onClick={() => setShowItem(l)} className="rounded-lg border px-2 py-1 text-xs">{t('crud.view')}</button> },
+    { key: 'title', label: t('col.title'), sortable: true, primary: true },
+    { key: 'type', label: t('col.type'), hideOnMobile: Boolean(typeFilter) },
+    { key: 'notes', label: t('col.notes'), render: l => l.notes || '—', hideOnMobile: true },
+    {
+      key: 'download',
+      label: '',
+      render: l => (
+        l.url ? (
+          <a
+            href={l.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={t('homework.openFile')}
+            className="inline-flex rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+          </a>
+        ) : '—'
+      ),
+    },
+    {
+      key: '_show',
+      label: t('crud.view'),
+      render: l => (
+        <button type="button" onClick={() => setShowItem(l)} className="rounded-lg border px-2.5 py-1.5 text-xs font-medium">
+          {t('crud.view')}
+        </button>
+      ),
+    },
   ];
+
   return (
     <>
       <CrudPage<LibRow>
         title={t('nav.library')}
         description={t('page.library.desc')}
         columns={columns}
-        data={rows}
+        data={filteredRows}
         searchKeys={['title', 'type', 'notes']}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}
+        topContent={(
+          <StudentPageFilterBar
+            appliedCount={appliedFilters}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+            renderFilters={idPrefix => (
+              <StudentFilterField id={`${idPrefix}-type`} label={t('col.type')}>
+                <FormSelect
+                  id={`${idPrefix}-type`}
+                  title={t('col.type')}
+                  value={typeFilter}
+                  onChange={e => setTypeFilter(e.target.value)}
+                >
+                  <option value="">{t('filter.all')}</option>
+                  {types.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </FormSelect>
+              </StudentFilterField>
+            )}
+          />
+        )}
       />
       {showItem && <LibraryShowDialog item={showItem} onClose={() => setShowItem(null)} />}
     </>

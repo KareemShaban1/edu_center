@@ -1,7 +1,10 @@
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
+  /** Canonical status key used for color mapping (e.g. active, inactive, paid). */
   status: string;
+  /** Optional translated label; defaults to a formatted status key. */
+  label?: string;
   variant?: 'success' | 'warning' | 'destructive' | 'info' | 'default';
 }
 
@@ -22,11 +25,12 @@ const variantClasses: Record<string, string> = {
   default: 'bg-muted text-muted-foreground',
 };
 
-export default function StatusBadge({ status, variant }: StatusBadgeProps) {
+export default function StatusBadge({ status, label, variant }: StatusBadgeProps) {
   const v = variant || autoVariant(status);
+  const text = label ?? status.replace(/_/g, ' ');
   return (
     <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize', variantClasses[v || 'default'])}>
-      {status.replace(/_/g, ' ')}
+      {text}
     </span>
   );
 }

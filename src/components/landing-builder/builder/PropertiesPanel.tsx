@@ -15,6 +15,8 @@ import { SECTION_CATALOG } from '@/lib/landing/constants';
 import { getSectionLayouts, resolveSectionLayout } from '@/lib/landing/section-layouts';
 import { TypographyControls } from './TypographyControls';
 import { SectionImageEditor } from './SectionImageEditor';
+import { HeroSectionEditor } from './HeroSectionEditor';
+import { StudentResultsEditor } from './StudentResultsEditor';
 import { ComponentBuilderPanel } from './ComponentBuilderPanel';
 import type { ComponentType } from '@/types/landing';
 
@@ -145,7 +147,7 @@ export function PropertiesPanel({
                   <Label className="text-xs">{t('landing.visible')}</Label>
                   <Switch checked={section.visible} onCheckedChange={v => onUpdateSection(section.id, { visible: v })} />
                 </div>
-                {layoutOptions.length > 0 && (
+                {layoutOptions.length > 0 && section.type !== 'hero' && (
                   <div className="space-y-1">
                     <Label className="text-xs">{t('landing.layout')}</Label>
                     <Select
@@ -175,7 +177,29 @@ export function PropertiesPanel({
                   </Select>
                 </div>
                 <Separator />
-                {section.type !== 'custom' && (
+                {section.type === 'student_results' && (
+                  <>
+                    <StudentResultsEditor
+                      section={section}
+                      previewLocale={previewLocale}
+                      onUpdateContent={patch => onUpdateSectionContent(section.id, patch)}
+                    />
+                    <Separator />
+                  </>
+                )}
+                {section.type === 'hero' && (
+                  <>
+                    <HeroSectionEditor
+                      section={section}
+                      page={page}
+                      onPickFromMedia={onPickFromMedia}
+                      onUpdateContent={patch => onUpdateSectionContent(section.id, patch)}
+                      onUpdateStyle={patch => onUpdateSectionStyle(section.id, patch)}
+                    />
+                    <Separator />
+                  </>
+                )}
+                {section.type !== 'custom' && section.type !== 'hero' && (
                   <>
                     <SectionImageEditor
                       section={section}
@@ -186,14 +210,18 @@ export function PropertiesPanel({
                     <Separator />
                   </>
                 )}
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('landing.bgColor')}</Label>
-                  <Input type="color" value={section.style?.backgroundColor ?? '#ffffff'} onChange={e => onUpdateSection(section.id, { style: { ...section.style, backgroundColor: e.target.value } })} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('landing.sectionTextColor')}</Label>
-                  <Input type="color" value={section.style?.textColor ?? page.theme.textColor} onChange={e => onUpdateSection(section.id, { style: { ...section.style, textColor: e.target.value } })} />
-                </div>
+                {section.type !== 'hero' && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t('landing.bgColor')}</Label>
+                      <Input type="color" value={section.style?.backgroundColor ?? '#ffffff'} onChange={e => onUpdateSection(section.id, { style: { ...section.style, backgroundColor: e.target.value } })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t('landing.sectionTextColor')}</Label>
+                      <Input type="color" value={section.style?.textColor ?? page.theme.textColor} onChange={e => onUpdateSection(section.id, { style: { ...section.style, textColor: e.target.value } })} />
+                    </div>
+                  </>
+                )}
                 <div className="space-y-1">
                   <Label className="text-xs">{t('landing.paddingTop')}</Label>
                   <Slider value={[section.style?.paddingTop ?? 64]} min={0} max={128} step={8} onValueChange={([v]) => onUpdateSection(section.id, { style: { ...section.style, paddingTop: v } })} />

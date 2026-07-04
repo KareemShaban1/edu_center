@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,8 @@ import LoginPage from "@/pages/LoginPage";
 import PlatformLoginPage from "@/pages/PlatformLoginPage";
 import StudentLoginPage from "@/pages/StudentLoginPage";
 import ParentLoginPage from "@/pages/ParentLoginPage";
+import StudentRegisterPage from "@/pages/StudentRegisterPage";
+import ParentRegisterPage from "@/pages/ParentRegisterPage";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -23,6 +26,7 @@ import AdminParents from "@/pages/admin/AdminParents";
 import AdminGrades from "@/pages/admin/AdminGrades";
 import AdminClasses from "@/pages/admin/AdminClasses";
 import AdminSections from "@/pages/admin/AdminSections";
+import AdminSectionSessions from "@/pages/admin/AdminSectionSessions";
 import AdminAttendance from "@/pages/admin/AdminAttendance";
 import AdminAttendanceForm from "@/pages/admin/AdminAttendanceForm";
 import AdminAttendanceHistory from "@/pages/admin/AdminAttendanceHistory";
@@ -40,14 +44,17 @@ import AdminLibrary from "@/pages/admin/AdminLibrary";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminReports from "@/pages/admin/AdminReports";
+import AdminReportDetail from "@/pages/admin/AdminReportDetail";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUnits from "@/pages/admin/AdminUnits";
 import AdminLessons from "@/pages/admin/AdminLessons";
 import AdminHomework from "@/pages/admin/AdminHomework";
+import AdminHomeworkReview from "@/pages/admin/AdminHomeworkReview";
+
+const AdminHomeworkRemark = lazy(() => import("@/pages/admin/AdminHomeworkRemark"));
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminRolesPermissions from "@/pages/admin/AdminRolesPermissions";
-import AdminMeetingSeries from "@/pages/admin/AdminMeetingSeries";
-import AdminMeetings from "@/pages/admin/AdminMeetings";
+import AdminSessions from "@/pages/admin/AdminSessions";
 import AdminLandingPages from "@/pages/admin/AdminLandingPages";
 import AdminLandingBuilder from "@/pages/admin/AdminLandingBuilder";
 import AdminLandingAnalytics from "@/pages/admin/AdminLandingAnalytics";
@@ -61,14 +68,13 @@ import TeacherExams from "@/pages/teacher/TeacherExams";
 import TeacherQuizzes from "@/pages/teacher/TeacherQuizzes";
 import TeacherHomework from "@/pages/teacher/TeacherHomework";
 import TeacherLibrary from "@/pages/teacher/TeacherLibrary";
-import TeacherMeetingSeries from "@/pages/teacher/TeacherMeetingSeries";
-import TeacherMeetings from "@/pages/teacher/TeacherMeetings";
-import TeacherLiveKitMeeting from "@/pages/teacher/TeacherLiveKitMeeting";
+import TeacherSessions from "@/pages/teacher/TeacherSessions";
+import TeacherLiveKitSession from "@/pages/teacher/TeacherLiveKitSession";
 
 // Student
 import StudentDashboard from "@/pages/student/StudentDashboard";
-import StudentMeetings from "@/pages/student/StudentMeetings";
-import StudentLiveKitMeeting from "@/pages/student/StudentLiveKitMeeting";
+import StudentSessions from "@/pages/student/StudentSessions";
+import StudentLiveKitSession from "@/pages/student/StudentLiveKitSession";
 import StudentAttendance from "@/pages/student/StudentAttendance";
 import StudentGrades from "@/pages/student/StudentGrades";
 import StudentHomework from "@/pages/student/StudentHomework";
@@ -111,6 +117,8 @@ const App = () => (
               <Route path="/login" element={<Navigate to={`/${defaultTenantSlug}/login`} replace />} />
               <Route path="/student/login" element={<StudentLoginPage />} />
               <Route path="/parent/login" element={<ParentLoginPage />} />
+              <Route path="/student/register" element={<StudentRegisterPage />} />
+              <Route path="/parent/register" element={<ParentRegisterPage />} />
               <Route path="/:tenantSlug/login" element={<LoginPage />} />
               <Route path="/platform/login" element={<PlatformLoginPage />} />
 
@@ -122,6 +130,7 @@ const App = () => (
               <Route path="/admin/grades" element={<ProtectedRoute allowedRoles={['admin']}><AdminGrades /></ProtectedRoute>} />
               <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={['admin']}><AdminClasses /></ProtectedRoute>} />
               <Route path="/admin/sections" element={<ProtectedRoute allowedRoles={['admin']}><AdminSections /></ProtectedRoute>} />
+              <Route path="/admin/sections/:sectionId/sessions" element={<ProtectedRoute allowedRoles={['admin']}><AdminSectionSessions /></ProtectedRoute>} />
               <Route path="/admin/attendance" element={<ProtectedRoute allowedRoles={['admin']}><AdminAttendance /></ProtectedRoute>} />
               <Route path="/admin/attendance/section/:sectionId/today" element={<ProtectedRoute allowedRoles={['admin']}><AdminAttendanceForm /></ProtectedRoute>} />
               <Route path="/admin/attendance/section/:sectionId/history" element={<ProtectedRoute allowedRoles={['admin']}><AdminAttendanceHistory /></ProtectedRoute>} />
@@ -143,12 +152,14 @@ const App = () => (
               <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnnouncements /></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
+              <Route path="/admin/reports/:type" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportDetail /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
               <Route path="/admin/units" element={<ProtectedRoute allowedRoles={['admin']}><AdminUnits /></ProtectedRoute>} />
               <Route path="/admin/lessons" element={<ProtectedRoute allowedRoles={['admin']}><AdminLessons /></ProtectedRoute>} />
               <Route path="/admin/homework" element={<ProtectedRoute allowedRoles={['admin']}><AdminHomework /></ProtectedRoute>} />
-              <Route path="/admin/meetings" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetings /></ProtectedRoute>} />
-              <Route path="/admin/meeting-series" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetingSeries /></ProtectedRoute>} />
+              <Route path="/admin/homework/:homeworkId/review" element={<ProtectedRoute allowedRoles={['admin']}><AdminHomeworkReview /></ProtectedRoute>} />
+              <Route path="/admin/homework/:homeworkId/submissions/:submissionId/remarks" element={<ProtectedRoute allowedRoles={['admin']}><Suspense fallback={null}><AdminHomeworkRemark /></Suspense></ProtectedRoute>} />
+              <Route path="/admin/sessions" element={<ProtectedRoute allowedRoles={['admin']}><AdminSessions /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
               <Route path="/admin/roles" element={<ProtectedRoute allowedRoles={['admin']}><AdminRolesPermissions /></ProtectedRoute>} />
               <Route path="/admin/landing" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingPages /></ProtectedRoute>} />
@@ -158,9 +169,8 @@ const App = () => (
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
               <Route path="/teacher/classes" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherClasses /></ProtectedRoute>} />
-              <Route path="/teacher/meetings" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherMeetings /></ProtectedRoute>} />
-              <Route path="/teacher/meeting-series" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherMeetingSeries /></ProtectedRoute>} />
-              <Route path="/teacher/meetings/:meetingId/livekit" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLiveKitMeeting /></ProtectedRoute>} />
+              <Route path="/teacher/sessions" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherSessions /></ProtectedRoute>} />
+              <Route path="/teacher/sessions/:sessionId/livekit" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLiveKitSession /></ProtectedRoute>} />
               <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherAttendance /></ProtectedRoute>} />
               <Route path="/teacher/exams" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherExams /></ProtectedRoute>} />
               <Route path="/teacher/quizzes" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherQuizzes /></ProtectedRoute>} />
@@ -169,9 +179,9 @@ const App = () => (
 
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentDashboard /></ProtectedRoute>} />
-              <Route path="/student/meetings" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentMeetings /></ProtectedRoute>} />
-              <Route path="/student/meetings/:meetingId/livekit" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLiveKitMeeting /></ProtectedRoute>} />
-              <Route path="/student/courses" element={<Navigate to="/student/meetings" replace />} />
+              <Route path="/student/sessions" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentSessions /></ProtectedRoute>} />
+              <Route path="/student/sessions/:sessionId/livekit" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLiveKitSession /></ProtectedRoute>} />
+              <Route path="/student/courses" element={<Navigate to="/student/sessions" replace />} />
               <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendance /></ProtectedRoute>} />
               <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentGrades /></ProtectedRoute>} />
               <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />

@@ -6,8 +6,8 @@ final class LiveKitAccessTokenService
 {
     public static function isConfigured(): bool
     {
-        $key = (string) config('meetings.livekit.api_key');
-        $secret = (string) config('meetings.livekit.api_secret');
+        $key = (string) config('sessions.livekit.api_key');
+        $secret = (string) config('sessions.livekit.api_secret');
 
         return $key !== '' && $secret !== '';
     }
@@ -19,8 +19,8 @@ final class LiveKitAccessTokenService
         bool $allowRoomRecord,
         int $ttlSeconds = 21600
     ): string {
-        $apiKey = (string) config('meetings.livekit.api_key');
-        $apiSecret = (string) config('meetings.livekit.api_secret');
+        $apiKey = (string) config('sessions.livekit.api_key');
+        $apiSecret = (string) config('sessions.livekit.api_secret');
         if ($apiKey === '' || $apiSecret === '') {
             throw new \RuntimeException('LiveKit API credentials are not configured.');
         }

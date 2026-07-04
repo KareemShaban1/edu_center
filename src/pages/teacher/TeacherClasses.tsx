@@ -11,9 +11,9 @@ export default function TeacherClasses() {
     <DashboardLayout>
       <div className="page-header">
         <h1 className="page-title">{t('nav.sections')}</h1>
-        <p className="page-description">Sections assigned to you with enrolled students</p>
+        <p className="page-description">{t('page.sections.desc')}</p>
       </div>
-      {isLoading && <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading...</div>}
+      {isLoading && <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">{t('misc.loading')}</div>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {classes.map(c => (
           <div key={c.id} className="rounded-xl border border-border bg-card p-5 shadow-card hover:shadow-elevated transition-shadow">
@@ -26,7 +26,7 @@ export default function TeacherClasses() {
               <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{c.students} {t('nav.students').toLowerCase()}</span>
             </div>
             <div className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
-              <p className="text-xs font-medium mb-1">Students</p>
+              <p className="text-xs font-medium mb-1">{t('nav.students').toLowerCase()}</p>
               {(c.students_list && c.students_list.length > 0) ? (
                 <div className="max-h-28 overflow-auto space-y-1">
                   {c.students_list.map((s) => (

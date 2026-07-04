@@ -34,11 +34,11 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
   const NextIcon = dir === 'rtl' ? ChevronLeft : ChevronRight;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+      <p className="text-center text-xs text-muted-foreground sm:text-start sm:text-sm">
         {totalItems ? `${t('crud.showing')} ${start}–${end} ${t('crud.of')} ${totalItems}` : `${t('crud.page')} ${currentPage} ${t('crud.of')} ${totalPages}`}
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-center gap-1">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
@@ -55,7 +55,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
               key={p}
               onClick={() => onPageChange(p)}
               className={cn(
-                'h-8 min-w-[2rem] rounded-lg text-sm font-medium transition-colors',
+                'h-9 min-w-[2.25rem] rounded-lg app-table-text font-medium transition-colors',
                 p === currentPage ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
               )}
             >

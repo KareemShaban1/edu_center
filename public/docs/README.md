@@ -1,6 +1,6 @@
 # EduCenter Documentation
 
-Living documentation for the EduCenter education management platform. Keep it current by running **`npm run docs:sync`** after route, migration, or schema changes.
+Living documentation for the EduCenter education management platform. Keep it current by running **`npm run docs:sync`** after route, migration, or schema changes — this also copies files to `public/docs/` for the Platform viewer at `/platform/documentation`.
 
 ## Quick sync
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { GraduationCap } from 'lucide-react';
@@ -50,6 +50,7 @@ export default function PortalRegisterPage({
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [centerSlug, setCenterSlug] = useState('');
+  const [centerSearch, setCenterSearch] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,6 +60,29 @@ export default function PortalRegisterPage({
     queryFn: async () => apiClient.get<PublicCenter[]>('/public/centers', undefined, false),
     staleTime: 60_000,
   });
+
+  const filteredCenters = useMemo(() => {
+    const query = centerSearch.trim().toLowerCase();
+    if (!query) return [];
+    return centers.filter(center => center.name.toLowerCase().includes(query));
+  }, [centers, centerSearch]);
+
+  const showCenterResults = centerSearch.trim().length > 0 && !centerSlug;
+
+  const handleCenterSearchChange = (value: string) => {
+    setCenterSearch(value);
+    if (centerSlug) {
+      const selected = centers.find(center => center.slug === centerSlug);
+      if (selected?.name !== value) {
+        setCenterSlug('');
+      }
+    }
+  };
+
+  const handleSelectCenter = (center: PublicCenter) => {
+    setCenterSlug(center.slug);
+    setCenterSearch(center.name);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,24 +252,44 @@ export default function PortalRegisterPage({
               )}
 
               {centers.length > 0 && (
-                <div>
-                  <label htmlFor="center" className="mb-1.5 block text-[18px] font-medium">
+                <div className="relative">
+                  <label htmlFor="center-search" className="mb-1.5 block text-[18px] font-medium">
                     {t('auth.centerOptional')}
                   </label>
-                  <select
-                    id="center"
-                    value={centerSlug}
-                    onChange={e => setCenterSlug(e.target.value)}
+                  <input
+                    id="center-search"
+                    type="search"
+                    value={centerSearch}
+                    onChange={e => handleCenterSearchChange(e.target.value)}
+                    placeholder={t('auth.centerSearchPlaceholder')}
+                    autoComplete="off"
                     className="w-full rounded-lg border px-3 py-2.5 text-sm"
                     style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
-                  >
-                    <option value="">{t('auth.centerSelectPlaceholder')}</option>
-                    {centers.map(center => (
-                      <option key={center.id} value={center.slug}>
-                        {center.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {showCenterResults && (
+                    <ul
+                      className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border py-1 shadow-lg"
+                      style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.surface }}
+                    >
+                      {filteredCenters.length === 0 ? (
+                        <li className="px-3 py-2 text-sm" style={{ color: C.textMuted }}>
+                          {t('auth.centerNoResults')}
+                        </li>
+                      ) : (
+                        filteredCenters.map(center => (
+                          <li key={center.id}>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectCenter(center)}
+                              className="w-full px-3 py-2 text-start text-sm transition-colors hover:bg-black/5"
+                            >
+                              {center.name}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  )}
                 </div>
               )}
 

@@ -131,7 +131,7 @@ export function PlatformLandingPage() {
       </motion.header>
 
       {/* ── Hero ── */}
-      <section id="home" className="relative scroll-mt-16 overflow-hidden bg-white pt-24 pb-16 sm:pt-28 sm:pb-20">
+      <section id="home" className="relative scroll-mt-16 overflow-hidden bg-white pt-32 pb-16 sm:pt-40 sm:pb-20">
         <motion.div
           aria-hidden
           className="pointer-events-none absolute -top-32 end-0 h-96 w-96 rounded-full opacity-30 blur-3xl"

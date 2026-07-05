@@ -12,6 +12,7 @@ import LandingPage from "@/pages/LandingPage";
 import { defaultTenantSlug } from "@/config/login-defaults";
 import LoginPage from "@/pages/LoginPage";
 import PlatformLoginPage from "@/pages/PlatformLoginPage";
+import DeveloperLoginPage from "@/pages/DeveloperLoginPage";
 import StudentLoginPage from "@/pages/StudentLoginPage";
 import ParentLoginPage from "@/pages/ParentLoginPage";
 import StudentRegisterPage from "@/pages/StudentRegisterPage";
@@ -97,6 +98,12 @@ import PlatformUsers from "@/pages/platform/PlatformUsers";
 import PlatformRoles from "@/pages/platform/PlatformRoles";
 import PlatformLogs from "@/pages/platform/PlatformLogs";
 import PlatformDocumentation from "@/pages/platform/PlatformDocumentation";
+import DeveloperDashboardLayout from "@/components/DeveloperDashboardLayout";
+import DeveloperProtectedRoute from "@/components/DeveloperProtectedRoute";
+import DeveloperOverviewPage from "@/pages/developer/DeveloperOverviewPage";
+import DeveloperApisPage from "@/pages/developer/DeveloperApisPage";
+import DeveloperDatabasePage from "@/pages/developer/DeveloperDatabasePage";
+import DeveloperDocumentationPage from "@/pages/developer/DeveloperDocumentationPage";
 import PlatformSettings from "@/pages/platform/PlatformSettings";
 
 const queryClient = new QueryClient();
@@ -206,6 +213,16 @@ const App = () => (
               <Route path="/platform/documentation" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
               <Route path="/platform/documentation/:docId" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
               <Route path="/platform/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSettings /></ProtectedRoute>} />
+
+              {/* Developer Portal */}
+              <Route path="/developer/login" element={<DeveloperLoginPage />} />
+              <Route path="/developer" element={<DeveloperProtectedRoute><DeveloperDashboardLayout /></DeveloperProtectedRoute>}>
+                <Route index element={<DeveloperOverviewPage />} />
+                <Route path="apis" element={<DeveloperApisPage />} />
+                <Route path="database" element={<DeveloperDatabasePage />} />
+                <Route path="documentation" element={<DeveloperDocumentationPage />} />
+                <Route path="documentation/:docId" element={<DeveloperDocumentationPage />} />
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>

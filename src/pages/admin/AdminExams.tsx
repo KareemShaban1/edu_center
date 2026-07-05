@@ -6,6 +6,8 @@ export default function AdminExams() {
       basePath="exams"
       titleKey="nav.exams"
       descKey="page.exams.desc"
+      todayKey="page.exams.today"
+      historyKey="page.exams.history"
     />
   );
 }

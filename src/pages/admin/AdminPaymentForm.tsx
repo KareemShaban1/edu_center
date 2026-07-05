@@ -49,15 +49,11 @@ export default function AdminPaymentForm() {
     enabled: Boolean(sectionId && paymentDate),
   });
 
-  const bootstrapFees = useMemo(() => {
+  const sectionFees = useMemo(() => {
     if (!section) return [] as PaymentFeeOption[];
     const all = (bootstrap?.fees || []) as Array<PaymentFeeOption & { grade_id?: number; classroom_id?: number; section_id?: number }>;
     return all
-      .filter(f =>
-        f.section_id === section.id
-        || (f.grade_id === section.grade_id && f.classroom_id === section.class_id)
-        || f.grade_id === section.grade_id,
-      )
+      .filter(f => Number(f.section_id) === section.id)
       .map(f => ({
         id: f.id,
         title: f.title,
@@ -70,15 +66,20 @@ export default function AdminPaymentForm() {
 
   useEffect(() => {
     if (data?.rows) setRows(data.rows.map(r => ({ ...r, payment_date: r.payment_date || paymentDate, amount: Number(r.amount || 0) })));
-    const apiFees = data?.fees?.length ? data.fees : bootstrapFees;
-    if (apiFees.length) {
-      setFees(apiFees);
-      const backendSelectedFee = (data?.selected_fee_id as number | null | undefined) ?? apiFees[0]?.id ?? null;
-      if (!selectedFeeId || !apiFees.some(f => f.id === selectedFeeId)) {
+    const sectionFeeIds = new Set(sectionFees.map(f => f.id));
+    const apiFees = (data?.fees || []).filter(f => sectionFeeIds.has(f.id));
+    const feesToUse = apiFees.length > 0 ? apiFees : sectionFees;
+    if (feesToUse.length) {
+      setFees(feesToUse);
+      const backendSelectedFee = (data?.selected_fee_id as number | null | undefined) ?? feesToUse[0]?.id ?? null;
+      if (!selectedFeeId || !feesToUse.some(f => f.id === selectedFeeId)) {
         setSelectedFeeId(backendSelectedFee);
       }
+    } else {
+      setFees([]);
+      setSelectedFeeId(null);
     }
-  }, [data, bootstrapFees, paymentDate, selectedFeeId]);
+  }, [data, sectionFees, paymentDate, selectedFeeId]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -179,7 +180,7 @@ export default function AdminPaymentForm() {
               <option value="" disabled>{t('filter.select_fee')}</option>
               {fees.map(fee => (
                 <option key={fee.id} value={fee.id}>
-                  {fee.title} (${Number(fee.amount).toFixed(2)})
+                  {fee.title} ({Number(fee.amount).toFixed(2)})
                 </option>
               ))}
             </select>
@@ -232,7 +233,7 @@ export default function AdminPaymentForm() {
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground w-10">#</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.name')}</th>
-                <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.fee')}</th>
+                {/* <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.fee')}</th> */}
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.date')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.month')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.amount')}</th>
@@ -254,7 +255,7 @@ export default function AdminPaymentForm() {
                 >
                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium whitespace-nowrap">{row.student_name}</td>
-                  <td className="px-3 py-2">
+                  {/* <td className="px-3 py-2">
                     <select
                       title="Fee"
                       className="w-44 rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -265,7 +266,7 @@ export default function AdminPaymentForm() {
                       <option value="" disabled>{t('filter.select_fee')}</option>
                       {fees.map(fee => <option key={fee.id} value={fee.id}>{fee.title}</option>)}
                     </select>
-                  </td>
+                  </td> */}
                   <td className="px-3 py-2">
                     <input
                       title={t('col.date')}

@@ -319,8 +319,7 @@ export default function LoginPage() {
             <p className="mt-4 text-center">
               <Link
                 to="/"
-                className="text-sm font-medium underline-offset-4 hover:underline"
-                style={{ color: C.crimson }}
+                className="text-sm text-black font-medium underline-offset-4 hover:underline"
               >
                 {isAr ? 'العودة للرئيسية' : 'Back to home'}
               </Link>
@@ -335,9 +334,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-4 text-center text-xs" style={{ color: C.textSoft }}>
+          {/* <p className="mt-4 text-center text-xs" style={{ color: C.textSoft }}>
             {t('app.demoMode')}
-          </p>
+          </p> */}
         </div>
       </div>
     </div>

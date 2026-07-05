@@ -96,3 +96,7 @@ export function getPlatformDocById(id: string | undefined): PlatformDocEntry {
 export function getPlatformDocUrl(id: string): string {
   return `/platform/documentation/${id}`;
 }
+
+export function getDeveloperDocUrl(id: string): string {
+  return `/developer/documentation/${id}`;
+}

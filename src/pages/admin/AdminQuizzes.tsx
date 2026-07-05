@@ -6,6 +6,8 @@ export default function AdminQuizzes() {
       basePath="quizzes"
       titleKey="nav.quizzes"
       descKey="page.quizzes.desc"
+      todayKey="page.quizzes.today"
+      historyKey="page.quizzes.history"
     />
   );
 }

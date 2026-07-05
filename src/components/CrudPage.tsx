@@ -37,6 +37,8 @@ interface CrudPageProps<T extends { id: number | string }> {
   topContent?: React.ReactNode;
   readOnly?: boolean;
   rowKey?: (item: T) => string | number;
+  /** When set, edit is only offered for rows that return true. */
+  canEditItem?: (item: T) => boolean;
   /** Card layout on small screens; table from md breakpoint up. */
   responsive?: boolean;
 }
@@ -73,6 +75,7 @@ export default function CrudPage<T extends { id: number | string }>({
   topContent,
   readOnly = false,
   rowKey,
+  canEditItem,
   responsive = true,
 }: CrudPageProps<T>) {
   const { t } = useLocale();
@@ -142,7 +145,7 @@ export default function CrudPage<T extends { id: number | string }>({
 
   const renderRowActions = (item: T) => (
     <div className="flex shrink-0 items-center gap-1">
-      {canEdit && renderForm && (
+      {canEdit && renderForm && (!canEditItem || canEditItem(item)) && (
         <button
           onClick={() => setEditItem(item)}
           className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -169,7 +172,7 @@ export default function CrudPage<T extends { id: number | string }>({
       <div className={cn('min-w-0 max-w-full overflow-x-hidden', fonts.body)}>
         <div className="page-header flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h1 className={cn('text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl', fonts.display)}>{title}</h1>
+            <h1 className={cn('text-xl font-bold tracking-tight sm:text-lg lg:text-3xl', fonts.display)}>{title}</h1>
             <p className="page-description text-sm leading-relaxed sm:text-base">{description}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">

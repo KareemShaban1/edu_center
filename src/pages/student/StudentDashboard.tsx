@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/endpoints/dashboard';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
-import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
+import StudentCentersSection from '@/components/student/StudentCentersSection';
+import { portalRowKey } from '@/components/CenterLabel';
 import type { DashboardStat } from '@/types/models';
 
 export default function StudentDashboard() {
@@ -66,14 +67,12 @@ export default function StudentDashboard() {
       <div className="page-header">
         <h1 className="page-title">{t('dashboard.student')}</h1>
         <p className="page-description">{t('dashboard.student.desc')}</p>
-        {portalMode && bootstrap?.centers && bootstrap.centers.length > 1 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {bootstrap.centers.map(c => (
-              <CenterLabel key={c.center_id} name={c.center_name} />
-            ))}
-          </div>
-        )}
       </div>
+
+      <StudentCentersSection
+        centers={bootstrap?.centers || []}
+        loading={bootstrapLoading}
+      />
 
       <DashboardHomeLinks
         mainLinks={[

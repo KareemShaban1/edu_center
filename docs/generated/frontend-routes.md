@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-06-16T18:56:59.241Z
+> Last synced: 2026-07-05T14:45:37.411Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -24,13 +24,14 @@
 | `/admin/fees` |
 | `/admin/grades` |
 | `/admin/homework` |
+| `/admin/homework/:homeworkId/review` |
+| `/admin/homework/:homeworkId/submissions/:submissionId/remarks` |
 | `/admin/landing` |
 | `/admin/landing/:pageId/analytics` |
 | `/admin/landing/:pageId/edit` |
 | `/admin/lessons` |
 | `/admin/library` |
-| `/admin/meeting-series` |
-| `/admin/meetings` |
+| `/admin/notifications` |
 | `/admin/parents` |
 | `/admin/payments` |
 | `/admin/payments/section/:sectionId/date/:date` |
@@ -41,13 +42,18 @@
 | `/admin/quizzes/section/:sectionId/history` |
 | `/admin/quizzes/section/:sectionId/today` |
 | `/admin/reports` |
+| `/admin/reports/:type` |
 | `/admin/roles` |
 | `/admin/sections` |
+| `/admin/sections/:sectionId/sessions` |
+| `/admin/sessions` |
 | `/admin/settings` |
 | `/admin/students` |
 | `/admin/teachers` |
 | `/admin/units` |
 | `/admin/users` |
+| `/developer` |
+| `/developer/login` |
 | `/login` |
 | `/p/*` |
 | `/parent` |
@@ -57,6 +63,7 @@
 | `/parent/fees` |
 | `/parent/login` |
 | `/parent/quizzes` |
+| `/parent/register` |
 | `/parent/reports` |
 | `/platform` |
 | `/platform/documentation` |
@@ -64,6 +71,7 @@
 | `/platform/login` |
 | `/platform/logs` |
 | `/platform/roles` |
+| `/platform/settings` |
 | `/platform/subscriptions` |
 | `/platform/tenants` |
 | `/platform/users` |
@@ -74,15 +82,17 @@
 | `/student/homework` |
 | `/student/library` |
 | `/student/login` |
-| `/student/meetings` |
-| `/student/meetings/:meetingId/livekit` |
+| `/student/register` |
+| `/student/sessions` |
+| `/student/sessions/:sessionId/livekit` |
 | `/teacher` |
 | `/teacher/attendance` |
 | `/teacher/classes` |
 | `/teacher/exams` |
 | `/teacher/homework` |
 | `/teacher/library` |
-| `/teacher/meeting-series` |
-| `/teacher/meetings` |
-| `/teacher/meetings/:meetingId/livekit` |
 | `/teacher/quizzes` |
+| `/teacher/sessions` |
+| `/teacher/sessions/:sessionId/livekit` |
+| `apis` |
+| `database` |

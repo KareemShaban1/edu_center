@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, cpSync, rmSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { extractDatabaseSchema } from "./parse-database-schema.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -123,7 +124,37 @@ function extractEndpointModules() {
   }
 }
 
+function normalizeApiPath(path) {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+function enrichApiRoute(route) {
+  const path = normalizeApiPath(route.path);
+  const pathParams = [...path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+  const segments = path.split("/").filter(Boolean);
+  const module = segments[0] || "root";
+  const method = route.method;
+  const acceptsBody = ["POST", "PUT", "PATCH"].includes(method);
+  const publicPaths = ["/login", "/register", "/auth/guards"];
+  const authRequired = !publicPaths.some(
+    (p) => path === p || path.startsWith(`${p}/`),
+  );
+  const id = `${method}-${path.replace(/\//g, "_").replace(/\{|\}/g, "_")}`;
+  return {
+    id,
+    method,
+    path,
+    fullPath: `/api${path}`,
+    handler: route.handler || "closure",
+    module,
+    pathParams,
+    acceptsBody,
+    authRequired,
+  };
+}
+
 function writeGeneratedApiRoutes(routes) {
+  const enriched = routes.map(enrichApiRoute);
   const lines = [
     "# API Routes (auto-generated)",
     "",
@@ -134,10 +165,15 @@ function writeGeneratedApiRoutes(routes) {
     "| Method | Path | Handler |",
     "|--------|------|---------|",
   ];
-  for (const r of routes) {
-    lines.push(`| ${r.method} | \`/api${r.path.startsWith("/") ? r.path : "/" + r.path}\` | ${r.handler || "closure"} |`);
+  for (const r of enriched) {
+    lines.push(`| ${r.method} | \`${r.fullPath}\` | ${r.handler} |`);
   }
   writeFileSync(join(OUT, "api-routes.md"), lines.join("\n") + "\n");
+  writeFileSync(
+    join(OUT, "api-routes.json"),
+    JSON.stringify({ syncedAt: now, routes: enriched }, null, 2) + "\n",
+  );
+  return enriched;
 }
 
 function writeGeneratedFrontendRoutes(routes) {
@@ -184,6 +220,24 @@ function writeGeneratedDatabase(tables, scoped) {
   writeFileSync(join(OUT, "database-tables.md"), lines.join("\n") + "\n");
 }
 
+function writeGeneratedDatabaseSchema(tables, scoped) {
+  writeFileSync(
+    join(OUT, "database-schema.json"),
+    JSON.stringify(
+      {
+        syncedAt: now,
+        tableCount: tables.length,
+        centerScopedCount: scoped.scoped.length,
+        membershipScopedCount: Object.keys(scoped.membership).length,
+        tables,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  return tables;
+}
+
 function writeManifest(data) {
   writeFileSync(
     join(OUT, "MANIFEST.json"),
@@ -195,6 +249,7 @@ const apiRoutes = extractApiRoutes();
 const frontendRoutes = extractFrontendRoutes();
 const migrations = extractMigrations();
 const scoped = extractScopedTables();
+const databaseSchema = writeGeneratedDatabaseSchema(extractDatabaseSchema(ROOT, scoped), scoped);
 const roles = extractUserRoles();
 const endpointModules = extractEndpointModules();
 
@@ -205,13 +260,14 @@ function copyDocsToPublic() {
   cpSync(source, target, { recursive: true });
 }
 
-writeGeneratedApiRoutes(apiRoutes);
+const enrichedApiRoutes = writeGeneratedApiRoutes(apiRoutes);
 writeGeneratedFrontendRoutes(frontendRoutes);
 writeGeneratedDatabase(migrations, scoped);
 writeManifest({
-  apiRouteCount: apiRoutes.length,
+  apiRouteCount: enrichedApiRoutes.length,
   frontendRouteCount: frontendRoutes.length,
   migrationTableCount: migrations.length,
+  databaseTableCount: databaseSchema.length,
   scopedTableCount: scoped.scoped.length,
   userRoles: roles,
   endpointModules,
@@ -222,6 +278,6 @@ copyDocsToPublic();
 console.log(`Documentation synced at ${now}`);
 console.log(`  API routes: ${apiRoutes.length}`);
 console.log(`  Frontend routes: ${frontendRoutes.length}`);
-console.log(`  DB tables: ${migrations.length}`);
+console.log(`  DB tables: ${migrations.length} (${databaseSchema.length} schema)`);
 console.log(`  Output: docs/generated/`);
 console.log(`  Public copy: public/docs/`);

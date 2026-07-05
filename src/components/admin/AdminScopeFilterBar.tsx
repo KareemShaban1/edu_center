@@ -22,6 +22,9 @@ interface AdminScopeFilterBarProps {
   monthFilter?: string;
   showMonth?: boolean;
   monthOptions?: string[];
+  parents?: ScopeOption[];
+  parentFilter?: string;
+  onParentChange?: (value: string) => void;
   onGradeChange: (value: string) => void;
   onClassChange: (value: string) => void;
   onSectionChange: (value: string) => void;
@@ -45,6 +48,9 @@ export default function AdminScopeFilterBar({
   monthFilter = '',
   showMonth = false,
   monthOptions = [],
+  parents = [],
+  parentFilter = '',
+  onParentChange,
   onGradeChange,
   onClassChange,
   onSectionChange,
@@ -110,6 +116,23 @@ export default function AdminScopeFilterBar({
               ))}
             </FormSelect>
           </StudentFilterField>
+          {parents.length > 0 ? (
+            <StudentFilterField id={`${idPrefix}-parent`} label={t('col.parent')}>
+              <FormSelect
+                id={`${idPrefix}-parent`}
+                title={t('col.parent')}
+                value={parentFilter}
+                onChange={e => onParentChange?.(e.target.value)}
+              >
+                <option value="">{t('filter.all')}</option>
+                {parents.map(parent => (
+                  <option key={parent.id} value={parent.id}>
+                    {parent.name}
+                  </option>
+                ))}
+              </FormSelect>
+            </StudentFilterField>
+          ) : null}
           {showMonth ? (
             <StudentFilterField id={`${idPrefix}-month`} label={t('col.month')}>
               <FormSelect

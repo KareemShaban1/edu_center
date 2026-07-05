@@ -1936,6 +1936,9 @@ Route::middleware([
             'homework' => $homework,
             'homework_options' => $homeworkOptions,
             'library' => $library,
+            'centers' => CenterContext::center()
+                ? [app(MultiCenterPortalService::class)->buildStudentCenterSummary(CenterContext::center(), $studentId)]
+                : [],
         ]);
     });
 
@@ -5763,25 +5766,10 @@ Route::middleware([
         $feeSelect = ['id', 'title', 'amount', 'month', 'year', $feeTypeSelect];
         $fees = $mapFees(
             $tenantDb->table('fees')
-                ->where(function ($query) use ($section) {
-                    $query->where('section_id', $section->id)
-                        ->orWhere(function ($q) use ($section) {
-                            $q->where('grade_id', $section->grade_id)
-                                ->where('class_id', $section->class_id);
-                        });
-                })
+                ->where('section_id', $section->id)
                 ->select($feeSelect)
                 ->get()
         );
-
-        if ($fees->isEmpty()) {
-            $fees = $mapFees(
-                $tenantDb->table('fees')
-                    ->where('grade_id', $section->grade_id)
-                    ->select($feeSelect)
-                    ->get()
-            );
-        }
 
         $requestedFeeId = $request->query('fee_id');
         $requestedFeeId = is_numeric($requestedFeeId) ? (int) $requestedFeeId : null;

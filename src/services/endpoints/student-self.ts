@@ -82,7 +82,40 @@ export interface StudentSelfBootstrapPayload {
     url?: string | null;
   }>;
 
-  centers?: Array<{ center_id: string; center_name: string; center_slug?: string }>;
+  centers?: StudentCenterSummary[];
+}
+
+export interface StudentCenterProfile {
+  id: number;
+  name: string;
+  email: string;
+  grade_id?: number;
+  class_id?: number;
+  section_id?: number;
+  grade_name?: string | null;
+  class_name?: string | null;
+  section_name?: string | null;
+}
+
+export interface StudentCenterStats {
+  sessions_count: number;
+  attendance_rate: number | null;
+  gpa: number | null;
+  pending_homework: number;
+  library_items: number;
+}
+
+export interface StudentCenterSummary {
+  membership_id?: number | null;
+  center_id: string | number;
+  center_slug?: string;
+  center_name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  profile?: StudentCenterProfile | null;
+  stats?: StudentCenterStats;
 }
 
 

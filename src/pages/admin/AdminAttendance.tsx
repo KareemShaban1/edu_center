@@ -6,6 +6,8 @@ export default function AdminAttendance() {
       basePath="attendance"
       titleKey="nav.attendance"
       descKey="page.attendance.desc"
+      todayKey="page.attendance.today"
+      historyKey="page.attendance.history"
     />
   );
 }

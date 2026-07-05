@@ -130,7 +130,7 @@ export default function SessionProviderPicker({ value, onChange, id }: SessionPr
                   <Info className="h-4 w-4" />
                 </button>
               </HoverCardTrigger>
-              <HoverCardContent className="w-72 sm:w-80" side="left" align="start">
+              <HoverCardContent className="w-72 sm:w-80" align="start">
                 <ProviderGuideCard
                   guideKey={provider.guideKey}
                   proCount={provider.proCount}

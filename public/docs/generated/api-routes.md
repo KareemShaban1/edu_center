@@ -1,6 +1,6 @@
 # API Routes (auto-generated)
 
-> Last synced: 2026-06-16T18:56:59.241Z
+> Last synced: 2026-07-05T14:45:37.411Z
 > Source: `backend/routes/api.php`
 > Regenerate: `npm run docs:sync`
 
@@ -26,6 +26,10 @@
 | PUT | `/api/admin/grades/{id}` | closure |
 | POST | `/api/admin/homework` | closure |
 | PUT | `/api/admin/homework/{id}` | closure |
+| GET | `/api/admin/homework/{id}/submissions` | closure |
+| GET | `/api/admin/homework/submissions/{id}` | closure |
+| PUT | `/api/admin/homework/submissions/{id}` | closure |
+| POST | `/api/admin/homework/submissions/{id}/correction` | closure |
 | GET | `/api/admin/landing-pages` | closure |
 | POST | `/api/admin/landing-pages` | closure |
 | DELETE | `/api/admin/landing-pages/{id}` | closure |
@@ -44,18 +48,13 @@
 | DELETE | `/api/admin/landing-pages/media/{id}` | closure |
 | GET | `/api/admin/landing-pages/templates` | closure |
 | POST | `/api/admin/lessons` | closure |
+| POST | `/api/admin/lessons/{id}` | closure |
 | PUT | `/api/admin/lessons/{id}` | closure |
 | GET | `/api/admin/library` | closure |
 | POST | `/api/admin/library` | closure |
 | DELETE | `/api/admin/library/{id}` | closure |
 | POST | `/api/admin/library/{id}` | closure |
-| GET | `/api/admin/meeting-series` | closure |
-| POST | `/api/admin/meeting-series` | closure |
-| DELETE | `/api/admin/meeting-series/{id}` | closure |
-| GET | `/api/admin/meetings` | closure |
-| POST | `/api/admin/meetings` | closure |
-| DELETE | `/api/admin/meetings/{id}` | closure |
-| PUT | `/api/admin/meetings/{id}` | closure |
+| POST | `/api/admin/notifications/send` | closure |
 | POST | `/api/admin/parents` | closure |
 | PUT | `/api/admin/parents/{id}` | closure |
 | GET | `/api/admin/payments/section/{sectionId}/date/{date}` | closure |
@@ -65,17 +64,27 @@
 | POST | `/api/admin/quizzes/section/{sectionId}/date/{date}` | closure |
 | GET | `/api/admin/quizzes/section/{sectionId}/history` | closure |
 | GET | `/api/admin/reports` | closure |
+| GET | `/api/admin/reports/{type}` | closure |
 | GET | `/api/admin/roles` | closure |
 | POST | `/api/admin/roles` | closure |
 | DELETE | `/api/admin/roles/{id}` | closure |
 | PUT | `/api/admin/roles/{id}` | closure |
 | POST | `/api/admin/sections` | closure |
 | PUT | `/api/admin/sections/{id}` | closure |
+| GET | `/api/admin/sections/{sectionId}/sessions` | closure |
+| GET | `/api/admin/sessions` | closure |
+| POST | `/api/admin/sessions` | closure |
+| DELETE | `/api/admin/sessions/{id}` | closure |
+| PUT | `/api/admin/sessions/{id}` | closure |
 | POST | `/api/admin/students` | closure |
 | PUT | `/api/admin/students/{id}` | closure |
+| POST | `/api/admin/students/{id}/assign-center` | closure |
+| POST | `/api/admin/students/{id}/unassign-center` | closure |
+| GET | `/api/admin/students/search-by-code` | closure |
 | POST | `/api/admin/teachers` | closure |
 | PUT | `/api/admin/teachers/{id}` | closure |
 | POST | `/api/admin/units` | closure |
+| POST | `/api/admin/units/{id}` | closure |
 | PUT | `/api/admin/units/{id}` | closure |
 | GET | `/api/admin/users` | closure |
 | POST | `/api/admin/users` | closure |
@@ -85,13 +94,21 @@
 | GET | `/api/auth/memberships` | closure |
 | POST | `/api/auth/switch-center` | closure |
 | POST | `/api/auth/switch-tenant` | closure |
+| GET | `/api/branding` | closure |
 | GET | `/api/config` | closure |
 | GET | `/api/dashboard` | closure |
 | POST | `/api/login` | closure |
 | POST | `/api/logout` | closure |
+| GET | `/api/notifications` | closure |
+| POST | `/api/notifications/{id}/read` | closure |
+| POST | `/api/notifications/mark-all-read` | closure |
+| POST | `/api/notifications/subscribe` | closure |
+| GET | `/api/notifications/vapid-key` | closure |
 | GET | `/api/parent/bootstrap` | closure |
 | GET | `/api/parent/portal` | closure |
 | GET | `/api/platform/activity-logs` | closure |
+| GET | `/api/platform/branding` | closure |
+| PUT | `/api/platform/branding` | closure |
 | GET | `/api/platform/centers` | closure |
 | POST | `/api/platform/centers` | closure |
 | DELETE | `/api/platform/centers/{id}` | closure |
@@ -109,7 +126,10 @@
 | POST | `/api/platform/users` | closure |
 | DELETE | `/api/platform/users/{id}` | closure |
 | PUT | `/api/platform/users/{id}` | closure |
+| GET | `/api/public/centers` | closure |
 | GET | `/api/public/landing/{slug}` | closure |
+| POST | `/api/register/parent` | closure |
+| POST | `/api/register/student` | closure |
 | POST | `/api/student/attendance` | closure |
 | DELETE | `/api/student/attendance/{id}` | closure |
 | PUT | `/api/student/attendance/{id}` | closure |
@@ -119,21 +139,19 @@
 | PUT | `/api/student/grades/{source}/{id}` | closure |
 | POST | `/api/student/homework/submissions` | closure |
 | DELETE | `/api/student/homework/submissions/{id}` | closure |
+| POST | `/api/student/homework/submissions/{id}` | closure |
 | PUT | `/api/student/homework/submissions/{id}` | closure |
 | POST | `/api/student/library` | closure |
 | DELETE | `/api/student/library/{id}` | closure |
 | PUT | `/api/student/library/{id}` | closure |
-| POST | `/api/student/meetings` | closure |
-| DELETE | `/api/student/meetings/{id}` | closure |
-| PUT | `/api/student/meetings/{id}` | closure |
-| GET | `/api/student/meetings/{id}/livekit-token` | closure |
 | GET | `/api/student/portal` | closure |
+| POST | `/api/student/sessions` | closure |
+| DELETE | `/api/student/sessions/{id}` | closure |
+| PUT | `/api/student/sessions/{id}` | closure |
+| GET | `/api/student/sessions/{id}/livekit-token` | closure |
 | GET | `/api/teacher/bootstrap` | closure |
-| GET | `/api/teacher/meeting-series` | closure |
-| POST | `/api/teacher/meeting-series` | closure |
-| DELETE | `/api/teacher/meeting-series/{id}` | closure |
-| GET | `/api/teacher/meetings` | closure |
-| DELETE | `/api/teacher/meetings/{id}` | closure |
-| PUT | `/api/teacher/meetings/{id}` | closure |
-| GET | `/api/teacher/meetings/{id}/livekit-token` | closure |
+| GET | `/api/teacher/sessions` | closure |
+| DELETE | `/api/teacher/sessions/{id}` | closure |
+| PUT | `/api/teacher/sessions/{id}` | closure |
+| GET | `/api/teacher/sessions/{id}/livekit-token` | closure |
 | GET | `/api/user` | closure |

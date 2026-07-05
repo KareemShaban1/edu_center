@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, ExternalLink } from 'lucide-react';
 import { resolveAssetUrl } from '@/lib/asset-url';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
@@ -39,6 +39,10 @@ function hasSubmission(row: HWRow): boolean {
     || row.file_url
     || (row.status && row.status !== 'not_submitted'),
   );
+}
+
+function isHomeworkSubmissionLocked(status: string): boolean {
+  return status === 'submitted' || status === 'late' || status === 'approved';
 }
 
 function HomeworkShowDialog({ item, onClose }: { item: HWRow; onClose: () => void }) {
@@ -94,11 +98,20 @@ function HomeworkSubmissionForm({
   const { t } = useLocale();
   const [studentNotes, setStudentNotes] = useState(item.student_notes || '');
   const [file, setFile] = useState<File | null>(null);
-  const isApproved = item.status === 'approved';
+  const isLocked = isHomeworkSubmissionLocked(item.status);
+
+  useEffect(() => {
+    if (!isLocked) return;
+    toast({
+      title: t('homework.submittedLocked'),
+      description: t('homework.submittedLockedDesc'),
+    });
+    onClose();
+  }, [isLocked, onClose, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isApproved) return;
+    if (isLocked) return;
     if (!item.submission_id && !file && !studentNotes.trim()) {
       toast({
         title: t('homework.submitFailed'),
@@ -116,6 +129,8 @@ function HomeworkSubmissionForm({
     }, item.submission_id);
     onClose();
   };
+
+  if (isLocked) return null;
 
   return (
     <FormDialog
@@ -150,7 +165,6 @@ function HomeworkSubmissionForm({
           id="homework-file"
           type="file"
           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.zip"
-          disabled={isApproved}
           onChange={e => setFile(e.target.files?.[0] ?? null)}
         />
         <p className="mt-1 text-xs text-muted-foreground">{t('homework.uploadHint')}</p>
@@ -160,15 +174,10 @@ function HomeworkSubmissionForm({
         <FormTextarea
           id="homework-notes"
           value={studentNotes}
-          disabled={isApproved}
           placeholder={t('homework.notesPlaceholder')}
           onChange={e => setStudentNotes(e.target.value)}
         />
       </FormField>
-
-      {isApproved && (
-        <p className="text-sm text-muted-foreground">{t('homework.approvedLocked')}</p>
-      )}
     </FormDialog>
   );
 }
@@ -287,6 +296,7 @@ export default function StudentHomework() {
         canCreate={false}
         canDelete={false}
         canEdit
+        canEditItem={row => !isHomeworkSubmissionLocked(row.status)}
         topContent={(
           <StudentPageFilterBar
             appliedCount={appliedFilters}

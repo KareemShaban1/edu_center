@@ -1,0 +1,6024 @@
+{
+  "syncedAt": "2026-07-05T14:45:37.411Z",
+  "tableCount": 53,
+  "centerScopedCount": 46,
+  "membershipScopedCount": 0,
+  "tables": [
+    {
+      "name": "activity_logs",
+      "createMigration": "2025_08_07_192820_create_activity_logs_table.php",
+      "migrations": [
+        "2025_08_07_192820_create_activity_logs_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "action",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "model",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "model_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "changes",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "user_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 10,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "admins",
+      "createMigration": "2025_08_11_221636_create_admins_table.php",
+      "migrations": [
+        "2025_08_11_221636_create_admins_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "phone",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email_verified_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "remember_token",
+          "type": "varchar(100)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [],
+      "columnCount": 9,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "announcements",
+      "createMigration": "2023_05_13_022236_create_announcements_table.php",
+      "migrations": [
+        "2023_05_13_022236_create_announcements_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "time",
+          "type": "datetime",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 10,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 0
+    },
+    {
+      "name": "answers",
+      "createMigration": "2025_03_25_201559_create_answers_table.php",
+      "migrations": [
+        "2025_03_25_201559_create_answers_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "question_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "answer_text",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_correct",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "question_id",
+          "referencesTable": "questions",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 0
+    },
+    {
+      "name": "attendances",
+      "createMigration": "2021_07_16_185459_create_attendances_table.php",
+      "migrations": [
+        "2021_07_16_185459_create_attendances_table.php",
+        "2026_06_20_000005_add_session_id_and_drop_session_series.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "teacher_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "attendance_date",
+          "type": "date",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "attendance_status",
+          "type": "boolean",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "session_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "student_id",
+          "referencesTable": "students",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "teacher_id",
+          "referencesTable": "teachers",
+          "referencesColumn": "id"
+        },
+        {
+          "column": "session_id",
+          "referencesTable": "sessions",
+          "referencesColumn": "id"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 13,
+      "indexCount": 0,
+      "foreignKeyCount": 6,
+      "incomingCount": 0
+    },
+    {
+      "name": "center_memberships",
+      "createMigration": "2014_09_15_000001_create_global_users_and_memberships_table.php",
+      "migrations": [
+        "2014_09_15_000001_create_global_users_and_memberships_table.php",
+        "2026_06_17_000001_refactor_center_memberships_morph.php",
+        "2026_06_20_000002_convert_centers_id_to_integer.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "user_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "user_type",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "status",
+          "type": "varchar(16)",
+          "nullable": false,
+          "default": "assigned",
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "center_id",
+            "user_id",
+            "user_type"
+          ],
+          "unique": true,
+          "name": "center_memberships_center_user_unique"
+        },
+        {
+          "columns": [
+            "center_id",
+            "user_type",
+            "user_id"
+          ],
+          "unique": false,
+          "name": "center_memberships_center_type_user_idx"
+        },
+        {
+          "columns": [
+            "user_type",
+            "user_id",
+            "status"
+          ],
+          "unique": false,
+          "name": "center_memberships_type_user_status_idx"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "center_id",
+          "referencesTable": "centers",
+          "referencesColumn": "id"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 3,
+      "foreignKeyCount": 1,
+      "incomingCount": 0
+    },
+    {
+      "name": "centers",
+      "createMigration": "2014_09_15_000000_create_centers_table.php",
+      "migrations": [
+        "2014_09_15_000000_create_centers_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "slug",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "domain",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "phone",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "address",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "city",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "data",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [
+        {
+          "fromTable": "center_memberships",
+          "column": "center_id",
+          "referencesColumn": "id"
+        }
+      ],
+      "columnCount": 11,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 1
+    },
+    {
+      "name": "centers_new",
+      "createMigration": "2026_06_20_000002_convert_centers_id_to_integer.php",
+      "migrations": [
+        "2026_06_20_000002_convert_centers_id_to_integer.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "slug",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "domain",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "phone",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "address",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "city",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "data",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [],
+      "columnCount": 11,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "certification_templates",
+      "createMigration": "2025_07_25_235412_create_certification_templates_table.php",
+      "migrations": [
+        "2025_07_25_235412_create_certification_templates_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "variables",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "classes",
+      "createMigration": "2021_01_23_181414_create_classes_table.php",
+      "migrations": [
+        "2021_01_23_181414_create_classes_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "class_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "announcements",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "attendances",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "exam_degrees",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "fees",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "homeworks",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "library",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "online_classes",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "payments",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "questions",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "quiz_degrees",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "sections",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "sessions",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "units",
+          "column": "class_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 13
+    },
+    {
+      "name": "events",
+      "createMigration": "2021_12_11_142103_create_events_table.php",
+      "migrations": [
+        "2021_12_11_142103_create_events_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "start",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "exam_degrees",
+      "createMigration": "2023_02_09_113231_create_exam_degrees_table.php",
+      "migrations": [
+        "2023_02_09_113231_create_exam_degrees_table.php",
+        "2025_07_25_222355_add_final_degree_column_to_exam_degrees_table.php",
+        "2026_06_20_000005_add_session_id_and_drop_session_series.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "exam_date",
+          "type": "date",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "degree",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "final_degree",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "session_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "student_id",
+          "referencesTable": "students",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "session_id",
+          "referencesTable": "sessions",
+          "referencesColumn": "id"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 13,
+      "indexCount": 0,
+      "foreignKeyCount": 5,
+      "incomingCount": 0
+    },
+    {
+      "name": "failed_jobs",
+      "createMigration": "2019_08_19_000000_create_failed_jobs_table.php",
+      "migrations": [
+        "2019_08_19_000000_create_failed_jobs_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "connection",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "queue",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "payload",
+          "type": "longtext",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "exception",
+          "type": "longtext",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "failed_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "fees",
+      "createMigration": "2021_06_01_174202_create_fees_table.php",
+      "migrations": [
+        "2021_06_01_174202_create_fees_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "amount",
+          "type": "decimal(8,2)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "description",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "year",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "month",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "payments",
+          "column": "fee_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 12,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 1
+    },
+    {
+      "name": "genders",
+      "createMigration": "2021_03_17_175656_create_genders_table.php",
+      "migrations": [
+        "2021_03_17_175656_create_genders_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "Name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 5,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "grades",
+      "createMigration": "2021_01_15_184804_create_grades_table.php",
+      "migrations": [
+        "2021_01_15_184804_create_grades_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "grade_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "announcements",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "attendances",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "classes",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "exam_degrees",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "fees",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "homeworks",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "library",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "online_classes",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "payments",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "questions",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "quiz_degrees",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "sections",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "sessions",
+          "column": "grade_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "students",
+          "column": "grade_id",
+          "referencesColumn": "id"
+        }
+      ],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 14
+    },
+    {
+      "name": "homeworks",
+      "createMigration": "2025_08_05_124520_create_homeworks_table.php",
+      "migrations": [
+        "2025_08_05_124520_create_homeworks_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "submit_date",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "due_date",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "final_degree",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "student_homework",
+          "column": "homework_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 12,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 1
+    },
+    {
+      "name": "images",
+      "createMigration": "2021_04_28_195145_create_images_table.php",
+      "migrations": [
+        "2021_04_28_195145_create_images_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "filename",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "imageable_id",
+          "type": "int",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "imageable_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "landing_media",
+      "createMigration": "2026_06_09_000001_create_landing_pages_tables.php",
+      "migrations": [
+        "2026_06_09_000001_create_landing_pages_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "type",
+          "type": "varchar(16)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "url",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "folder",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "size",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "width",
+          "type": "int unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "height",
+          "type": "int unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 11,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "landing_page_analytics",
+      "createMigration": "2026_06_09_000001_create_landing_pages_tables.php",
+      "migrations": [
+        "2026_06_09_000001_create_landing_pages_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "landing_page_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "visitors",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "default": "0",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "unique_visitors",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "default": "0",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "form_submissions",
+          "type": "int unsigned",
+          "nullable": false,
+          "default": "0",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "cta_clicks",
+          "type": "int unsigned",
+          "nullable": false,
+          "default": "0",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "leads",
+          "type": "int unsigned",
+          "nullable": false,
+          "default": "0",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "device_stats",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "traffic_sources",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "daily_views",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "landing_page_id",
+          "referencesTable": "landing_pages",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 13,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 0
+    },
+    {
+      "name": "landing_page_revisions",
+      "createMigration": "2026_06_09_000001_create_landing_pages_tables.php",
+      "migrations": [
+        "2026_06_09_000001_create_landing_pages_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "landing_page_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "snapshot",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "label",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "landing_page_id",
+          "referencesTable": "landing_pages",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 0
+    },
+    {
+      "name": "landing_pages",
+      "createMigration": "2026_06_09_000001_create_landing_pages_tables.php",
+      "migrations": [
+        "2026_06_09_000001_create_landing_pages_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "slug",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "type",
+          "type": "varchar(32)",
+          "nullable": false,
+          "default": "custom",
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "status",
+          "type": "varchar(16)",
+          "nullable": false,
+          "default": "draft",
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "teacher_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "subject_key",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "course_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "event_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "branch_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "sections",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "theme",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "seo",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "branding",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "template_id",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "published_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "status",
+            "type"
+          ],
+          "unique": false
+        },
+        {
+          "columns": [
+            "teacher_id"
+          ],
+          "unique": false
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "landing_page_analytics",
+          "column": "landing_page_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "landing_page_revisions",
+          "column": "landing_page_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 19,
+      "indexCount": 2,
+      "foreignKeyCount": 0,
+      "incomingCount": 2
+    },
+    {
+      "name": "lessons",
+      "createMigration": "2025_03_25_194123_create_lessons_table.php",
+      "migrations": [
+        "2025_03_25_194123_create_lessons_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "unit_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "unit_id",
+          "referencesTable": "units",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "questions",
+          "column": "lesson_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "words",
+          "column": "lesson_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 2
+    },
+    {
+      "name": "library",
+      "createMigration": "2021_10_31_185145_create_library_table.php",
+      "migrations": [
+        "2021_10_31_185145_create_library_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 10,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 0
+    },
+    {
+      "name": "media",
+      "createMigration": "2025_07_10_170137_create_media_table.php",
+      "migrations": [
+        "2025_07_10_170137_create_media_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "model_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "model_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "uuid",
+          "type": "char(36)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "collection_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "file_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "mime_type",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "disk",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "conversions_disk",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "size",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "manipulations",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "custom_properties",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "generated_conversions",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "responsive_images",
+          "type": "json",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "order_column",
+          "type": "int unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 19,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "model_has_permissions",
+      "createMigration": "2025_08_07_214633_create_permission_tables.php",
+      "migrations": [
+        "2025_08_07_214633_create_permission_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "model_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 2,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "model_has_roles",
+      "createMigration": "2025_08_07_214633_create_permission_tables.php",
+      "migrations": [
+        "2025_08_07_214633_create_permission_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "model_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 2,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "months",
+      "createMigration": "2023_02_08_162703_create_months_table.php",
+      "migrations": [
+        "2023_02_08_162703_create_months_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "notes",
+      "createMigration": "2025_03_24_144311_create_notes_table.php",
+      "migrations": [
+        "2025_03_24_144311_create_notes_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "noteable_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "noteable_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "date_time",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 9,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "notifications",
+      "createMigration": "2024_07_01_170137_create_notifications_table.php",
+      "migrations": [
+        "2024_07_01_170137_create_notifications_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "char(36)",
+          "nullable": false,
+          "primary": true,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notifiable_type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notifiable_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "data",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 9,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "online_classes",
+      "createMigration": "2021_10_23_180609_create_online_classes_table.php",
+      "migrations": [
+        "2021_10_23_180609_create_online_classes_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "integration",
+          "type": "boolean",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_by",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "meeting_id",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "topic",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "start_at",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "duration",
+          "type": "int",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "start_url",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "join_url",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 16,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 0
+    },
+    {
+      "name": "parent_attachments",
+      "createMigration": "2021_03_04_110235_create_parent_attachments_table.php",
+      "migrations": [
+        "2021_03_04_110235_create_parent_attachments_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "file_name",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_id",
+          "type": "bigint",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "parents",
+      "createMigration": "2021_03_03_151536_create_parents_table.php",
+      "migrations": [
+        "2021_03_03_151536_create_parents_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_phone",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_job",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_address",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "push_subscription",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [
+        {
+          "fromTable": "students",
+          "column": "parent_id",
+          "referencesColumn": "id"
+        }
+      ],
+      "columnCount": 12,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 1
+    },
+    {
+      "name": "password_resets",
+      "createMigration": "2014_10_12_100000_create_password_resets_table.php",
+      "migrations": [
+        "2014_10_12_100000_create_password_resets_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "token",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 4,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "payments",
+      "createMigration": "2021_06_08_181848_create_payments_table.php",
+      "migrations": [
+        "2021_06_08_181848_create_payments_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "payment_date",
+          "type": "date",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "fee_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "payment_status",
+          "type": "boolean",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "month",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "amount",
+          "type": "decimal(8,2)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "student_id",
+          "referencesTable": "students",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "fee_id",
+          "referencesTable": "fees",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 14,
+      "indexCount": 0,
+      "foreignKeyCount": 5,
+      "incomingCount": 0
+    },
+    {
+      "name": "permissions",
+      "createMigration": "2025_08_07_214633_create_permission_tables.php",
+      "migrations": [
+        "2025_08_07_214633_create_permission_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "guard_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "center_id",
+            "name",
+            "guard_name"
+          ],
+          "unique": true
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 1,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "platform_settings",
+      "createMigration": "2026_06_17_000002_create_platform_settings_table.php",
+      "migrations": [
+        "2026_06_17_000002_create_platform_settings_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "key",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [],
+      "columnCount": 5,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "questions",
+      "createMigration": "2025_03_25_194124_create_questions_table.php",
+      "migrations": [
+        "2025_03_25_194124_create_questions_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "lesson_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "question_text",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "lesson_id",
+          "referencesTable": "lessons",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "answers",
+          "column": "question_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 8,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 1
+    },
+    {
+      "name": "quiz_degrees",
+      "createMigration": "2023_02_09_111233_create_quiz_degree_table.php",
+      "migrations": [
+        "2023_02_09_111233_create_quiz_degree_table.php",
+        "2025_07_25_222435_add_final_degree_column_to_quiz_degrees_table.php",
+        "2026_06_20_000005_add_session_id_and_drop_session_series.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "quiz_date",
+          "type": "date",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "degree",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "final_degree",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "session_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "student_id",
+          "referencesTable": "students",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "session_id",
+          "referencesTable": "sessions",
+          "referencesColumn": "id"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 13,
+      "indexCount": 0,
+      "foreignKeyCount": 5,
+      "incomingCount": 0
+    },
+    {
+      "name": "role_has_permissions",
+      "createMigration": "2025_08_07_214633_create_permission_tables.php",
+      "migrations": [
+        "2025_08_07_214633_create_permission_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [],
+          "unique": true,
+          "primary": true,
+          "name": "role_has_permissions_permission_id_role_id_primary"
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 1,
+      "indexCount": 1,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "roles",
+      "createMigration": "2025_08_07_214633_create_permission_tables.php",
+      "migrations": [
+        "2025_08_07_214633_create_permission_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "guard_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "center_id",
+            "name",
+            "guard_name"
+          ],
+          "unique": true
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 1,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "rooms",
+      "createMigration": "2025_06_28_115653_create_rooms_table.php",
+      "migrations": [
+        "2025_06_28_115653_create_rooms_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 5,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "sections",
+      "createMigration": "2021_02_10_182227_create_sections_table.php",
+      "migrations": [
+        "2021_02_10_182227_create_sections_table.php",
+        "2026_06_10_000001_add_week_days_to_sections_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "section_name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "status",
+          "type": "int",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "announcements",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "attendances",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "exam_degrees",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "fees",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "homeworks",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "library",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "online_classes",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "payments",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "quiz_degrees",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "sessions",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "students",
+          "column": "section_id",
+          "referencesColumn": "id"
+        },
+        {
+          "fromTable": "teacher_section",
+          "column": "section_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 8,
+      "indexCount": 0,
+      "foreignKeyCount": 2,
+      "incomingCount": 12
+    },
+    {
+      "name": "sessions",
+      "createMigration": "2025_03_23_120000_create_sessions_table.php",
+      "migrations": [
+        "2025_03_23_120000_create_sessions_table.php",
+        "2026_06_20_000005_add_session_id_and_drop_session_series.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_by",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "topic",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "provider",
+          "type": "varchar(32)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "start_at",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "duration",
+          "type": "int unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "room_slug",
+          "type": "varchar(191)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "join_url",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "moderator_url",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "record_enabled",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "external_ref",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "location",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "attendances",
+          "column": "session_id",
+          "referencesColumn": "id"
+        },
+        {
+          "fromTable": "exam_degrees",
+          "column": "session_id",
+          "referencesColumn": "id"
+        },
+        {
+          "fromTable": "quiz_degrees",
+          "column": "session_id",
+          "referencesColumn": "id"
+        }
+      ],
+      "columnCount": 20,
+      "indexCount": 0,
+      "foreignKeyCount": 3,
+      "incomingCount": 3
+    },
+    {
+      "name": "settings",
+      "createMigration": "2021_11_12_163746_create_settings_table.php",
+      "migrations": [
+        "2021_11_12_163746_create_settings_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "key",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "value",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "student_homework",
+      "createMigration": "2025_08_05_125233_create_student_homework_table.php",
+      "migrations": [
+        "2025_08_05_125233_create_student_homework_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "homework_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "upload_date_time",
+          "type": "datetime",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "degree",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "rate",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "student_notes",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "response",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "student_id",
+          "referencesTable": "students",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "homework_id",
+          "referencesTable": "homeworks",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 11,
+      "indexCount": 0,
+      "foreignKeyCount": 2,
+      "incomingCount": 0
+    },
+    {
+      "name": "students",
+      "createMigration": "2021_04_10_181456_create_students_table.php",
+      "migrations": [
+        "2021_04_10_181456_create_students_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "code",
+          "type": "varchar(50)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "grade_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "parent_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "academic_year",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "push_subscription",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "grade_id",
+          "referencesTable": "grades",
+          "referencesColumn": "id"
+        },
+        {
+          "column": "class_id",
+          "referencesTable": "classs",
+          "referencesColumn": "id"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id"
+        },
+        {
+          "column": "parent_id",
+          "referencesTable": "parents",
+          "referencesColumn": "id"
+        }
+      ],
+      "scoping": "platform",
+      "referencedBy": [
+        {
+          "fromTable": "attendances",
+          "column": "student_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "exam_degrees",
+          "column": "student_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "payments",
+          "column": "student_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "quiz_degrees",
+          "column": "student_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "fromTable": "student_homework",
+          "column": "student_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 16,
+      "indexCount": 0,
+      "foreignKeyCount": 4,
+      "incomingCount": 5
+    },
+    {
+      "name": "teacher_section",
+      "createMigration": "2021_03_28_155234_create_teacher_section_table.php",
+      "migrations": [
+        "2021_03_28_155234_create_teacher_section_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "teacher_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "teacher_id",
+          "referencesTable": "teachers",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "section_id",
+          "referencesTable": "sections",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 4,
+      "indexCount": 0,
+      "foreignKeyCount": 2,
+      "incomingCount": 0
+    },
+    {
+      "name": "teachers",
+      "createMigration": "2021_03_18_174036_create_teachers_table.php",
+      "migrations": [
+        "2021_03_18_174036_create_teachers_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "phone",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "subject",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "joining_date",
+          "type": "date",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "attendances",
+          "column": "teacher_id",
+          "referencesColumn": "id"
+        },
+        {
+          "fromTable": "teacher_section",
+          "column": "teacher_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 11,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 2
+    },
+    {
+      "name": "units",
+      "createMigration": "2025_03_25_194122_create_units_table.php",
+      "migrations": [
+        "2025_03_25_194122_create_units_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "class_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "class_id",
+          "referencesTable": "classes",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [
+        {
+          "fromTable": "lessons",
+          "column": "unit_id",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 1
+    },
+    {
+      "name": "users",
+      "createMigration": "2014_10_12_000000_create_users_table.php",
+      "migrations": [
+        "2014_10_12_000000_create_users_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "phone",
+          "type": "varchar(255)",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "email_verified_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "password",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "remember_token",
+          "type": "varchar(100)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 10,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "whatsapp_templates",
+      "createMigration": "2025_07_25_151914_create_whatsapp_templates_table.php",
+      "migrations": [
+        "2025_07_25_151914_create_whatsapp_templates_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "name",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "variables",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "words",
+      "createMigration": "2025_05_10_165257_create_words_table.php",
+      "migrations": [
+        "2025_05_10_165257_create_words_table.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "lesson_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "word",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "translation",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "type",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [
+        {
+          "column": "lesson_id",
+          "referencesTable": "lessons",
+          "referencesColumn": "id",
+          "onDelete": "cascade"
+        }
+      ],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 8,
+      "indexCount": 0,
+      "foreignKeyCount": 1,
+      "incomingCount": 0
+    }
+  ]
+}

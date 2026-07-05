@@ -128,13 +128,7 @@ class MultiCenterPortalService
             }
 
             $block = $this->studentCenterBlock($center, (int) $membership->user_id);
-            $centers[] = array_merge([
-                'membership_id' => $membership->id,
-                'center_id' => $center->id,
-                'center_slug' => $center->slug,
-                'center_name' => $center->name,
-                'profile' => $block['profile'],
-            ], collect($block)->except('profile')->all());
+            $centers[] = $this->buildStudentCenterSummary($center, (int) $membership->user_id, (int) $membership->id, $block);
 
             $tag = fn (array $row): array => array_merge($row, [
                 'center_id' => $center->id,
@@ -399,6 +393,75 @@ class MultiCenterPortalService
     protected function centralDb(): \Illuminate\Database\Connection
     {
         return DB::connection((string) config('database.default', 'mysql'));
+    }
+
+    /** @return array<string, mixed> */
+    public function buildStudentCenterSummary(Center $center, int $studentId, ?int $membershipId = null, ?array $block = null): array
+    {
+        $block ??= $this->studentCenterBlock($center, $studentId);
+
+        return [
+            'membership_id' => $membershipId,
+            'center_id' => $center->id,
+            'center_slug' => $center->slug,
+            'center_name' => $center->name,
+            'email' => $center->email ?? '',
+            'phone' => $center->phone ?? '',
+            'address' => $center->address ?? '',
+            'city' => $center->city ?? '',
+            'profile' => $this->enrichStudentProfile($block['profile'] ?? null),
+            'stats' => $this->studentCenterStats($block),
+        ];
+    }
+
+    /** @param  array<string, mixed>|null  $profile */
+    protected function enrichStudentProfile(?array $profile): ?array
+    {
+        if (! $profile) {
+            return null;
+        }
+
+        $db = DB::connection('center');
+        $gradeName = ! empty($profile['grade_id'])
+            ? $db->table('grades')->where('id', (int) $profile['grade_id'])->value('grade_name')
+            : null;
+        $className = ! empty($profile['class_id'])
+            ? $db->table('classes')->where('id', (int) $profile['class_id'])->value('class_name')
+            : null;
+        $sectionName = ! empty($profile['section_id'])
+            ? $db->table('sections')->where('id', (int) $profile['section_id'])->value('section_name')
+            : null;
+
+        return array_merge($profile, [
+            'grade_name' => $gradeName ? (string) $gradeName : null,
+            'class_name' => $className ? (string) $className : null,
+            'section_name' => $sectionName ? (string) $sectionName : null,
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $block */
+    protected function studentCenterStats(array $block): array
+    {
+        $attendance = collect($block['attendance'] ?? []);
+        $present = $attendance->filter(fn (array $row): bool => in_array($row['status'] ?? '', ['present', 'late'], true))->count();
+        $attendanceRate = $attendance->count() > 0 ? (int) round(($present / $attendance->count()) * 100) : null;
+
+        $grades = collect($block['grades'] ?? []);
+        $scored = $grades->filter(fn (array $row): bool => is_numeric($row['score'] ?? null));
+        $gpa = $scored->count() > 0 ? round((float) $scored->avg('score'), 1) : null;
+
+        $homework = collect($block['homework'] ?? []);
+        $pendingHomework = $homework->filter(
+            fn (array $row): bool => ! in_array($row['status'] ?? '', ['submitted', 'graded'], true)
+        )->count();
+
+        return [
+            'sessions_count' => count($block['sessions'] ?? []),
+            'attendance_rate' => $attendanceRate,
+            'gpa' => $gpa,
+            'pending_homework' => $pendingHomework,
+            'library_items' => count($block['library'] ?? []),
+        ];
     }
 
     /** @return array<string, mixed> */

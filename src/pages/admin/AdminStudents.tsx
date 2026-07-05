@@ -1,16 +1,20 @@
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import type { Student } from '@/types/models';
+
+type StudentRow = Student & { parent_name?: string };
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import StatusBadge from '@/components/StatusBadge';
+import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import { Search, UserMinus, UserPlus } from 'lucide-react';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
+import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { adminStudentsApi } from '@/services/endpoints/admin-students';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormInput } from '@/components/FormFields';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 function AssignByCodePanel({ onAssigned }: { onAssigned: () => Promise<void> }) {
   const { t } = useLocale();
@@ -149,8 +153,50 @@ export default function AdminStudents() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const { data: bootstrap } = useAdminBootstrap();
-  const students = (bootstrap?.students || []) as Student[];
-  const parents = ((bootstrap?.parents || []) as Array<{ id: number; name: string }>).map(p => ({ id: Number(p.id), name: p.name }));
+  const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
+  const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
+  const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
+  const parents = useMemo(
+    () => ((bootstrap?.parents || []) as Array<{ id: number; name: string }>)
+      .map(p => ({ id: Number(p.id), name: p.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [bootstrap?.parents],
+  );
+  const students = useMemo(() => {
+    const parentById = new Map(parents.map(p => [p.id, p.name]));
+    return ((bootstrap?.students || []) as Student[]).map(student => ({
+      ...student,
+      parent_name: parentById.get(student.parent_id ?? 0) ?? student.parent?.name ?? '',
+    })) as StudentRow[];
+  }, [bootstrap?.students, parents]);
+  const [parentFilter, setParentFilter] = useState('');
+
+  const {
+    gradeFilter,
+    classFilter,
+    sectionFilter,
+    grades: gradeOptions,
+    classesByGrade,
+    sectionsByClass,
+    filteredRows: scopeFilteredStudents,
+    appliedCount: scopeAppliedCount,
+    clearFilters: clearScopeFilters,
+    handleGradeChange,
+    handleClassChange,
+    setSectionFilter,
+  } = useAdminScopeFilters(grades, classes, sections, students);
+
+  const filteredStudents = useMemo(() => {
+    if (!parentFilter) return scopeFilteredStudents;
+    const parentId = Number(parentFilter);
+    return scopeFilteredStudents.filter(student => student.parent_id === parentId);
+  }, [scopeFilteredStudents, parentFilter]);
+
+  const appliedCount = scopeAppliedCount + (parentFilter ? 1 : 0);
+  const clearFilters = () => {
+    clearScopeFilters();
+    setParentFilter('');
+  };
 
   const unassignMutation = useMutation({
     mutationFn: (id: number) => adminStudentsApi.unassignFromCenter(id),
@@ -170,20 +216,17 @@ export default function AdminStudents() {
     await unassignMutation.mutateAsync(student.id);
   };
 
-  const columns: CrudColumn<Student>[] = [
+  const columns: CrudColumn<StudentRow>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'code', label: 'Code', sortable: true },
     { key: 'name', label: t('col.name'), sortable: true },
     { key: 'email', label: t('col.email') },
     { key: 'gender', label: t('col.gender'), render: s => <span className="capitalize"> {t(`gender.${s.gender}`)}</span> },
-    { key: 'status', label: t('col.status'), render: s => <StatusBadge status={s.status} /> },
+    { key: 'status', label: t('col.status'), render: s => <StatusBadge status={s.status} label={t(`status.${s.status}`)} /> },
     { key: 'grade_name', label: t('col.grade'), render: s => `${s.grade_name}` },
     { key: 'class_name', label: t('col.class'), render: s => `${s.class_name}` },
     { key: 'section_name', label: t('col.section'), render: s => `${s.section_name}` },
-    { key: 'parent_name', label: t('col.parent'), render: s => {
-      const parent = parents.find(p => p.id === s.parent_id);
-      return parent ? parent.name : '—';
-    }},
+    { key: 'parent_name', label: t('col.parent'), render: s => s.parent_name || '—' },
   ];
 
   const refreshStudents = async () => {
@@ -191,13 +234,34 @@ export default function AdminStudents() {
   };
 
   return (
-    <CrudPage<Student>
+    <CrudPage<StudentRow>
       title={t('nav.students')}
       description={t('page.students.desc')}
-      topContent={<AssignByCodePanel onAssigned={refreshStudents} />}
+      topContent={(
+        <>
+          <AssignByCodePanel onAssigned={refreshStudents} />
+          <AdminScopeFilterBar
+            grades={gradeOptions}
+            classesByGrade={classesByGrade}
+            sectionsByClass={sectionsByClass}
+            gradeFilter={gradeFilter}
+            classFilter={classFilter}
+            sectionFilter={sectionFilter}
+            parents={parents}
+            parentFilter={parentFilter}
+            onParentChange={setParentFilter}
+            onGradeChange={handleGradeChange}
+            onClassChange={handleClassChange}
+            onSectionChange={setSectionFilter}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredStudents.length}
+          />
+        </>
+      )}
       columns={columns}
-      data={students}
-      searchKeys={['name', 'email', 'code']}
+      data={filteredStudents}
+      searchKeys={['name', 'email', 'code', 'grade_name', 'class_name', 'section_name', 'parent_name']}
       canCreate={false}
       canEdit={false}
       canDelete={false}

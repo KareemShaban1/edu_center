@@ -35,6 +35,8 @@ import {
   PieChart,
   SlidersHorizontal,
   Layout,
+  MessageCircle,
+  Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
@@ -197,6 +199,8 @@ const adminNavBlocks: NavBlock[] = [
         { labelKey: 'nav.library', path: '/admin/library', icon: Library },
         { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
         { labelKey: 'nav.notifications', path: '/admin/notifications', icon: Bell },
+        { labelKey: 'nav.whatsapp', path: '/admin/whatsapp', icon: MessageCircle },
+        { labelKey: 'nav.certifications', path: '/admin/certifications', icon: Award },
         { labelKey: 'nav.landingBuilder', path: '/admin/landing', icon: Layout },
       ],
     },
@@ -276,6 +280,7 @@ const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
   { type: 'link', item: { labelKey: 'nav.library', path: '/student/library', icon: Library } },
+  { type: 'link', item: { labelKey: 'nav.certifications', path: '/student/certifications', icon: Award } },
 ];
 
 const parentNavBlocks: NavBlock[] = [

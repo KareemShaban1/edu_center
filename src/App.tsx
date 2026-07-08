@@ -44,6 +44,11 @@ import AdminPaymentHistory from "@/pages/admin/AdminPaymentHistory";
 import AdminLibrary from "@/pages/admin/AdminLibrary";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
+import AdminWhatsAppSend from "@/pages/admin/AdminWhatsAppSend";
+import AdminWhatsAppTemplates from "@/pages/admin/AdminWhatsAppTemplates";
+import AdminCertificationsIssue from "@/pages/admin/AdminCertificationsIssue";
+import AdminCertificationTemplates from "@/pages/admin/AdminCertificationTemplates";
+import AdminCertificationBuilder from "@/pages/admin/AdminCertificationBuilder";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminReportDetail from "@/pages/admin/AdminReportDetail";
 import AdminSettings from "@/pages/admin/AdminSettings";
@@ -80,6 +85,7 @@ import StudentAttendance from "@/pages/student/StudentAttendance";
 import StudentGrades from "@/pages/student/StudentGrades";
 import StudentHomework from "@/pages/student/StudentHomework";
 import StudentLibrary from "@/pages/student/StudentLibrary";
+import StudentCertifications from "@/pages/student/StudentCertifications";
 
 // Parent
 import ParentDashboard from "@/pages/parent/ParentDashboard";
@@ -158,6 +164,12 @@ const App = () => (
               <Route path="/admin/library" element={<ProtectedRoute allowedRoles={['admin']}><AdminLibrary /></ProtectedRoute>} />
               <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnnouncements /></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
+              <Route path="/admin/whatsapp" element={<ProtectedRoute allowedRoles={['admin']}><AdminWhatsAppSend /></ProtectedRoute>} />
+              <Route path="/admin/whatsapp/templates" element={<ProtectedRoute allowedRoles={['admin']}><AdminWhatsAppTemplates /></ProtectedRoute>} />
+              <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationsIssue /></ProtectedRoute>} />
+              <Route path="/admin/certifications/templates" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationTemplates /></ProtectedRoute>} />
+              <Route path="/admin/certifications/templates/new" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationBuilder /></ProtectedRoute>} />
+              <Route path="/admin/certifications/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationBuilder /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
               <Route path="/admin/reports/:type" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportDetail /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
@@ -193,6 +205,7 @@ const App = () => (
               <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentGrades /></ProtectedRoute>} />
               <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />
               <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLibrary /></ProtectedRoute>} />
+              <Route path="/student/certifications" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentCertifications /></ProtectedRoute>} />
 
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentDashboard /></ProtectedRoute>} />

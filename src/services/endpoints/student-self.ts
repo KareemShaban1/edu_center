@@ -82,6 +82,18 @@ export interface StudentSelfBootstrapPayload {
     url?: string | null;
   }>;
 
+  certifications?: Array<CenterScopedRow & {
+    id: number;
+    template_id?: number | null;
+    title: string;
+    content: string;
+    design?: import('@/lib/certification/types').CertificateDesignConfig | null;
+    context: string;
+    context_date?: string | null;
+    issued_at?: string | null;
+    is_custom?: boolean;
+  }>;
+
   centers?: StudentCenterSummary[];
 }
 

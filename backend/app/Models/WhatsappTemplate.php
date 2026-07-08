@@ -9,6 +9,10 @@ class WhatsappTemplate extends Model
 {
     use HasFactory;
 
+    protected $connection = 'center';
+
+    protected $table = 'whatsapp_templates';
+
     protected $fillable = ['name', 'content', 'variables'];
     protected $casts = [
         'variables' => 'array',

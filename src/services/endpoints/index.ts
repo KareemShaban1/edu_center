@@ -22,5 +22,6 @@ export { parentApi } from './parent';
 export { studentSelfApi } from './student-self';
 export { teacherSessionsApi } from './teacher-sessions';
 export { adminLandingApi, publicLandingApi } from './admin-landing';
+export { adminCertificationsApi } from './admin-certifications';
 export { configApi } from './config';
 export type { AppConfig, TenancyMode } from './config';

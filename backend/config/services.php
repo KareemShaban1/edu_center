@@ -45,4 +45,13 @@ return [
     'badge' => env('WEBPUSH_BADGE', '/pwa-badge.png'),
 ],
 
+'whatsapp' => [
+    'mode' => env('WHATSAPP_MODE', 'link'),
+    'default_country_code' => env('WHATSAPP_DEFAULT_COUNTRY_CODE', '20'),
+    'base_url' => env('WHATSAPP_BASE_URL'),
+    'instance' => env('WHATSAPP_INSTANCE'),
+    'api_key' => env('WHATSAPP_API_KEY'),
+    'send_delay_ms' => (int) env('WHATSAPP_SEND_DELAY_MS', 1500),
+],
+
 ];

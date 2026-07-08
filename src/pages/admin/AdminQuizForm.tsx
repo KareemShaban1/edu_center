@@ -9,6 +9,8 @@ import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { adminAssessmentsApi } from '@/services/endpoints/admin-assessments';
 import SessionLinkField from '@/components/SessionLinkField';
+import WhatsAppSectionNotify, { WhatsAppRowButton } from '@/components/admin/WhatsAppSectionNotify';
+import CertificationSectionIssue, { CertificationRowButton } from '@/components/admin/CertificationSectionIssue';
 
 interface StudentQuizRow {
   student_id: number;
@@ -92,6 +94,7 @@ export default function AdminQuizForm() {
   const presentCount = rows.filter(r => r.status === 'present').length;
   const absentCount = rows.filter(r => r.status === 'absent').length;
   const lateCount = rows.filter(r => r.status === 'late').length;
+  const sectionLabel = [grade?.name, cls?.name, section.name].filter(Boolean).join(' — ');
 
   return (
     <DashboardLayout>
@@ -125,6 +128,23 @@ export default function AdminQuizForm() {
           <SessionLinkField id="quiz-session" value={sessionId} options={sessionOptions} onChange={setSessionId} />
         </div>
       )}
+
+      <WhatsAppSectionNotify
+        context="quiz"
+        sectionId={Number(sectionId)}
+        date={currentDate}
+        sectionLabel={sectionLabel}
+        rows={rows}
+      />
+
+      <CertificationSectionIssue
+        context="quiz"
+        sectionId={Number(sectionId)}
+        date={currentDate}
+        sectionLabel={sectionLabel}
+        rows={rows}
+      />
+
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-primary">{presentCount}</p>
@@ -164,11 +184,12 @@ export default function AdminQuizForm() {
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('attendance.late')}</th>
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('quiz.degree')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.notes')}</th>
+                <th className="px-3 py-2 text-center font-medium text-muted-foreground w-12">{t('whatsapp.short')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
               ) : rows.map((row, idx) => (
                 <tr key={row.student_id} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
@@ -201,6 +222,24 @@ export default function AdminQuizForm() {
                       rows={1}
                       className="w-full min-w-[150px] rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-y"
                     />
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <WhatsAppRowButton
+                        context="quiz"
+                        sectionId={Number(sectionId)}
+                        date={currentDate}
+                        sectionLabel={sectionLabel}
+                        row={row}
+                      />
+                      <CertificationRowButton
+                        context="quiz"
+                        sectionId={Number(sectionId)}
+                        date={currentDate}
+                        sectionLabel={sectionLabel}
+                        row={row}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

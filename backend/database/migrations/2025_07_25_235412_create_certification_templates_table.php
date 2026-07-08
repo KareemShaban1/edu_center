@@ -30,6 +30,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('certificate_templates');
+        Schema::dropIfExists('certification_templates');
     }
 };

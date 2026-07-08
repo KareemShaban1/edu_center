@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             'App\Models\Payment',
             'App\Models\Attendance',
             'App\Models\CertificationTemplate',
+            'App\Models\StudentCertification',
             'App\Models\WhatsappTemplate',
             'App\Models\Homework',
             'App\Models\ExamDegree',

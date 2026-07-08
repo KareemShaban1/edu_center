@@ -328,8 +328,10 @@ export interface NotificationListResponse {
 export interface WhatsAppTemplate {
   id: number;
   name: string;
-  body: string;
-  language: string;
+  content: string;
+  variables: string[];
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // ===== Platform =====

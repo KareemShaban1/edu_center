@@ -15,6 +15,8 @@ use App\Http\Controllers\Platform\PlatformBrandingApiController;
 use App\Http\Controllers\Admin\DashboardApiController;
 use App\Http\Controllers\Admin\LandingPageApiController;
 use App\Http\Controllers\Api\NotificationApiController;
+use App\Http\Controllers\Api\CertificationApiController;
+use App\Http\Controllers\Api\WhatsAppApiController;
 use App\Services\NotificationDispatchService;
 use App\Notifications\AnnouncementNotification;
 use App\Notifications\ParentAttendanceNotification;
@@ -1929,6 +1931,29 @@ Route::middleware([
                 ->values();
         }
 
+        $certifications = collect();
+        if (Schema::connection('center')->hasTable('student_certifications')) {
+            $certifications = $tenantDb->table('student_certifications')
+                ->where('student_id', $studentId)
+                ->orderByDesc('issued_at')
+                ->limit(200)
+                ->get(['id', 'template_id', 'title', 'content', 'variables', 'design', 'context', 'context_date', 'issued_at', 'is_custom'])
+                ->map(function ($row) {
+                    return [
+                        'id' => (int) $row->id,
+                        'template_id' => $row->template_id ? (int) $row->template_id : null,
+                        'title' => $row->title,
+                        'content' => $row->content,
+                        'design' => $row->design ? json_decode((string) $row->design, true) : null,
+                        'context' => $row->context ?? 'manual',
+                        'context_date' => $row->context_date ? (string) $row->context_date : null,
+                        'issued_at' => $row->issued_at ? (string) $row->issued_at : null,
+                        'is_custom' => (bool) ($row->is_custom ?? false),
+                    ];
+                })
+                ->values();
+        }
+
         return response()->json([
             'sessions' => $sessions,
             'attendance' => $attendance,
@@ -1936,6 +1961,7 @@ Route::middleware([
             'homework' => $homework,
             'homework_options' => $homeworkOptions,
             'library' => $library,
+            'certifications' => $certifications,
             'centers' => CenterContext::center()
                 ? [app(MultiCenterPortalService::class)->buildStudentCenterSummary(CenterContext::center(), $studentId)]
                 : [],
@@ -2606,6 +2632,23 @@ Route::middleware([
     Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
     Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
 
+    Route::get('/admin/whatsapp/templates', [WhatsAppApiController::class, 'listTemplates']);
+    Route::post('/admin/whatsapp/templates', [WhatsAppApiController::class, 'createTemplate']);
+    Route::put('/admin/whatsapp/templates/{id}', [WhatsAppApiController::class, 'updateTemplate'])->whereNumber('id');
+    Route::delete('/admin/whatsapp/templates/{id}', [WhatsAppApiController::class, 'deleteTemplate'])->whereNumber('id');
+    Route::post('/admin/whatsapp/prepare', [WhatsAppApiController::class, 'prepareSend']);
+    Route::post('/admin/whatsapp/send', [WhatsAppApiController::class, 'send']);
+    Route::get('/admin/whatsapp/status', [WhatsAppApiController::class, 'status']);
+
+    Route::get('/admin/certifications/templates', [CertificationApiController::class, 'listTemplates']);
+    Route::post('/admin/certifications/templates', [CertificationApiController::class, 'createTemplate']);
+    Route::put('/admin/certifications/templates/{id}', [CertificationApiController::class, 'updateTemplate'])->whereNumber('id');
+    Route::delete('/admin/certifications/templates/{id}', [CertificationApiController::class, 'deleteTemplate'])->whereNumber('id');
+    Route::get('/admin/certifications/issued', [CertificationApiController::class, 'listIssued']);
+    Route::post('/admin/certifications/prepare', [CertificationApiController::class, 'prepareIssue']);
+    Route::post('/admin/certifications/issue', [CertificationApiController::class, 'issue']);
+    Route::delete('/admin/certifications/issued/{id}', [CertificationApiController::class, 'deleteIssued'])->whereNumber('id');
+
     // Locale-prefixed aliases (when StripApiLocalePrefix is not active / route cache)
     Route::prefix('{locale}')->where(['locale' => 'en|ar'])->group(function () {
         Route::get('/notifications/vapid-key', [NotificationApiController::class, 'vapidKey']);
@@ -2614,6 +2657,23 @@ Route::middleware([
         Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
         Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
         Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
+
+        Route::get('/admin/whatsapp/templates', [WhatsAppApiController::class, 'listTemplates']);
+        Route::post('/admin/whatsapp/templates', [WhatsAppApiController::class, 'createTemplate']);
+        Route::put('/admin/whatsapp/templates/{id}', [WhatsAppApiController::class, 'updateTemplate'])->whereNumber('id');
+        Route::delete('/admin/whatsapp/templates/{id}', [WhatsAppApiController::class, 'deleteTemplate'])->whereNumber('id');
+        Route::post('/admin/whatsapp/prepare', [WhatsAppApiController::class, 'prepareSend']);
+        Route::post('/admin/whatsapp/send', [WhatsAppApiController::class, 'send']);
+        Route::get('/admin/whatsapp/status', [WhatsAppApiController::class, 'status']);
+
+        Route::get('/admin/certifications/templates', [CertificationApiController::class, 'listTemplates']);
+        Route::post('/admin/certifications/templates', [CertificationApiController::class, 'createTemplate']);
+        Route::put('/admin/certifications/templates/{id}', [CertificationApiController::class, 'updateTemplate'])->whereNumber('id');
+        Route::delete('/admin/certifications/templates/{id}', [CertificationApiController::class, 'deleteTemplate'])->whereNumber('id');
+        Route::get('/admin/certifications/issued', [CertificationApiController::class, 'listIssued']);
+        Route::post('/admin/certifications/prepare', [CertificationApiController::class, 'prepareIssue']);
+        Route::post('/admin/certifications/issue', [CertificationApiController::class, 'issue']);
+        Route::delete('/admin/certifications/issued/{id}', [CertificationApiController::class, 'deleteIssued'])->whereNumber('id');
     });
 
     Route::get('/admin/students/search-by-code', function (Request $request) use ($resolveTenantBySlug, $resolveTenant, $ensureTenantInitialized) {

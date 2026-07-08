@@ -27,6 +27,7 @@ class CenterSeeder extends Seeder
             StudentsSeeder::class,
             TeacherSeeder::class,
             DashboardDataSeeder::class,
+            CertificateTemplateSeeder::class,
         ]);
     }
 }

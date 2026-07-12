@@ -44,6 +44,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { NotificationBell } from '@/components/NotificationBell';
 import HeaderUserMenu from '@/components/dashboard/HeaderUserMenu';
+import AdminTopbarQuickNav from '@/components/dashboard/AdminTopbarQuickNav';
 
 type NavIcon = React.ElementType;
 
@@ -150,6 +151,8 @@ const adminNavBlocks: NavBlock[] = [
         { labelKey: 'nav.units', path: '/admin/units', icon: BookOpen },
         { labelKey: 'nav.lessons', path: '/admin/lessons', icon: FileText },
         { labelKey: 'nav.homework', path: '/admin/homework', icon: ClipboardList },
+        { labelKey: 'nav.library', path: '/admin/library', icon: Library },
+
       ],
     },
   },
@@ -189,6 +192,7 @@ const adminNavBlocks: NavBlock[] = [
       ],
     },
   },
+
   {
     type: 'group',
     group: {
@@ -196,7 +200,6 @@ const adminNavBlocks: NavBlock[] = [
       labelKey: 'nav.group.content',
       icon: FolderOpen,
       items: [
-        { labelKey: 'nav.library', path: '/admin/library', icon: Library },
         { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
         { labelKey: 'nav.notifications', path: '/admin/notifications', icon: Bell },
         { labelKey: 'nav.whatsapp', path: '/admin/whatsapp', icon: MessageCircle },
@@ -458,23 +461,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-md lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md lg:gap-4 lg:px-6">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 hover:bg-muted lg:hidden"
+            className="shrink-0 rounded-lg p-2 hover:bg-muted lg:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="hidden lg:block">
-            <h2 className={'text-xl font-medium text-muted-foreground'}>
-              {currentNavLabel ? t(currentNavLabel) : t('nav.dashboard')}
-            </h2>
-          </div>
+     
+            <div className="hidden min-w-0 flex-1 lg:block">
+              <h2 className="truncate text-xl font-medium text-muted-foreground">
+                {currentNavLabel ? t(currentNavLabel) : t('nav.dashboard')}
+              </h2>
+            </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <PwaInstallButton />
 
             {/* <button
@@ -486,6 +490,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Languages className="h-4 w-4 text-muted-foreground" />
               <span className="hidden text-muted-foreground text-xs sm:inline">{locale === 'en' ? 'العربية' : 'English'}</span>
             </button> */}
+
+            <AdminTopbarQuickNav />
 
             <NotificationBell />
             <HeaderUserMenu

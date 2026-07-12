@@ -9,6 +9,7 @@ import { BrandingProvider } from "@/contexts/BrandingContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
+import UserGuidePage from "@/pages/UserGuidePage";
 import { defaultTenantSlug } from "@/config/login-defaults";
 import LoginPage from "@/pages/LoginPage";
 import PlatformLoginPage from "@/pages/PlatformLoginPage";
@@ -125,6 +126,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/guide" element={<UserGuidePage />} />
               <Route path="/:tenantSlug/p/*" element={<PublicLandingPage />} />
               <Route path="/p/*" element={<PublicLandingPage />} />
               <Route path="/login" element={<Navigate to={`/${defaultTenantSlug}/login`} replace />} />

@@ -37,6 +37,7 @@ Manual sections (business goals, user stories, security policies) are edited dir
 | 10 | [Security](./10-security.md) | Auth, authorization, encryption, incident response |
 | 11 | [Deployment](./11-deployment.md) | Servers, CI/CD, env vars, rollback |
 | 12 | [Testing](./12-testing.md) | Strategy, test types, sample cases |
+| 13 | [User Guide](./13-user-guide.md) | Arabic end-user guide (no technical details) — public at `/guide` |
 
 ## Legacy / supplementary
 

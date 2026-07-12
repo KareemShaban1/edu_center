@@ -2,6 +2,7 @@ import StudentPageFilterBar from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
 import { FormInput, FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
+import type { ReactNode } from 'react';
 import type { AdminGrade } from '@/hooks/use-admin-scope-filters';
 
 interface ScopeOption {
@@ -33,6 +34,7 @@ interface AdminScopeFilterBarProps {
   appliedCount: number;
   onClear: () => void;
   resultCount?: number;
+  extraFilters?: ReactNode;
 }
 
 export default function AdminScopeFilterBar({
@@ -59,6 +61,7 @@ export default function AdminScopeFilterBar({
   appliedCount,
   onClear,
   resultCount,
+  extraFilters,
 }: AdminScopeFilterBarProps) {
   const { t } = useLocale();
 
@@ -160,6 +163,7 @@ export default function AdminScopeFilterBar({
               />
             </StudentFilterField>
           ) : null}
+          {extraFilters}
         </>
       )}
     />

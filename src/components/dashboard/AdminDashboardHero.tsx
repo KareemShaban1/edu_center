@@ -1,25 +1,18 @@
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import DashboardHomeLinks from '@/components/DashboardHomeLinks';
 import { AdminHeroIllustration } from '@/components/dashboard/DashboardStatDecor';
-import type { AdminDashboardLink, AdminDashboardLinkGroup } from '@/config/admin-dashboard-links';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 interface AdminDashboardHeroProps {
   userName?: string;
-  mainLinks: AdminDashboardLink[];
-  linkGroups: AdminDashboardLinkGroup[];
   className?: string;
 }
 
 export default function AdminDashboardHero({
   userName,
-  mainLinks,
-  linkGroups,
   className,
-}: AdminDashboardHeroProps) {
-  const { t } = useLocale();
+}: AdminDashboardHeroProps) {  const { t } = useLocale();
 
   return (
     <motion.section
@@ -55,9 +48,6 @@ export default function AdminDashboardHero({
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">{t('dashboard.admin.desc')}</p>
           </div>
         </div>
-
-        <DashboardHomeLinks mainLinks={mainLinks} extraLinkGroups={linkGroups} />
       </div>
-    </motion.section>
-  );
+    </motion.section>  );
 }

@@ -18,6 +18,19 @@ trait ResolvesCenterApiContext
         return app(CenterContextManager::class);
     }
 
+    protected function centralConnection(): string
+    {
+        return (string) config('database.default', 'mysql');
+    }
+
+    protected function resolveCenter(mixed $tenantId, mixed $tenantSlug): ?Center
+    {
+        return $this->centerContext()->resolve(
+            $tenantId,
+            is_string($tenantSlug) ? $tenantSlug : null
+        );
+    }
+
     protected function resolveCenterBySlug(?string $slug): ?Center
     {
         return $this->centerContext()->resolveBySlug($slug);

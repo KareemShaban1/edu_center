@@ -26,6 +26,11 @@ export interface WhatsAppSectionRow {
   status: 'present' | 'absent' | 'late';
   degree?: string;
   notes?: string;
+  can_whatsapp?: boolean;
+}
+
+function contactableRows(rows: WhatsAppSectionRow[]): WhatsAppSectionRow[] {
+  return rows.filter(row => row.can_whatsapp !== false);
 }
 
 interface WhatsAppSectionNotifyProps {
@@ -173,6 +178,7 @@ export default function WhatsAppSectionNotify({
   });
 
   const notify = (targetRows: WhatsAppSectionRow[], automatic: boolean) => {
+    const recipients = contactableRows(targetRows);
     if (!activeTemplateId) {
       toast({
         title: t('whatsapp.validationError'),
@@ -181,7 +187,7 @@ export default function WhatsAppSectionNotify({
       });
       return;
     }
-    if (targetRows.length === 0) {
+    if (recipients.length === 0) {
       toast({
         title: t('whatsapp.noRecipients'),
         description: t('whatsapp.noRecipientsDesc'),
@@ -190,16 +196,17 @@ export default function WhatsAppSectionNotify({
       return;
     }
     if (automatic) {
-      sendMutation.mutate(targetRows);
+      sendMutation.mutate(recipients);
     } else {
-      prepareMutation.mutate(targetRows);
+      prepareMutation.mutate(recipients);
     }
   };
 
-  const absentRows = rows.filter(row => row.status === 'absent');
+  const contactable = useMemo(() => contactableRows(rows), [rows]);
+  const absentRows = contactable.filter(row => row.status === 'absent');
   const isBusy = prepareMutation.isPending || sendMutation.isPending;
 
-  if (rows.length === 0 || templates.length === 0) {
+  if (rows.length === 0 || templates.length === 0 || contactable.length === 0) {
     return null;
   }
 
@@ -233,7 +240,7 @@ export default function WhatsAppSectionNotify({
               size="sm"
               className="gap-2"
               disabled={isBusy}
-              onClick={() => notify(rows, false)}
+              onClick={() => notify(contactable, false)}
             >
               <ExternalLink className="h-4 w-4" />
               {t('whatsapp.notifyAllParents')}
@@ -244,7 +251,7 @@ export default function WhatsAppSectionNotify({
                 size="sm"
                 className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                 disabled={isBusy}
-                onClick={() => notify(rows, true)}
+                onClick={() => notify(contactable, true)}
               >
                 <Send className="h-4 w-4" />
                 {t('whatsapp.sendAllParents')}
@@ -399,7 +406,7 @@ export function WhatsAppRowButton({
     },
   });
 
-  if (!templateId) return null;
+  if (!templateId || row.can_whatsapp === false) return null;
 
   return (
     <Button

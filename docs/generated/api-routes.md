@@ -1,6 +1,6 @@
 # API Routes (auto-generated)
 
-> Last synced: 2026-07-05T14:45:37.411Z
+> Last synced: 2026-07-08T21:42:18.270Z
 > Source: `backend/routes/api.php`
 > Regenerate: `npm run docs:sync`
 
@@ -14,6 +14,14 @@
 | POST | `/api/admin/attendance/section/{sectionId}/date/{date}` | closure |
 | GET | `/api/admin/attendance/section/{sectionId}/history` | closure |
 | GET | `/api/admin/bootstrap` | closure |
+| POST | `/api/admin/certifications/issue` | closure |
+| GET | `/api/admin/certifications/issued` | closure |
+| DELETE | `/api/admin/certifications/issued/{id}` | closure |
+| POST | `/api/admin/certifications/prepare` | closure |
+| GET | `/api/admin/certifications/templates` | closure |
+| POST | `/api/admin/certifications/templates` | closure |
+| DELETE | `/api/admin/certifications/templates/{id}` | closure |
+| PUT | `/api/admin/certifications/templates/{id}` | closure |
 | POST | `/api/admin/classes` | closure |
 | PUT | `/api/admin/classes/{id}` | closure |
 | GET | `/api/admin/exams/section/{sectionId}/date/{date}` | closure |
@@ -90,6 +98,13 @@
 | POST | `/api/admin/users` | closure |
 | DELETE | `/api/admin/users/{id}` | closure |
 | PUT | `/api/admin/users/{id}` | closure |
+| POST | `/api/admin/whatsapp/prepare` | closure |
+| POST | `/api/admin/whatsapp/send` | closure |
+| GET | `/api/admin/whatsapp/status` | closure |
+| GET | `/api/admin/whatsapp/templates` | closure |
+| POST | `/api/admin/whatsapp/templates` | closure |
+| DELETE | `/api/admin/whatsapp/templates/{id}` | closure |
+| PUT | `/api/admin/whatsapp/templates/{id}` | closure |
 | GET | `/api/auth/guards` | closure |
 | GET | `/api/auth/memberships` | closure |
 | POST | `/api/auth/switch-center` | closure |

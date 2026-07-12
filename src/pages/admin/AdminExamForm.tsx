@@ -18,6 +18,7 @@ interface StudentExamRow {
   status: 'present' | 'absent' | 'late';
   degree: string;
   notes: string;
+  can_whatsapp?: boolean;
 }
 
 export default function AdminExamForm() {
@@ -59,6 +60,7 @@ export default function AdminExamForm() {
         status: r.status,
         degree: r.degree || '',
         notes: r.notes || '',
+        can_whatsapp: r.can_whatsapp ?? false,
       })));
       setSessionId(data.session_id ? Number(data.session_id) : 0);
       setSessionOptions(data.session_options || []);
@@ -184,7 +186,7 @@ export default function AdminExamForm() {
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('attendance.late')}</th>
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('exam.degree')}</th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('col.notes')}</th>
-                <th className="px-3 py-2 text-center font-medium text-muted-foreground w-12">{t('whatsapp.short')}</th>
+                <th className="px-3 py-2 text-center font-medium text-muted-foreground w-20">{t('crud.actions')}</th>
               </tr>
             </thead>
             <tbody>

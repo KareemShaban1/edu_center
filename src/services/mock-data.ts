@@ -61,7 +61,20 @@ export const mockTeachers: Teacher[] = Array.from({ length: 6 }, (_, i) => ({
   email: `teacher${i + 1}@school.com`,
   specialization: ['Math', 'Science', 'English', 'Arabic', 'History', 'Art'][i],
   gender: i % 2 === 0 ? 'male' : 'female',
+  status: (i % 3 === 2 ? 'inactive' : 'active') as 'active' | 'inactive',
+  phone: `+20100000000${i}`,
   class_ids: [1, 2].slice(0, (i % 2) + 1),
+  section_ids: [1],
+  sections: [
+    {
+      id: 1,
+      name: `Section ${i + 1}`,
+      class_id: 1,
+      class_name: 'Class A',
+      grade_id: 1,
+      grade_name: 'Grade 1',
+    },
+  ],
   attachments: [],
 }));
 

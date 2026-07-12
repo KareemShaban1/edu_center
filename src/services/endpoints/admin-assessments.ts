@@ -7,6 +7,7 @@ export interface AssessmentRow {
   status: 'present' | 'absent' | 'late';
   degree: string;
   notes: string;
+  can_whatsapp?: boolean;
 }
 
 export interface AssessmentDayPayload {

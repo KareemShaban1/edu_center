@@ -21,7 +21,6 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/endpoints/dashboard';
-import { adminLinkGroups, adminMainLinks } from '@/config/admin-dashboard-links';
 import type { DashboardFilters, DashboardStat } from '@/types/models';
 
 const statVariantById: Record<string, DashboardStat['variant']> = {
@@ -174,11 +173,7 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      <AdminDashboardHero
-        userName={user?.name}
-        mainLinks={adminMainLinks}
-        linkGroups={adminLinkGroups}
-      />
+      <AdminDashboardHero userName={user?.name} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {isLoading

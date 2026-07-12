@@ -10,6 +10,7 @@ use App\Models\Parents;
 use App\Models\Student;
 use App\Models\WhatsappTemplate;
 use App\Services\NotificationDispatchService;
+use App\Services\StudentWhatsAppContactResolver;
 use App\Services\WhatsAppEvolutionService;
 use App\Services\WhatsAppLinkService;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +32,7 @@ class WhatsAppApiController extends Controller
         private readonly NotificationDispatchService $dispatcher,
         private readonly WhatsAppLinkService $whatsAppLinks,
         private readonly WhatsAppEvolutionService $evolution,
+        private readonly StudentWhatsAppContactResolver $contactResolver,
     ) {}
 
     public function status(Request $request): JsonResponse
@@ -298,8 +300,8 @@ class WhatsAppApiController extends Controller
             $model = $entry['model'];
             $type = $entry['type'];
             $contextStudentId = isset($entry['student_id']) ? (int) $entry['student_id'] : null;
+            $phone = $entry['phone'] ?? $this->resolvePhone($model, $type, $studentsHavePhone, $contextStudentId);
 
-            $phone = $this->resolvePhone($model, $type, $studentsHavePhone, $contextStudentId);
             if ($phone === null) {
                 $skipped++;
                 continue;
@@ -366,26 +368,23 @@ class WhatsAppApiController extends Controller
         $audience = $payload['audience'];
         $studentIds = collect($payload['student_ids'] ?? [])->filter()->map(fn ($id) => (int) $id)->unique()->values();
 
-        if ($audience === 'parents' && $studentIds->isNotEmpty()) {
+        if ($studentIds->isNotEmpty()) {
             $recipients = collect();
 
             Student::query()
                 ->whereIn('id', $studentIds)
                 ->get()
                 ->each(function (Student $student) use ($recipients) {
-                    if (empty($student->parent_id)) {
-                        return;
-                    }
-
-                    $parent = Parents::query()->find($student->parent_id);
-                    if (! $parent) {
+                    $contact = $this->contactResolver->resolve($student);
+                    if ($contact === null) {
                         return;
                     }
 
                     $recipients->push([
-                        'type' => 'parent',
-                        'model' => $parent,
+                        'type' => $contact['type'],
+                        'model' => $contact['model'],
                         'student_id' => (int) $student->getKey(),
+                        'phone' => $contact['phone'],
                     ]);
                 });
 

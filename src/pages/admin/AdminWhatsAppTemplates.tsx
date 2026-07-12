@@ -4,6 +4,7 @@ import FormDialog from '@/components/FormDialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { toast } from '@/hooks/use-toast';
 import { adminWhatsAppApi, type WhatsAppTemplate } from '@/services/endpoints/admin-whatsapp';
+import WhatsAppTemplatesGuide from '@/components/admin/WhatsAppTemplatesGuide';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -66,14 +67,17 @@ export default function AdminWhatsAppTemplates() {
       columns={columns}
       data={isLoading ? [] : templates}
       searchKeys={['name', 'content']}
-      actions={
-        <Button variant="outline" size="sm" asChild className="gap-2">
-          <Link to="/admin/whatsapp">
-            <Send className="h-4 w-4" />
-            {t('whatsapp.sendTitle')}
-          </Link>
-        </Button>
-      }
+      actions={(
+        <>
+          <WhatsAppTemplatesGuide />
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <Link to="/admin/whatsapp">
+              <Send className="h-4 w-4" />
+              {t('whatsapp.sendTitle')}
+            </Link>
+          </Button>
+        </>
+      )}
       onDelete={item => {
         void deleteMutation.mutateAsync(item.id);
       }}

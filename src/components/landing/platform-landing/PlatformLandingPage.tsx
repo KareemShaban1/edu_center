@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GraduationCap, ArrowLeft, Check, Languages } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -8,6 +8,8 @@ import { getTenantLoginPath, getRoleLoginPath } from '@/lib/tenant-routes';
 import { dashboardPreviews } from '@/components/landing/LandingDashboardPreviews';
 import { navLinks, heroBadges, features, roles, whyUs, footerTrust } from './constants';
 import { PlatformLandingHeroIllustration } from './PlatformLandingHeroIllustration';
+import PlatformLandingStats from './PlatformLandingStats';
+import PlatformLandingWhatsAppFloat from './PlatformLandingWhatsAppFloat';
 import { FeatureIconCircle } from './EgyptLandmarkIllustration';
 import { usePlatformLandingFonts } from './usePlatformLandingFonts';
 import { useLandingBrand } from './useLandingBrand';
@@ -88,23 +90,46 @@ export function PlatformLandingPage() {
           </motion.a>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((link, i) => (
-              <motion.a
-                key={link.id}
-                href={link.href}
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
-                whileHover={{ y: -2 }}
-                className={cn(
-                  'rounded-lg px-3.5 py-2 font-medium text-[20px] transition-colors',
-                  'active' in link && link.active ? 'font-semibold' : 'text-gray-600 hover:text-gray-900',
-                )}
-                style={{ fontSize: fonts.nav, ...('active' in link && link.active ? { color: brand.red } : {}) }}
-              >
-                {isAr ? link.labelAr : link.labelEn}
-              </motion.a>
-            ))}
+            {navLinks.map((link, i) => {
+              const isInternal = link.href.startsWith('/');
+              const label = isAr ? link.labelAr : link.labelEn;
+              const className = cn(
+                'rounded-lg px-3.5 py-2 font-medium text-[20px] transition-colors',
+                'active' in link && link.active ? 'font-semibold' : 'text-gray-600 hover:text-gray-900',
+              );
+              const style = { fontSize: fonts.nav, ...('active' in link && link.active ? { color: brand.red } : {}) };
+
+              if (isInternal) {
+                return (
+                  <motion.span
+                    key={link.id}
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
+                    whileHover={{ y: -2 }}
+                  >
+                    <Link to={link.href} className={className} style={style}>
+                      {label}
+                    </Link>
+                  </motion.span>
+                );
+              }
+
+              return (
+                <motion.a
+                  key={link.id}
+                  href={link.href}
+                  initial={{ opacity: 0, y: -12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
+                  whileHover={{ y: -2 }}
+                  className={className}
+                  style={style}
+                >
+                  {label}
+                </motion.a>
+              );
+            })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -124,7 +149,7 @@ export function PlatformLandingPage() {
               className="rounded-full px-4 py-2 font-semibold text-white shadow-md transition sm:px-5"
               style={{ backgroundColor: brand.red, fontSize: fonts.button }}
             >
-              {isAr ? 'احجز عرض تجريبي' : 'Book a demo'}
+              {isAr ? 'جرب الأن' : 'Try now'}
             </motion.button>
           </div>
         </div>
@@ -225,6 +250,8 @@ export function PlatformLandingPage() {
           </motion.div>
         </div>
       </section>
+
+      <PlatformLandingStats />
 
       {/* ── Features ── */}
       <section id="features" className="scroll-mt-16 bg-[#FAFAFA] py-16 sm:py-20">
@@ -482,7 +509,7 @@ export function PlatformLandingPage() {
                   className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 font-bold shadow-lg"
                   style={{ color: brand.red, fontSize: fonts.button }}
                 >
-                  {isAr ? 'احجز عرض تجريبي مجاني' : 'Book a free demo'}
+                  {isAr ? 'جرب الأن' : 'Try now'}
                   <ArrowLeft
                     className={cn(
                       'h-4 w-4 transition-transform',
@@ -551,9 +578,15 @@ export function PlatformLandingPage() {
           </div>
           <p className="text-gray-500" style={{ fontSize: fonts.footerCopy }}>
             © {new Date().getFullYear()} {brandName}. {isAr ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
+            {' · '}
+            <Link to="/guide" className="text-gray-600 underline-offset-4 hover:text-gray-900 hover:underline">
+              {isAr ? 'دليل المستخدم' : 'User Guide'}
+            </Link>
           </p>
         </div>
       </motion.footer>
+
+      <PlatformLandingWhatsAppFloat />
     </div>
   );
 }

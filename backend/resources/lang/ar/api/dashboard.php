@@ -6,7 +6,7 @@ return [
     'attendance_rate' => 'معدل الحضور',
     'unpaid_this_month' => 'غير مدفوع هذا الشهر',
     'unpaid_amount' => 'المبلغ غير المدفوع',
-    'unpaid_students_section' => 'الطلاب غير المدفوعين — :month',
+    'unpaid_students_section' => 'طلاب لم يدفعوا — :month',
     'recent_students' => 'الطلاب الجدد',
     'announcements' => 'الإعلانات',
     'teacher_sections' => 'شعبتي',

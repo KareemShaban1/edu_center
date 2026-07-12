@@ -85,6 +85,12 @@ export const PLATFORM_DOCUMENTATION: PlatformDocEntry[] = [
     titleKey: 'docs.testing.title',
     descriptionKey: 'docs.testing.desc',
   },
+  {
+    id: 'user-guide',
+    file: '13-user-guide.md',
+    titleKey: 'docs.userGuide.title',
+    descriptionKey: 'docs.userGuide.desc',
+  },
 ];
 
 export const DEFAULT_PLATFORM_DOC_ID = 'index';

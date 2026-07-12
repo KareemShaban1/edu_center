@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-07-05T14:45:37.411Z",
+  "syncedAt": "2026-07-08T21:42:18.270Z",
   "routes": [
     {
       "id": "GET-_admin_announcements",
@@ -99,6 +99,100 @@
       "module": "admin",
       "pathParams": [],
       "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_issue",
+      "method": "POST",
+      "path": "/admin/certifications/issue",
+      "fullPath": "/api/admin/certifications/issue",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_certifications_issued",
+      "method": "GET",
+      "path": "/admin/certifications/issued",
+      "fullPath": "/api/admin/certifications/issued",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_certifications_issued__id_",
+      "method": "DELETE",
+      "path": "/admin/certifications/issued/{id}",
+      "fullPath": "/api/admin/certifications/issued/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_prepare",
+      "method": "POST",
+      "path": "/admin/certifications/prepare",
+      "fullPath": "/api/admin/certifications/prepare",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_certifications_templates",
+      "method": "GET",
+      "path": "/admin/certifications/templates",
+      "fullPath": "/api/admin/certifications/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_templates",
+      "method": "POST",
+      "path": "/admin/certifications/templates",
+      "fullPath": "/api/admin/certifications/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_certifications_templates__id_",
+      "method": "DELETE",
+      "path": "/admin/certifications/templates/{id}",
+      "fullPath": "/api/admin/certifications/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_certifications_templates__id_",
+      "method": "PUT",
+      "path": "/admin/certifications/templates/{id}",
+      "fullPath": "/api/admin/certifications/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
       "authRequired": true
     },
     {
@@ -1032,6 +1126,87 @@
       "method": "PUT",
       "path": "/admin/users/{id}",
       "fullPath": "/api/admin/users/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_prepare",
+      "method": "POST",
+      "path": "/admin/whatsapp/prepare",
+      "fullPath": "/api/admin/whatsapp/prepare",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_send",
+      "method": "POST",
+      "path": "/admin/whatsapp/send",
+      "fullPath": "/api/admin/whatsapp/send",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_whatsapp_status",
+      "method": "GET",
+      "path": "/admin/whatsapp/status",
+      "fullPath": "/api/admin/whatsapp/status",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_whatsapp_templates",
+      "method": "GET",
+      "path": "/admin/whatsapp/templates",
+      "fullPath": "/api/admin/whatsapp/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_templates",
+      "method": "POST",
+      "path": "/admin/whatsapp/templates",
+      "fullPath": "/api/admin/whatsapp/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_whatsapp_templates__id_",
+      "method": "DELETE",
+      "path": "/admin/whatsapp/templates/{id}",
+      "fullPath": "/api/admin/whatsapp/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_whatsapp_templates__id_",
+      "method": "PUT",
+      "path": "/admin/whatsapp/templates/{id}",
+      "fullPath": "/api/admin/whatsapp/templates/{id}",
       "handler": "closure",
       "module": "admin",
       "pathParams": [

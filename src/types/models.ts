@@ -125,6 +125,15 @@ export interface Parent {
   children?: Student[];
 }
 
+export interface TeacherSectionAssignment {
+  id: number;
+  name: string;
+  class_id: number;
+  class_name: string;
+  grade_id: number;
+  grade_name: string;
+}
+
 export interface Teacher {
   id: number;
   name: string;
@@ -137,6 +146,8 @@ export interface Teacher {
   joining_date?: string;
   address?: string;
   class_ids?: number[];
+  section_ids?: number[];
+  sections?: TeacherSectionAssignment[];
   attachments?: string[];
 }
 

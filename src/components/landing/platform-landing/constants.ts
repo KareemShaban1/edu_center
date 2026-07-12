@@ -12,6 +12,7 @@ export const BRAND = {
 export const navLinks = [
   { id: 'home', href: '#home', labelAr: 'الرئيسية', labelEn: 'Home', active: true },
   { id: 'features', href: '#features', labelAr: 'المميزات', labelEn: 'Features' },
+  { id: 'guide', href: '/guide', labelAr: 'دليل المستخدم', labelEn: 'User Guide' },
   { id: 'pricing', href: '#pricing', labelAr: 'الأسعار', labelEn: 'Pricing' },
   { id: 'about', href: '#about', labelAr: 'من نحن', labelEn: 'About' },
   { id: 'contact', href: '#contact', labelAr: 'تواصل معنا', labelEn: 'Contact' },
@@ -108,7 +109,7 @@ export const whyUs = [
   { icon: 'cloud', titleAr: 'نسخ احتياطي يومي', titleEn: 'Daily backups', descAr: 'حماية بياناتك على مدار الساعة', descEn: 'Your data protected around the clock' },
   { icon: 'headset', titleAr: 'دعم فني متميز', titleEn: 'Premium support', descAr: 'فريق دعم متخصص لمساعدتك', descEn: 'Dedicated support team' },
   { icon: 'shield', titleAr: 'أمان عالي', titleEn: 'High security', descAr: 'حماية متقدمة لبيانات المركز', descEn: 'Advanced protection for center data' },
-  { icon: 'map', titleAr: 'مناسب لمصر', titleEn: 'Built for Egypt', descAr: 'مصمم خصيصاً للمراكز المصرية', descEn: 'Designed for Egyptian centers' },
+//   { icon: 'map', titleAr: 'مناسب لمصر', titleEn: 'Built for Egypt', descAr: 'مصمم خصيصاً للمراكز المصرية', descEn: 'Designed for Egyptian centers' },
 ] as const;
 
 export const footerTrust = [
@@ -116,3 +117,10 @@ export const footerTrust = [
   { icon: 'zap', labelAr: 'إعداد سريع', labelEn: 'Fast setup' },
   { icon: 'headset', labelAr: 'دعم فني', labelEn: 'Technical support' },
 ] as const;
+
+/** Platform landing WhatsApp contact (override via VITE_LANDING_WHATSAPP_PHONE). */
+export const LANDING_WHATSAPP = {
+  phone: (import.meta.env.VITE_LANDING_WHATSAPP_PHONE as string | undefined) || '201000000000',
+  defaultMessageEn: 'Hello, I would like to book a demo for the educational platform.',
+  defaultMessageAr: 'مرحباً، أود حجز عرض تجريبي للمنصة التعليمية.',
+} as const;

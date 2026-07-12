@@ -1,6 +1,6 @@
 # Database Tables (auto-generated)
 
-> Last synced: 2026-07-05T14:45:37.411Z
+> Last synced: 2026-07-08T21:42:18.270Z
 > Sources: `backend/database/migrations/`, `backend/config/centers.php`
 > Regenerate: `npm run docs:sync`
 
@@ -53,6 +53,7 @@
 | `landing_pages` | `2026_06_09_000001_create_landing_pages_tables.php` |
 | `platform_settings` | `2026_06_17_000002_create_platform_settings_table.php` |
 | `centers_new` | `2026_06_20_000002_convert_centers_id_to_integer.php` |
+| `student_certifications` | `2026_07_06_000001_create_student_certifications_table.php` |
 
 ## Center-scoped tables (`center_id`)
 
@@ -77,6 +78,7 @@
 - `settings`
 - `whatsapp_templates`
 - `certification_templates`
+- `student_certifications`
 - `activity_logs`
 - `months`
 - `genders`

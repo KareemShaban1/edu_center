@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-07-05T14:45:37.411Z
+> Last synced: 2026-07-08T21:42:18.270Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -16,6 +16,10 @@
 | `/admin/attendance/section/:sectionId/date/:date` |
 | `/admin/attendance/section/:sectionId/history` |
 | `/admin/attendance/section/:sectionId/today` |
+| `/admin/certifications` |
+| `/admin/certifications/templates` |
+| `/admin/certifications/templates/:id/edit` |
+| `/admin/certifications/templates/new` |
 | `/admin/classes` |
 | `/admin/exams` |
 | `/admin/exams/section/:sectionId/date/:date` |
@@ -52,8 +56,11 @@
 | `/admin/teachers` |
 | `/admin/units` |
 | `/admin/users` |
+| `/admin/whatsapp` |
+| `/admin/whatsapp/templates` |
 | `/developer` |
 | `/developer/login` |
+| `/guide` |
 | `/login` |
 | `/p/*` |
 | `/parent` |
@@ -77,6 +84,7 @@
 | `/platform/users` |
 | `/student` |
 | `/student/attendance` |
+| `/student/certifications` |
 | `/student/courses` |
 | `/student/grades` |
 | `/student/homework` |
@@ -96,3 +104,5 @@
 | `/teacher/sessions/:sessionId/livekit` |
 | `apis` |
 | `database` |
+| `documentation` |
+| `documentation/:docId` |

@@ -1,7 +1,7 @@
 {
-  "syncedAt": "2026-07-05T14:45:37.411Z",
-  "tableCount": 53,
-  "centerScopedCount": 46,
+  "syncedAt": "2026-07-08T21:42:18.270Z",
+  "tableCount": 54,
+  "centerScopedCount": 47,
   "membershipScopedCount": 0,
   "tables": [
     {
@@ -952,7 +952,9 @@
       "name": "certification_templates",
       "createMigration": "2025_07_25_235412_create_certification_templates_table.php",
       "migrations": [
-        "2025_07_25_235412_create_certification_templates_table.php"
+        "2025_07_25_235412_create_certification_templates_table.php",
+        "2026_07_06_000002_add_is_system_to_certification_templates_table.php",
+        "2026_07_06_100001_add_design_to_certification_tables.php"
       ],
       "columns": [
         {
@@ -5102,6 +5104,161 @@
       "scoping": "center",
       "referencedBy": [],
       "columnCount": 6,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "student_certifications",
+      "createMigration": "2026_07_06_000001_create_student_certifications_table.php",
+      "migrations": [
+        "2026_07_06_000001_create_student_certifications_table.php",
+        "2026_07_06_100001_add_design_to_certification_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "template_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "section_id",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "variables",
+          "type": "json",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "context",
+          "type": "varchar(255)",
+          "nullable": false,
+          "default": "manual",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "context_date",
+          "type": "date",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "issued_at",
+          "type": "timestamp",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "issued_by",
+          "type": "bigint unsigned",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_custom",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 15,
       "indexCount": 0,
       "foreignKeyCount": 0,
       "incomingCount": 0

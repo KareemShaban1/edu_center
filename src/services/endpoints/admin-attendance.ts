@@ -8,6 +8,7 @@ export interface AttendanceRowPayload {
   student_name: string;
   status: AttendanceStatus;
   notes: string;
+  can_whatsapp?: boolean;
 }
 
 export interface AttendanceDayPayload {

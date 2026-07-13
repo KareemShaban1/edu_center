@@ -12,6 +12,7 @@ const navItems = [
   { labelKey: 'developer.tab.overview', path: '/developer', icon: LayoutDashboard, exact: true },
   { labelKey: 'developer.tab.apis', path: '/developer/apis', icon: Code2, exact: false },
   { labelKey: 'developer.tab.database', path: '/developer/database', icon: Database, exact: false },
+  { labelKey: 'developer.tab.translations', path: '/developer/translations', icon: Languages, exact: false },
   { labelKey: 'developer.tab.documentation', path: '/developer/documentation', icon: BookOpen, exact: false },
 ];
 

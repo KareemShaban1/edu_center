@@ -25,6 +25,12 @@ Route::middleware([
 ])->group(function () {
     Route::get('/config', [ConfigApiController::class, 'show']);
     Route::get('/branding', [PlatformBrandingApiController::class, 'show']);
+    Route::get('/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'index']);
+    Route::post('/developer/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'store']);
+    Route::put('/developer/ui-translations/{key}', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'update'])
+        ->where('key', '[A-Za-z0-9_.-]+');
+    Route::delete('/developer/ui-translations/{key}', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'destroy'])
+        ->where('key', '[A-Za-z0-9_.-]+');
 
     require __DIR__ . '/api/admin.php';
     require __DIR__ . '/api/teacher.php';
@@ -50,6 +56,7 @@ Route::middleware([
     Route::post('/notifications/subscribe', [NotificationApiController::class, 'subscribe']);
     Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
     Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
+    Route::get('/admin/notifications', [NotificationApiController::class, 'adminIndex']);
     Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
 
     Route::get('/admin/whatsapp/templates', [WhatsAppApiController::class, 'listTemplates']);

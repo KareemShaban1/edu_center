@@ -10,6 +10,7 @@ use App\Http\Support\PortalNotificationService;
 use App\Http\Support\ResolvesCenterApiContext;
 use App\Models\Parents;
 use App\Models\Student;
+use App\Services\CenterNotificationHistoryService;
 use App\Services\NotificationDispatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class NotificationApiController extends Controller
     public function __construct(
         private readonly NotificationDispatchService $dispatcher,
         private readonly PortalNotificationService $portalNotifications,
+        private readonly CenterNotificationHistoryService $centerNotificationHistory,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -151,6 +153,23 @@ class NotificationApiController extends Controller
         ]);
 
         return response()->json(['success' => true]);
+    }
+
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web' || ! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $context = $this->resolveDashboardContext($request, self::TENANT_GUARDS, self::ROLE_MAP);
+        if ($context['error']) {
+            return $context['error'];
+        }
+
+        $limit = min((int) $request->query('limit', 100), 200);
+
+        return response()->json($this->centerNotificationHistory->list($limit));
     }
 
     public function adminSend(Request $request): JsonResponse

@@ -231,14 +231,14 @@ export default function DeveloperLoginPage() {
                 </button>
               </form>
 
-              <p className="mt-4 text-center">
+              {/* <p className="mt-4 text-center">
                 <Link
                   to={getTenantLoginPath()}
                   className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
                   {t('auth.linkSchoolLogin')}
                 </Link>
-              </p>
+              </p> */}
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">{t('app.demoMode')}</p>

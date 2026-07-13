@@ -1,6 +1,6 @@
 import { apiClient, USE_MOCK } from '../api-client';
 import { mockNotifications } from '../mock-data';
-import type { Notification, NotificationListResponse } from '@/types/models';
+import type { CenterSentNotificationListResponse, Notification, NotificationListResponse } from '@/types/models';
 
 export interface PushSubscriptionPayload {
   endpoint: string;
@@ -57,5 +57,56 @@ export const notificationsApi = {
       return { sent: { students: 1, parents: 1 } };
     }
     return apiClient.post('/admin/notifications/send', payload);
+  },
+
+  async adminList(limit = 100): Promise<CenterSentNotificationListResponse> {
+    if (USE_MOCK) {
+      return {
+        total: 2,
+        notifications: [
+          {
+            id: 'mock-1',
+            notification_type: 'ManualNotification',
+            channel_type: 'manual',
+            title: 'Exam reminder',
+            body: 'Final exam starts tomorrow at 9 AM.',
+            url: '/student/announcements',
+            audience: 'both',
+            section_id: 1,
+            grade_name: 'Grade 10',
+            class_name: 'Class A',
+            section_name: 'Section 1',
+            send_push: true,
+            source: 'manual',
+            sent_at: new Date().toISOString(),
+            recipients_count: 42,
+            students_count: 25,
+            parents_count: 17,
+            read_count: 30,
+          },
+          {
+            id: 'mock-2',
+            notification_type: 'StudentAttendanceNotification',
+            channel_type: 'attendance',
+            title: 'Attendance update',
+            body: 'Your child was marked present on 2026-07-12.',
+            url: null,
+            audience: null,
+            section_id: null,
+            grade_name: null,
+            class_name: null,
+            section_name: null,
+            send_push: null,
+            source: null,
+            sent_at: new Date(Date.now() - 86400000).toISOString(),
+            recipients_count: 1,
+            students_count: 0,
+            parents_count: 1,
+            read_count: 0,
+          },
+        ],
+      };
+    }
+    return apiClient.get(`/admin/notifications?limit=${limit}`);
   },
 };

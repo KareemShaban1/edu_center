@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-06-16T18:56:59.241Z
+> Last synced: 2026-07-08T21:42:18.270Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -16,6 +16,10 @@
 | `/admin/attendance/section/:sectionId/date/:date` |
 | `/admin/attendance/section/:sectionId/history` |
 | `/admin/attendance/section/:sectionId/today` |
+| `/admin/certifications` |
+| `/admin/certifications/templates` |
+| `/admin/certifications/templates/:id/edit` |
+| `/admin/certifications/templates/new` |
 | `/admin/classes` |
 | `/admin/exams` |
 | `/admin/exams/section/:sectionId/date/:date` |
@@ -24,13 +28,14 @@
 | `/admin/fees` |
 | `/admin/grades` |
 | `/admin/homework` |
+| `/admin/homework/:homeworkId/review` |
+| `/admin/homework/:homeworkId/submissions/:submissionId/remarks` |
 | `/admin/landing` |
 | `/admin/landing/:pageId/analytics` |
 | `/admin/landing/:pageId/edit` |
 | `/admin/lessons` |
 | `/admin/library` |
-| `/admin/meeting-series` |
-| `/admin/meetings` |
+| `/admin/notifications` |
 | `/admin/parents` |
 | `/admin/payments` |
 | `/admin/payments/section/:sectionId/date/:date` |
@@ -41,13 +46,21 @@
 | `/admin/quizzes/section/:sectionId/history` |
 | `/admin/quizzes/section/:sectionId/today` |
 | `/admin/reports` |
+| `/admin/reports/:type` |
 | `/admin/roles` |
 | `/admin/sections` |
+| `/admin/sections/:sectionId/sessions` |
+| `/admin/sessions` |
 | `/admin/settings` |
 | `/admin/students` |
 | `/admin/teachers` |
 | `/admin/units` |
 | `/admin/users` |
+| `/admin/whatsapp` |
+| `/admin/whatsapp/templates` |
+| `/developer` |
+| `/developer/login` |
+| `/guide` |
 | `/login` |
 | `/p/*` |
 | `/parent` |
@@ -57,6 +70,7 @@
 | `/parent/fees` |
 | `/parent/login` |
 | `/parent/quizzes` |
+| `/parent/register` |
 | `/parent/reports` |
 | `/platform` |
 | `/platform/documentation` |
@@ -64,25 +78,31 @@
 | `/platform/login` |
 | `/platform/logs` |
 | `/platform/roles` |
+| `/platform/settings` |
 | `/platform/subscriptions` |
 | `/platform/tenants` |
 | `/platform/users` |
 | `/student` |
 | `/student/attendance` |
+| `/student/certifications` |
 | `/student/courses` |
 | `/student/grades` |
 | `/student/homework` |
 | `/student/library` |
 | `/student/login` |
-| `/student/meetings` |
-| `/student/meetings/:meetingId/livekit` |
+| `/student/register` |
+| `/student/sessions` |
+| `/student/sessions/:sessionId/livekit` |
 | `/teacher` |
 | `/teacher/attendance` |
 | `/teacher/classes` |
 | `/teacher/exams` |
 | `/teacher/homework` |
 | `/teacher/library` |
-| `/teacher/meeting-series` |
-| `/teacher/meetings` |
-| `/teacher/meetings/:meetingId/livekit` |
 | `/teacher/quizzes` |
+| `/teacher/sessions` |
+| `/teacher/sessions/:sessionId/livekit` |
+| `apis` |
+| `database` |
+| `documentation` |
+| `documentation/:docId` |

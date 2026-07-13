@@ -1,8 +1,9 @@
 {
-  "syncedAt": "2026-06-16T18:56:59.241Z",
-  "apiRouteCount": 131,
-  "frontendRouteCount": 80,
-  "migrationTableCount": 44,
+  "syncedAt": "2026-07-08T21:42:18.270Z",
+  "apiRouteCount": 164,
+  "frontendRouteCount": 100,
+  "migrationTableCount": 46,
+  "databaseTableCount": 54,
   "scopedTableCount": 47,
   "userRoles": [
     "admin",
@@ -13,24 +14,25 @@
     "platform_admin"
   ],
   "endpointModules": [
-    "academic",
     "admin",
     "admin-academics",
     "admin-access",
     "admin-announcements",
     "admin-assessments",
     "admin-attendance",
+    "admin-certifications",
     "admin-fees",
+    "admin-homework",
     "admin-landing",
     "admin-learning",
     "admin-library",
-    "admin-meeting-series",
-    "admin-meetings",
     "admin-parents",
     "admin-payments",
     "admin-reports",
+    "admin-sessions",
     "admin-students",
     "admin-teachers",
+    "admin-whatsapp",
     "auth",
     "config",
     "dashboard",
@@ -38,10 +40,9 @@
     "notifications",
     "parent",
     "platform",
+    "session-types",
     "student-self",
-    "students",
     "teacher",
-    "teacher-meeting-series",
-    "teacher-meetings"
+    "teacher-sessions"
   ]
 }

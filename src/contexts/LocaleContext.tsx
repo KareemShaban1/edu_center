@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/services/api-client';
+import { uiTranslationsApi } from '@/services/endpoints/ui-translations';
 
 export type Locale = 'en' | 'ar';
 
@@ -8,9 +9,11 @@ interface LocaleContextType {
   dir: 'ltr' | 'rtl';
   setLocale: (locale: Locale) => void;
   t: (key: string) => string;
+  refreshTranslations: () => Promise<void>;
+  defaultTranslations: Record<Locale, Record<string, string>>;
 }
 
-const translations: Record<Locale, Record<string, string>> = {
+const defaultTranslations: Record<Locale, Record<string, string>> = {
   en: {
     // App
     'app.name': 'EduCenter',
@@ -97,6 +100,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.certifications': 'Certifications',
     'nav.reports': 'Reports',
     'nav.reportsAttendance': 'Attendance Reports',
+    'nav.reportsSummary': 'Summary Reports',
     'nav.reportsExams': 'Exam Reports',
     'nav.reportsQuizzes': 'Quiz Reports',
     'nav.reportsPayments': 'Payment Reports',
@@ -158,7 +162,30 @@ const translations: Record<Locale, Record<string, string>> = {
     'developer.tab.overview': 'Overview',
     'developer.tab.apis': 'APIs',
     'developer.tab.database': 'Database',
+    'developer.tab.translations': 'Translations',
     'developer.tab.documentation': 'Documentation',
+    'developer.translations.pageDesc': 'Manage the application translation keys and their English and Arabic values.',
+    'developer.translations.add': 'Add translation',
+    'developer.translations.edit': 'Edit translation',
+    'developer.translations.key': 'Translation key',
+    'developer.translations.english': 'English value',
+    'developer.translations.arabic': 'Arabic value',
+    'developer.translations.source': 'Source',
+    'developer.translations.source.default': 'Built in',
+    'developer.translations.source.custom': 'Custom',
+    'developer.translations.source.override': 'Override',
+    'developer.translations.formDesc': 'Keys may contain letters, numbers, dots, underscores, and hyphens.',
+    'developer.translations.required': 'Key, English value, and Arabic value are required.',
+    'developer.translations.keyFormat': 'Use only letters, numbers, dots, underscores, and hyphens in the key.',
+    'developer.translations.duplicate': 'This translation key already exists.',
+    'developer.translations.saved': 'Translation saved',
+    'developer.translations.deleted': 'Translation deleted',
+    'developer.translations.deleteTitle': 'Delete translation',
+    'developer.translations.deleteDesc': 'This key will stop resolving throughout the application.',
+    'developer.translations.loading': 'Loading translations...',
+    'developer.translations.searchPlaceholder': 'Search key or value…',
+    'developer.translations.namespace': 'Namespace',
+    'developer.translations.resultCount': 'Results',
     'developer.manifestError': 'Could not load documentation manifest. Run npm run docs:sync.',
     'developer.syncInfo': 'Documentation sync',
     'developer.syncedAtLabel': 'Last synced',
@@ -416,6 +443,21 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.sendFailed': 'Failed to send',
     'notifications.validationError': 'Validation error',
     'notifications.validationDesc': 'Title, message, and section are required.',
+    'notifications.sendNew': 'Send new notification',
+    'notifications.sentHistory': 'Sent notifications',
+    'notifications.sentHistoryDesc': 'All notifications delivered by this center to students and parents.',
+    'notifications.totalSent': 'Total campaigns',
+    'notifications.sentAt': 'Sent at',
+    'notifications.recipients': 'Recipients',
+    'notifications.readCount': 'Read',
+    'notifications.type': 'Type',
+    'notifications.scope': 'Scope',
+    'notifications.details': 'Notification details',
+    'notifications.notificationClass': 'System class',
+    'notifications.channelManual': 'Manual',
+    'notifications.channelAnnouncement': 'Announcement',
+    'notifications.channelAttendance': 'Attendance',
+    'notifications.channelGeneral': 'General',
     'whatsapp.sendTitle': 'WhatsApp Messages',
     'whatsapp.sendDesc': 'Generate free WhatsApp links from templates and send manually to students or parents.',
     'whatsapp.templatesTitle': 'WhatsApp Templates',
@@ -648,7 +690,23 @@ const translations: Record<Locale, Record<string, string>> = {
     'reports.recentRecords': 'Recent records',
     'reports.otherReports': 'Other reports',
     'reports.backToOverview': 'Back to reports overview',
+    'reports.backToAttendanceReport': 'Back to attendance report',
+    'reports.viewSectionReport': 'View report',
+    'reports.sectionAttendance': 'Section attendance report',
+    'reports.selectGradeClassHint': 'Select grade and class in the filters above to browse sections.',
+    'reports.daysRecorded': 'Days recorded',
     'reports.loading': 'Loading reports...',
+    'reports.unpaidAmount': 'Unpaid amount',
+    'reports.payments.unpaidStudents': 'Unpaid students',
+    'reports.payments.deservedMonths': 'Deserved months',
+    'reports.payments.unpaidForMonth': 'Unpaid students — {month}',
+    'reports.payments.unpaidDateHint': 'Students who have not paid fees for the month of the selected date.',
+    'reports.payments.deservedMonthsHint': 'Students with outstanding fees and the months they owe.',
+    'reports.payments.collectionByMonth': 'Collection by month',
+    'reports.payments.paidVsUnpaid': 'Paid vs unpaid',
+    'reports.payments.paid': 'Paid',
+    'reports.payments.unpaid': 'Unpaid',
+    'reports.payments.collected': 'Collected',
     'page.settings.desc': 'Manage school settings',
     'page.classes.desc': 'View and manage your classes',
     'page.quizzes.desc': 'Create and manage quizzes',
@@ -1480,6 +1538,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.whatsapp': 'واتساب',
     'nav.certifications': 'الشهادات',
     'nav.reports': 'التقارير',
+    'nav.reportsSummary': 'ملخص التقارير',
     'nav.reportsAttendance': 'تقارير الحضور',
     'nav.reportsExams': 'تقارير الامتحانات',
     'nav.reportsQuizzes': 'تقارير الاختبارات',
@@ -1542,7 +1601,30 @@ const translations: Record<Locale, Record<string, string>> = {
     'developer.tab.overview': 'نظرة عامة',
     'developer.tab.apis': 'واجهات API',
     'developer.tab.database': 'قاعدة البيانات',
+    'developer.tab.translations': 'الترجمات',
     'developer.tab.documentation': 'التوثيق',
+    'developer.translations.pageDesc': 'إدارة مفاتيح ترجمة التطبيق وقيمها الإنجليزية والعربية.',
+    'developer.translations.add': 'إضافة ترجمة',
+    'developer.translations.edit': 'تعديل الترجمة',
+    'developer.translations.key': 'مفتاح الترجمة',
+    'developer.translations.english': 'القيمة الإنجليزية',
+    'developer.translations.arabic': 'القيمة العربية',
+    'developer.translations.source': 'المصدر',
+    'developer.translations.source.default': 'مدمج',
+    'developer.translations.source.custom': 'مخصص',
+    'developer.translations.source.override': 'معدل',
+    'developer.translations.formDesc': 'يمكن أن يحتوي المفتاح على حروف وأرقام ونقاط وشرطة سفلية وشرطات.',
+    'developer.translations.required': 'المفتاح والقيمتان الإنجليزية والعربية مطلوبة.',
+    'developer.translations.keyFormat': 'استخدم الحروف والأرقام والنقاط والشرطة السفلية والشرطات فقط.',
+    'developer.translations.duplicate': 'مفتاح الترجمة موجود بالفعل.',
+    'developer.translations.saved': 'تم حفظ الترجمة',
+    'developer.translations.deleted': 'تم حذف الترجمة',
+    'developer.translations.deleteTitle': 'حذف الترجمة',
+    'developer.translations.deleteDesc': 'سيتوقف هذا المفتاح عن العمل في جميع أجزاء التطبيق.',
+    'developer.translations.loading': 'جارٍ تحميل الترجمات...',
+    'developer.translations.searchPlaceholder': 'بحث في المفتاح أو القيمة…',
+    'developer.translations.namespace': 'المجموعة',
+    'developer.translations.resultCount': 'النتائج',
     'developer.manifestError': 'تعذر تحميل بيانات التوثيق. شغّل npm run docs:sync.',
     'developer.syncInfo': 'مزامنة التوثيق',
     'developer.syncedAtLabel': 'آخر مزامنة',
@@ -1815,6 +1897,21 @@ const translations: Record<Locale, Record<string, string>> = {
     'notifications.sendFailed': 'فشل الإرسال',
     'notifications.validationError': 'خطأ في التحقق',
     'notifications.validationDesc': 'العنوان والرسالة والمجموعة مطلوبة.',
+    'notifications.sendNew': 'إرسال إشعار جديد',
+    'notifications.sentHistory': 'الإشعارات المرسلة',
+    'notifications.sentHistoryDesc': 'جميع الإشعارات التي أرسلها المركز للطلاب وأولياء الأمور.',
+    'notifications.totalSent': 'إجمالي الحملات',
+    'notifications.sentAt': 'تاريخ الإرسال',
+    'notifications.recipients': 'المستلمون',
+    'notifications.readCount': 'مقروء',
+    'notifications.type': 'النوع',
+    'notifications.scope': 'النطاق',
+    'notifications.details': 'تفاصيل الإشعار',
+    'notifications.notificationClass': 'فئة النظام',
+    'notifications.channelManual': 'يدوي',
+    'notifications.channelAnnouncement': 'إعلان',
+    'notifications.channelAttendance': 'حضور',
+    'notifications.channelGeneral': 'عام',
     'whatsapp.sendTitle': 'رسائل واتساب',
     'whatsapp.sendDesc': 'أنشئ روابط واتساب مجانية من القوالب وأرسلها يدوياً للطلاب أو أولياء الأمور.',
     'whatsapp.templatesTitle': 'قوالب واتساب',
@@ -2047,7 +2144,23 @@ const translations: Record<Locale, Record<string, string>> = {
     'reports.recentRecords': 'أحدث السجلات',
     'reports.otherReports': 'تقارير أخرى',
     'reports.backToOverview': 'العودة إلى ملخص التقارير',
+    'reports.backToAttendanceReport': 'العودة إلى تقرير الحضور',
+    'reports.viewSectionReport': 'عرض التقرير',
+    'reports.sectionAttendance': 'تقرير حضور المجموعة',
+    'reports.selectGradeClassHint': 'اختر الصف والفصل من الفلاتر أعلاه لتصفح المجموعات.',
+    'reports.daysRecorded': 'أيام مسجّلة',
     'reports.loading': 'جاري تحميل التقارير...',
+    'reports.unpaidAmount': 'المبلغ غير المسدد',
+    'reports.payments.unpaidStudents': 'الطلاب غير المسددين',
+    'reports.payments.deservedMonths': 'الأشهر المستحقة',
+    'reports.payments.unpaidForMonth': 'طلاب غير مسددين — {month}',
+    'reports.payments.unpaidDateHint': 'الطلاب الذين لم يسددوا رسوم شهر التاريخ المحدد.',
+    'reports.payments.deservedMonthsHint': 'الطلاب الذين لديهم رسوم مستحقة والأشهر التي عليهم.',
+    'reports.payments.collectionByMonth': 'التحصيل حسب الشهر',
+    'reports.payments.paidVsUnpaid': 'مدفوع مقابل غير مدفوع',
+    'reports.payments.paid': 'مدفوع',
+    'reports.payments.unpaid': 'غير مدفوع',
+    'reports.payments.collected': 'محصّل',
     'page.settings.desc': 'إدارة إعدادات المدرسة',
     'page.classes.desc': 'عرض وإدارة صفوفك',
     'page.quizzes.desc': 'إنشاء وإدارة الاختبارات القصيرة',
@@ -2825,8 +2938,36 @@ function readInitialLocale(): Locale {
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
+  const [overrides, setOverrides] = useState<{
+    values: Record<Locale, Record<string, string>>;
+    deleted: Set<string>;
+  }>({
+    values: { en: {}, ar: {} },
+    deleted: new Set(),
+  });
 
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
+
+  const refreshTranslations = useCallback(async () => {
+    try {
+      const items = await uiTranslationsApi.list();
+      const values: Record<Locale, Record<string, string>> = { en: {}, ar: {} };
+      const deleted = new Set<string>();
+
+      items.forEach(item => {
+        if (item.is_deleted) {
+          deleted.add(item.key);
+          return;
+        }
+        if (item.en !== null) values.en[item.key] = item.en;
+        if (item.ar !== null) values.ar[item.key] = item.ar;
+      });
+
+      setOverrides({ values, deleted });
+    } catch {
+      // The bundled translations remain available if the API is offline.
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('dir', dir);
@@ -2835,14 +2976,23 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     apiClient.setLocale(locale);
   }, [locale, dir]);
 
+  useEffect(() => {
+    void refreshTranslations();
+  }, [refreshTranslations]);
+
   const setLocale = useCallback((l: Locale) => setLocaleState(l), []);
 
   const t = useCallback((key: string): string => {
-    return translations[locale]?.[key] ?? translations.en?.[key] ?? key;
-  }, [locale]);
+    if (overrides.deleted.has(key)) return key;
+    return overrides.values[locale]?.[key]
+      ?? defaultTranslations[locale]?.[key]
+      ?? overrides.values.en?.[key]
+      ?? defaultTranslations.en?.[key]
+      ?? key;
+  }, [locale, overrides]);
 
   return (
-    <LocaleContext.Provider value={{ locale, dir, setLocale, t }}>
+    <LocaleContext.Provider value={{ locale, dir, setLocale, t, refreshTranslations, defaultTranslations }}>
       {children}
     </LocaleContext.Provider>
   );

@@ -27,6 +27,49 @@ export interface AdminReportRecentRow {
   status: string;
 }
 
+export interface AdminPaymentsUnpaidStudent {
+  id: number | string;
+  student_name: string;
+  grade_name: string;
+  class_name: string;
+  section_name: string;
+  deserved_months: string[];
+  unpaid_amount: number;
+  fee_title?: string | null;
+}
+
+export interface AdminPaymentsReportFilters {
+  grade_id?: number;
+  class_id?: number;
+  section_id?: number;
+  date?: string;
+}
+
+export interface AdminPaymentsReportPayload extends AdminTypedReportPayload {
+  by_fee_type: Array<{
+    type: string;
+    label: string;
+    collected: number;
+    unpaid: number;
+    total: number;
+  }>;
+  by_month: Array<{
+    month: string;
+    collected: number;
+    unpaid: number;
+  }>;
+  paid_vs_unpaid: {
+    paid_count: number;
+    unpaid_count: number;
+    paid_amount: number;
+    unpaid_amount: number;
+  };
+  unpaid_students: AdminPaymentsUnpaidStudent[];
+  unpaid_mode: 'date' | 'deserved_months';
+  reference_month?: string | null;
+  filters: AdminPaymentsReportFilters;
+}
+
 export interface AdminTypedReportPayload {
   type: AdminReportType;
   stats: AdminReportStat[];
@@ -86,10 +129,34 @@ export const adminReportsApi = {
     return apiClient.get<AdminReportsPayload>('/admin/reports', undefined, false);
   },
 
-  async getByType(type: AdminReportType): Promise<AdminTypedReportPayload> {
+  async getByType(type: AdminReportType, filters?: AdminPaymentsReportFilters): Promise<AdminTypedReportPayload | AdminPaymentsReportPayload> {
     if (USE_MOCK) {
+      if (type === 'payments') {
+        return {
+          type: 'payments',
+          stats: [],
+          by_grade: [],
+          recent: [],
+          by_fee_type: [],
+          by_month: [],
+          paid_vs_unpaid: { paid_count: 0, unpaid_count: 0, paid_amount: 0, unpaid_amount: 0 },
+          unpaid_students: [],
+          unpaid_mode: 'deserved_months',
+          filters: filters || {},
+        };
+      }
       return { type, stats: [], by_grade: [], recent: [] };
     }
-    return apiClient.get<AdminTypedReportPayload>(`/admin/reports/${type}`, undefined, false);
+    const params: Record<string, string | number> = {};
+    if (filters?.grade_id) params.grade_id = filters.grade_id;
+    if (filters?.class_id) params.class_id = filters.class_id;
+    if (filters?.section_id) params.section_id = filters.section_id;
+    if (filters?.date) params.date = filters.date;
+    return apiClient.get<AdminTypedReportPayload | AdminPaymentsReportPayload>(`/admin/reports/${type}`, params, false);
+  },
+
+  async getPayments(filters?: AdminPaymentsReportFilters): Promise<AdminPaymentsReportPayload> {
+    const result = await this.getByType('payments', filters);
+    return result as AdminPaymentsReportPayload;
   },
 };

@@ -215,6 +215,7 @@ const adminNavBlocks: NavBlock[] = [
       labelKey: 'nav.group.insights',
       icon: PieChart,
       items: [
+        { labelKey: 'nav.reportsSummary', path: '/admin/reports', icon: FileText },
         { labelKey: 'nav.reportsAttendance', path: '/admin/reports/attendance', icon: CalendarCheck },
         { labelKey: 'nav.reportsExams', path: '/admin/reports/exams', icon: ClipboardList },
         { labelKey: 'nav.reportsQuizzes', path: '/admin/reports/quizzes', icon: ClipboardCheck },

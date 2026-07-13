@@ -52,6 +52,9 @@ import AdminCertificationTemplates from "@/pages/admin/AdminCertificationTemplat
 import AdminCertificationBuilder from "@/pages/admin/AdminCertificationBuilder";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminReportDetail from "@/pages/admin/AdminReportDetail";
+import AdminReportAttendance from "@/pages/admin/AdminReportAttendance";
+import AdminReportAttendanceSection from "@/pages/admin/AdminReportAttendanceSection";
+import AdminReportPayments from "@/pages/admin/AdminReportPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUnits from "@/pages/admin/AdminUnits";
 import AdminLessons from "@/pages/admin/AdminLessons";
@@ -111,6 +114,7 @@ import DeveloperOverviewPage from "@/pages/developer/DeveloperOverviewPage";
 import DeveloperApisPage from "@/pages/developer/DeveloperApisPage";
 import DeveloperDatabasePage from "@/pages/developer/DeveloperDatabasePage";
 import DeveloperDocumentationPage from "@/pages/developer/DeveloperDocumentationPage";
+import DeveloperTranslationsPage from "@/pages/developer/DeveloperTranslationsPage";
 import PlatformSettings from "@/pages/platform/PlatformSettings";
 
 const queryClient = new QueryClient();
@@ -173,6 +177,9 @@ const App = () => (
               <Route path="/admin/certifications/templates/new" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationBuilder /></ProtectedRoute>} />
               <Route path="/admin/certifications/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationBuilder /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
+              <Route path="/admin/reports/attendance/section/:sectionId" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportAttendanceSection /></ProtectedRoute>} />
+              <Route path="/admin/reports/attendance" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportAttendance /></ProtectedRoute>} />
+              <Route path="/admin/reports/payments" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportPayments /></ProtectedRoute>} />
               <Route path="/admin/reports/:type" element={<ProtectedRoute allowedRoles={['admin']}><AdminReportDetail /></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
               <Route path="/admin/units" element={<ProtectedRoute allowedRoles={['admin']}><AdminUnits /></ProtectedRoute>} />
@@ -235,6 +242,7 @@ const App = () => (
                 <Route index element={<DeveloperOverviewPage />} />
                 <Route path="apis" element={<DeveloperApisPage />} />
                 <Route path="database" element={<DeveloperDatabasePage />} />
+                <Route path="translations" element={<DeveloperTranslationsPage />} />
                 <Route path="documentation" element={<DeveloperDocumentationPage />} />
                 <Route path="documentation/:docId" element={<DeveloperDocumentationPage />} />
               </Route>

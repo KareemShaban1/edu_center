@@ -336,6 +336,32 @@ export interface NotificationListResponse {
   unread_count: number;
 }
 
+export interface CenterSentNotification {
+  id: string;
+  notification_type: string;
+  channel_type: string;
+  title: string;
+  body: string;
+  url: string | null;
+  audience: 'students' | 'parents' | 'both' | null;
+  section_id: number | null;
+  grade_name: string | null;
+  class_name: string | null;
+  section_name: string | null;
+  send_push: boolean | null;
+  source: string | null;
+  sent_at: string;
+  recipients_count: number;
+  students_count: number;
+  parents_count: number;
+  read_count: number;
+}
+
+export interface CenterSentNotificationListResponse {
+  notifications: CenterSentNotification[];
+  total: number;
+}
+
 export interface WhatsAppTemplate {
   id: number;
   name: string;

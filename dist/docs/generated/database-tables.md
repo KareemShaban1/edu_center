@@ -1,6 +1,6 @@
 # Database Tables (auto-generated)
 
-> Last synced: 2026-06-16T18:56:59.241Z
+> Last synced: 2026-07-08T21:42:18.270Z
 > Sources: `backend/database/migrations/`, `backend/config/centers.php`
 > Regenerate: `npm run docs:sync`
 
@@ -9,7 +9,7 @@
 | Table | Migration file |
 |-------|----------------|
 | `centers` | `2014_09_15_000000_create_centers_table.php` |
-| `global_users` | `2014_09_15_000001_create_global_users_and_memberships_table.php` |
+| `center_memberships` | `2014_09_15_000001_create_global_users_and_memberships_table.php` |
 | `users` | `2014_10_12_000000_create_users_table.php` |
 | `password_resets` | `2014_10_12_100000_create_password_resets_table.php` |
 | `failed_jobs` | `2019_08_19_000000_create_failed_jobs_table.php` |
@@ -35,7 +35,7 @@
 | `exam_degrees` | `2023_02_09_113231_create_exam_degrees_table.php` |
 | `announcements` | `2023_05_13_022236_create_announcements_table.php` |
 | `notifications` | `2024_07_01_170137_create_notifications_table.php` |
-| `meetings` | `2025_03_23_120000_create_meetings_table_and_migrate_online_classes.php` |
+| `sessions` | `2025_03_23_120000_create_sessions_table.php` |
 | `notes` | `2025_03_24_144311_create_notes_table.php` |
 | `units` | `2025_03_25_194122_create_units_table.php` |
 | `lessons` | `2025_03_25_194123_create_lessons_table.php` |
@@ -50,8 +50,10 @@
 | `student_homework` | `2025_08_05_125233_create_student_homework_table.php` |
 | `activity_logs` | `2025_08_07_192820_create_activity_logs_table.php` |
 | `admins` | `2025_08_11_221636_create_admins_table.php` |
-| `meeting_series` | `2026_03_23_000001_add_meeting_series_and_offline_columns.php` |
 | `landing_pages` | `2026_06_09_000001_create_landing_pages_tables.php` |
+| `platform_settings` | `2026_06_17_000002_create_platform_settings_table.php` |
+| `centers_new` | `2026_06_20_000002_convert_centers_id_to_integer.php` |
+| `student_certifications` | `2026_07_06_000001_create_student_certifications_table.php` |
 
 ## Center-scoped tables (`center_id`)
 
@@ -76,12 +78,12 @@
 - `settings`
 - `whatsapp_templates`
 - `certification_templates`
+- `student_certifications`
 - `activity_logs`
 - `months`
 - `genders`
 - `rooms`
-- `meetings`
-- `meeting_series`
+- `sessions`
 - `notes`
 - `units`
 - `lessons`
@@ -105,5 +107,3 @@
 
 ## Membership-scoped tables
 
-- `students` → role `student` (via `center_memberships.profile_id`)
-- `parents` → role `parent` (via `center_memberships.profile_id`)

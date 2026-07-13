@@ -72,13 +72,10 @@ function statLabelKey(key: string): string {
 export default function AdminReportDetail() {
   const { type } = useParams<{ type: string }>();
   const { t } = useLocale();
+  const reportType = type && ADMIN_REPORT_TYPES.includes(type as AdminReportType)
+    ? (type as AdminReportType)
+    : null;
 
-  if (!type || !ADMIN_REPORT_TYPES.includes(type as AdminReportType)) {
-    return <Navigate to="/admin/reports" replace />;
-  }
-
-  const reportType = type as AdminReportType;
-  const meta = REPORT_META[reportType];
   const { data: bootstrap } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
@@ -101,15 +98,9 @@ export default function AdminReportDetail() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-reports', reportType],
-    queryFn: () => adminReportsApi.getByType(reportType),
+    queryFn: () => adminReportsApi.getByType(reportType!),
+    enabled: !!reportType && reportType !== 'payments' && reportType !== 'attendance',
   });
-
-  const byGradeLabel = reportType === 'payments' ? t('reports.byFeeType') : t('reports.byGrade');
-  const byGradeMetric = reportType === 'payments'
-    ? (row: { rate: number }) => `$${row.rate.toLocaleString()}`
-    : reportType === 'attendance'
-      ? (row: { rate: number }) => `${row.rate}%`
-      : (row: { rate: number }) => String(row.rate);
 
   const gradeName = gradeFilter ? grades.find(g => g.id === Number(gradeFilter))?.name : '';
   const className = classFilter ? classes.find(c => c.id === Number(classFilter))?.name : '';
@@ -134,12 +125,23 @@ export default function AdminReportDetail() {
     });
   }, [data?.recent, gradeName, className, sectionName, dateFilter]);
 
+  if (!reportType) {
+    return <Navigate to="/admin/reports" replace />;
+  }
+
+  if (reportType === 'payments') {
+    return <Navigate to="/admin/reports/payments" replace />;
+  }
+
+  if (reportType === 'attendance') {
+    return <Navigate to="/admin/reports/attendance" replace />;
+  }
+
+  const meta = REPORT_META[reportType];
+  const byGradeLabel = t('reports.byGrade');
+  const byGradeMetric = (row: { rate: number }) => String(row.rate);
+
   const barWidth = (row: { rate: number; total: number }) => {
-    if (reportType === 'payments') {
-      const max = Math.max(...filteredByGrade.map(r => r.rate), 1);
-      return `${(row.rate / max) * 100}%`;
-    }
-    if (reportType === 'attendance') return `${row.rate}%`;
     const max = Math.max(...filteredByGrade.map(r => r.total), 1);
     return `${(row.total / max) * 100}%`;
   };
@@ -231,20 +233,16 @@ export default function AdminReportDetail() {
                     <th className="px-2 py-2 text-start font-medium">{t('col.student')}</th>
                     <th className="px-2 py-2 text-start font-medium">{t('col.grade')}</th>
                     <th className="px-2 py-2 text-start font-medium">{t('col.date')}</th>
-                    <th className="px-2 py-2 text-start font-medium">
-                      {reportType === 'payments' ? t('col.amount') : reportType === 'attendance' ? t('col.status') : t('col.degree')}
-                    </th>
+                    <th className="px-2 py-2 text-start font-medium">{t('col.degree')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecent.map(row => (
                     <tr key={row.id} className="border-b border-border/60">
                       <td className="px-2 py-2">{row.student_name}</td>
-                      <td className="px-2 py-2">{row.grade_name}</td>
-                      <td className="px-2 py-2">{row.date}</td>
-                      <td className="px-2 py-2 capitalize">
-                        {reportType === 'payments' ? row.degree : reportType === 'attendance' ? row.status : row.degree}
-                      </td>
+                      <td className="px-2 py-2">{row.grade_name} {row.class_name} {row.section_name}</td>
+                      <td className="px-2 py-2">{dateOnly(row.date)}</td>
+                      <td className="px-2 py-2">{row.degree}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\PaymentsReportService;
 use App\Http\Support\ResolvesAdminApiContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ use Illuminate\Support\Str;
 class AdminReportsApiController extends Controller
 {
     use ResolvesAdminApiContext;
+
+    public function __construct(
+        private readonly PaymentsReportService $paymentsReportService,
+    ) {}
     public function index(Request $request): JsonResponse
     {
 $guard = $request->session()->get('api_auth_guard', 'web');
@@ -315,80 +320,7 @@ $guard = $request->session()->get('api_auth_guard', 'web');
             ]);
         }
 
-        // payments
-        $paymentsCount = $hasTable('payments') ? (int) $tenantDb->table('payments')->count() : 0;
-        $collectedAmount = $hasTable('payments')
-            ? (float) ($tenantDb->table('payments')->where('payment_status', 1)->sum('amount') ?? 0)
-            : 0.0;
-        $unpaidCount = $hasTable('payments')
-            ? (int) $tenantDb->table('payments')->where('payment_status', 0)->count()
-            : 0;
-        $feesTotal = $hasTable('fees') ? (float) ($tenantDb->table('fees')->sum('amount') ?? 0) : 0.0;
-
-        $byFeeType = collect();
-        if ($hasTable('fees') && $hasTable('payments')) {
-            $feeTypeExpr = $hasColumn('fees', 'fee_type')
-                ? 'fees.fee_type'
-                : ($hasColumn('fees', 'Fee_type') ? 'fees.Fee_type' : "'other'");
-            $byFeeType = $tenantDb->table('payments')
-                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
-                ->select(
-                    DB::raw("$feeTypeExpr as type"),
-                    DB::raw('SUM(CASE WHEN payments.payment_status = 1 THEN COALESCE(payments.amount,0) ELSE 0 END) as collected'),
-                    DB::raw('COUNT(payments.id) as total')
-                )
-                ->groupBy(DB::raw($feeTypeExpr))
-                ->get()
-                ->map(fn ($r) => [
-                    'grade_name' => ucfirst(str_replace('_', ' ', (string) ($r->type ?: 'other'))),
-                    'total' => (int) $r->total,
-                    'rate' => round((float) $r->collected, 2),
-                ])
-                ->sortByDesc('rate')
-                ->values();
-        }
-
-        $recent = collect();
-        if ($hasTable('payments') && $hasTable('students')) {
-            $recent = $tenantDb->table('payments')
-                ->leftJoin('students', 'payments.student_id', '=', 'students.id')
-                ->leftJoin('grades', 'payments.grade_id', '=', 'grades.id')
-                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
-                ->select(
-                    'payments.id',
-                    'students.name as student_name',
-                    'grades.grade_name',
-                    'payments.payment_date as date',
-                    'payments.amount',
-                    'payments.payment_status as status',
-                    'payments.month'
-                )
-                ->orderByDesc('payments.payment_date')
-                ->limit(25)
-                ->get()
-                ->map(fn ($r) => [
-                    'id' => (int) $r->id,
-                    'student_name' => $r->student_name ?: '—',
-                    'grade_name' => $r->grade_name ?: '—',
-                    'date' => $r->date,
-                    'degree' => $r->amount !== null ? number_format((float) $r->amount, 2) : '—',
-                    'status' => (int) $r->status === 1 ? 'paid' : 'unpaid',
-                    'class_name' => $r->month ?: '—',
-                ])
-                ->values();
-        }
-
-        return response()->json([
-            'type' => 'payments',
-            'stats' => [
-                ['key' => 'collected_amount', 'value' => round($collectedAmount, 2)],
-                ['key' => 'payments_count', 'value' => $paymentsCount],
-                ['key' => 'unpaid_count', 'value' => $unpaidCount],
-                ['key' => 'fees_total', 'value' => round($feesTotal, 2)],
-            ],
-            'by_grade' => $byFeeType,
-            'recent' => $recent,
-        ]);
+        return response()->json($this->paymentsReportService->build($request, $tenantDb));
     }
 
 }

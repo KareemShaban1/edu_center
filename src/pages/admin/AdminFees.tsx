@@ -188,6 +188,18 @@ export default function AdminFees() {
   const columns: CrudColumn<Fee>[] = [
     { key: 'id', label: t('col.id'), sortable: true },
     { key: 'title', label: t('col.title'), sortable: true },
+    {
+      key: 'scope',
+      label: `${t('col.grade')} · ${t('col.class')} · ${t('col.section')}`,
+      render: f => {
+        const parts = [
+          grades.find(g => g.id === f.grade_id)?.name,
+          classes.find(c => c.id === f.classroom_id)?.name,
+          sections.find(s => s.id === f.section_id)?.name,
+        ].filter(Boolean);
+        return parts.length > 0 ? parts.join(' · ') : '—';
+      },
+    },
     { key: 'amount', label: t('col.amount'), render: f => `${f.amount.toLocaleString()}` },
     { key: 'type', label: t('col.type'), render: f => <span className="capitalize">{f.type}</span> },
     { key: 'year', label: t('col.year'), sortable: true },

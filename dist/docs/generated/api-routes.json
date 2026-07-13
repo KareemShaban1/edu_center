@@ -1,0 +1,1986 @@
+{
+  "syncedAt": "2026-07-08T21:42:18.270Z",
+  "routes": [
+    {
+      "id": "GET-_admin_announcements",
+      "method": "GET",
+      "path": "/admin/announcements",
+      "fullPath": "/api/admin/announcements",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_announcements",
+      "method": "POST",
+      "path": "/admin/announcements",
+      "fullPath": "/api/admin/announcements",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_announcements__id_",
+      "method": "DELETE",
+      "path": "/admin/announcements/{id}",
+      "fullPath": "/api/admin/announcements/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_announcements__id_",
+      "method": "POST",
+      "path": "/admin/announcements/{id}",
+      "fullPath": "/api/admin/announcements/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_attendance_section__sectionId__date__date_",
+      "method": "GET",
+      "path": "/admin/attendance/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/attendance/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_attendance_section__sectionId__date__date_",
+      "method": "POST",
+      "path": "/admin/attendance/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/attendance/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_attendance_section__sectionId__history",
+      "method": "GET",
+      "path": "/admin/attendance/section/{sectionId}/history",
+      "fullPath": "/api/admin/attendance/section/{sectionId}/history",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_bootstrap",
+      "method": "GET",
+      "path": "/admin/bootstrap",
+      "fullPath": "/api/admin/bootstrap",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_issue",
+      "method": "POST",
+      "path": "/admin/certifications/issue",
+      "fullPath": "/api/admin/certifications/issue",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_certifications_issued",
+      "method": "GET",
+      "path": "/admin/certifications/issued",
+      "fullPath": "/api/admin/certifications/issued",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_certifications_issued__id_",
+      "method": "DELETE",
+      "path": "/admin/certifications/issued/{id}",
+      "fullPath": "/api/admin/certifications/issued/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_prepare",
+      "method": "POST",
+      "path": "/admin/certifications/prepare",
+      "fullPath": "/api/admin/certifications/prepare",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_certifications_templates",
+      "method": "GET",
+      "path": "/admin/certifications/templates",
+      "fullPath": "/api/admin/certifications/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_certifications_templates",
+      "method": "POST",
+      "path": "/admin/certifications/templates",
+      "fullPath": "/api/admin/certifications/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_certifications_templates__id_",
+      "method": "DELETE",
+      "path": "/admin/certifications/templates/{id}",
+      "fullPath": "/api/admin/certifications/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_certifications_templates__id_",
+      "method": "PUT",
+      "path": "/admin/certifications/templates/{id}",
+      "fullPath": "/api/admin/certifications/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_classes",
+      "method": "POST",
+      "path": "/admin/classes",
+      "fullPath": "/api/admin/classes",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_classes__id_",
+      "method": "PUT",
+      "path": "/admin/classes/{id}",
+      "fullPath": "/api/admin/classes/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_exams_section__sectionId__date__date_",
+      "method": "GET",
+      "path": "/admin/exams/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/exams/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_exams_section__sectionId__date__date_",
+      "method": "POST",
+      "path": "/admin/exams/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/exams/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_exams_section__sectionId__history",
+      "method": "GET",
+      "path": "/admin/exams/section/{sectionId}/history",
+      "fullPath": "/api/admin/exams/section/{sectionId}/history",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_fees",
+      "method": "POST",
+      "path": "/admin/fees",
+      "fullPath": "/api/admin/fees",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_fees__id_",
+      "method": "DELETE",
+      "path": "/admin/fees/{id}",
+      "fullPath": "/api/admin/fees/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_fees__id_",
+      "method": "PUT",
+      "path": "/admin/fees/{id}",
+      "fullPath": "/api/admin/fees/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_grades",
+      "method": "POST",
+      "path": "/admin/grades",
+      "fullPath": "/api/admin/grades",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_grades__id_",
+      "method": "PUT",
+      "path": "/admin/grades/{id}",
+      "fullPath": "/api/admin/grades/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_homework",
+      "method": "POST",
+      "path": "/admin/homework",
+      "fullPath": "/api/admin/homework",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_homework__id_",
+      "method": "PUT",
+      "path": "/admin/homework/{id}",
+      "fullPath": "/api/admin/homework/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_homework__id__submissions",
+      "method": "GET",
+      "path": "/admin/homework/{id}/submissions",
+      "fullPath": "/api/admin/homework/{id}/submissions",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_homework_submissions__id_",
+      "method": "GET",
+      "path": "/admin/homework/submissions/{id}",
+      "fullPath": "/api/admin/homework/submissions/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_homework_submissions__id_",
+      "method": "PUT",
+      "path": "/admin/homework/submissions/{id}",
+      "fullPath": "/api/admin/homework/submissions/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_homework_submissions__id__correction",
+      "method": "POST",
+      "path": "/admin/homework/submissions/{id}/correction",
+      "fullPath": "/api/admin/homework/submissions/{id}/correction",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages",
+      "method": "GET",
+      "path": "/admin/landing-pages",
+      "fullPath": "/api/admin/landing-pages",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages",
+      "method": "POST",
+      "path": "/admin/landing-pages",
+      "fullPath": "/api/admin/landing-pages",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_landing-pages__id_",
+      "method": "DELETE",
+      "path": "/admin/landing-pages/{id}",
+      "fullPath": "/api/admin/landing-pages/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages__id_",
+      "method": "GET",
+      "path": "/admin/landing-pages/{id}",
+      "fullPath": "/api/admin/landing-pages/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_landing-pages__id_",
+      "method": "PUT",
+      "path": "/admin/landing-pages/{id}",
+      "fullPath": "/api/admin/landing-pages/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages__id__duplicate",
+      "method": "POST",
+      "path": "/admin/landing-pages/{id}/duplicate",
+      "fullPath": "/api/admin/landing-pages/{id}/duplicate",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages__id__publish",
+      "method": "POST",
+      "path": "/admin/landing-pages/{id}/publish",
+      "fullPath": "/api/admin/landing-pages/{id}/publish",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages__id__unpublish",
+      "method": "POST",
+      "path": "/admin/landing-pages/{id}/unpublish",
+      "fullPath": "/api/admin/landing-pages/{id}/unpublish",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages__pageId__analytics",
+      "method": "GET",
+      "path": "/admin/landing-pages/{pageId}/analytics",
+      "fullPath": "/api/admin/landing-pages/{pageId}/analytics",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "pageId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages__pageId__revisions",
+      "method": "GET",
+      "path": "/admin/landing-pages/{pageId}/revisions",
+      "fullPath": "/api/admin/landing-pages/{pageId}/revisions",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "pageId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages__pageId__revisions__revisionId__restore",
+      "method": "POST",
+      "path": "/admin/landing-pages/{pageId}/revisions/{revisionId}/restore",
+      "fullPath": "/api/admin/landing-pages/{pageId}/revisions/{revisionId}/restore",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "pageId",
+        "revisionId"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages_from-teacher",
+      "method": "POST",
+      "path": "/admin/landing-pages/from-teacher",
+      "fullPath": "/api/admin/landing-pages/from-teacher",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages_from-template",
+      "method": "POST",
+      "path": "/admin/landing-pages/from-template",
+      "fullPath": "/api/admin/landing-pages/from-template",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages_media",
+      "method": "GET",
+      "path": "/admin/landing-pages/media",
+      "fullPath": "/api/admin/landing-pages/media",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_landing-pages_media",
+      "method": "POST",
+      "path": "/admin/landing-pages/media",
+      "fullPath": "/api/admin/landing-pages/media",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_landing-pages_media__id_",
+      "method": "DELETE",
+      "path": "/admin/landing-pages/media/{id}",
+      "fullPath": "/api/admin/landing-pages/media/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_landing-pages_templates",
+      "method": "GET",
+      "path": "/admin/landing-pages/templates",
+      "fullPath": "/api/admin/landing-pages/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_lessons",
+      "method": "POST",
+      "path": "/admin/lessons",
+      "fullPath": "/api/admin/lessons",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_lessons__id_",
+      "method": "POST",
+      "path": "/admin/lessons/{id}",
+      "fullPath": "/api/admin/lessons/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_lessons__id_",
+      "method": "PUT",
+      "path": "/admin/lessons/{id}",
+      "fullPath": "/api/admin/lessons/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_library",
+      "method": "GET",
+      "path": "/admin/library",
+      "fullPath": "/api/admin/library",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_library",
+      "method": "POST",
+      "path": "/admin/library",
+      "fullPath": "/api/admin/library",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_library__id_",
+      "method": "DELETE",
+      "path": "/admin/library/{id}",
+      "fullPath": "/api/admin/library/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_library__id_",
+      "method": "POST",
+      "path": "/admin/library/{id}",
+      "fullPath": "/api/admin/library/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_notifications_send",
+      "method": "POST",
+      "path": "/admin/notifications/send",
+      "fullPath": "/api/admin/notifications/send",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_parents",
+      "method": "POST",
+      "path": "/admin/parents",
+      "fullPath": "/api/admin/parents",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_parents__id_",
+      "method": "PUT",
+      "path": "/admin/parents/{id}",
+      "fullPath": "/api/admin/parents/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_payments_section__sectionId__date__date_",
+      "method": "GET",
+      "path": "/admin/payments/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/payments/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_payments_section__sectionId__date__date_",
+      "method": "POST",
+      "path": "/admin/payments/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/payments/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_payments_section__sectionId__history",
+      "method": "GET",
+      "path": "/admin/payments/section/{sectionId}/history",
+      "fullPath": "/api/admin/payments/section/{sectionId}/history",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_quizzes_section__sectionId__date__date_",
+      "method": "GET",
+      "path": "/admin/quizzes/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/quizzes/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_quizzes_section__sectionId__date__date_",
+      "method": "POST",
+      "path": "/admin/quizzes/section/{sectionId}/date/{date}",
+      "fullPath": "/api/admin/quizzes/section/{sectionId}/date/{date}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId",
+        "date"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_quizzes_section__sectionId__history",
+      "method": "GET",
+      "path": "/admin/quizzes/section/{sectionId}/history",
+      "fullPath": "/api/admin/quizzes/section/{sectionId}/history",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_reports",
+      "method": "GET",
+      "path": "/admin/reports",
+      "fullPath": "/api/admin/reports",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_reports__type_",
+      "method": "GET",
+      "path": "/admin/reports/{type}",
+      "fullPath": "/api/admin/reports/{type}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "type"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_roles",
+      "method": "GET",
+      "path": "/admin/roles",
+      "fullPath": "/api/admin/roles",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_roles",
+      "method": "POST",
+      "path": "/admin/roles",
+      "fullPath": "/api/admin/roles",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_roles__id_",
+      "method": "DELETE",
+      "path": "/admin/roles/{id}",
+      "fullPath": "/api/admin/roles/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_roles__id_",
+      "method": "PUT",
+      "path": "/admin/roles/{id}",
+      "fullPath": "/api/admin/roles/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_sections",
+      "method": "POST",
+      "path": "/admin/sections",
+      "fullPath": "/api/admin/sections",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_sections__id_",
+      "method": "PUT",
+      "path": "/admin/sections/{id}",
+      "fullPath": "/api/admin/sections/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_sections__sectionId__sessions",
+      "method": "GET",
+      "path": "/admin/sections/{sectionId}/sessions",
+      "fullPath": "/api/admin/sections/{sectionId}/sessions",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "sectionId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_sessions",
+      "method": "GET",
+      "path": "/admin/sessions",
+      "fullPath": "/api/admin/sessions",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_sessions",
+      "method": "POST",
+      "path": "/admin/sessions",
+      "fullPath": "/api/admin/sessions",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_sessions__id_",
+      "method": "DELETE",
+      "path": "/admin/sessions/{id}",
+      "fullPath": "/api/admin/sessions/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_sessions__id_",
+      "method": "PUT",
+      "path": "/admin/sessions/{id}",
+      "fullPath": "/api/admin/sessions/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_students",
+      "method": "POST",
+      "path": "/admin/students",
+      "fullPath": "/api/admin/students",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_students__id_",
+      "method": "PUT",
+      "path": "/admin/students/{id}",
+      "fullPath": "/api/admin/students/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_students__id__assign-center",
+      "method": "POST",
+      "path": "/admin/students/{id}/assign-center",
+      "fullPath": "/api/admin/students/{id}/assign-center",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_students__id__unassign-center",
+      "method": "POST",
+      "path": "/admin/students/{id}/unassign-center",
+      "fullPath": "/api/admin/students/{id}/unassign-center",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_students_search-by-code",
+      "method": "GET",
+      "path": "/admin/students/search-by-code",
+      "fullPath": "/api/admin/students/search-by-code",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_teachers",
+      "method": "POST",
+      "path": "/admin/teachers",
+      "fullPath": "/api/admin/teachers",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_teachers__id_",
+      "method": "PUT",
+      "path": "/admin/teachers/{id}",
+      "fullPath": "/api/admin/teachers/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_units",
+      "method": "POST",
+      "path": "/admin/units",
+      "fullPath": "/api/admin/units",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_units__id_",
+      "method": "POST",
+      "path": "/admin/units/{id}",
+      "fullPath": "/api/admin/units/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_units__id_",
+      "method": "PUT",
+      "path": "/admin/units/{id}",
+      "fullPath": "/api/admin/units/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_users",
+      "method": "GET",
+      "path": "/admin/users",
+      "fullPath": "/api/admin/users",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_users",
+      "method": "POST",
+      "path": "/admin/users",
+      "fullPath": "/api/admin/users",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_users__id_",
+      "method": "DELETE",
+      "path": "/admin/users/{id}",
+      "fullPath": "/api/admin/users/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_users__id_",
+      "method": "PUT",
+      "path": "/admin/users/{id}",
+      "fullPath": "/api/admin/users/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_prepare",
+      "method": "POST",
+      "path": "/admin/whatsapp/prepare",
+      "fullPath": "/api/admin/whatsapp/prepare",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_send",
+      "method": "POST",
+      "path": "/admin/whatsapp/send",
+      "fullPath": "/api/admin/whatsapp/send",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_whatsapp_status",
+      "method": "GET",
+      "path": "/admin/whatsapp/status",
+      "fullPath": "/api/admin/whatsapp/status",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_admin_whatsapp_templates",
+      "method": "GET",
+      "path": "/admin/whatsapp/templates",
+      "fullPath": "/api/admin/whatsapp/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_admin_whatsapp_templates",
+      "method": "POST",
+      "path": "/admin/whatsapp/templates",
+      "fullPath": "/api/admin/whatsapp/templates",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_admin_whatsapp_templates__id_",
+      "method": "DELETE",
+      "path": "/admin/whatsapp/templates/{id}",
+      "fullPath": "/api/admin/whatsapp/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_admin_whatsapp_templates__id_",
+      "method": "PUT",
+      "path": "/admin/whatsapp/templates/{id}",
+      "fullPath": "/api/admin/whatsapp/templates/{id}",
+      "handler": "closure",
+      "module": "admin",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_auth_guards",
+      "method": "GET",
+      "path": "/auth/guards",
+      "fullPath": "/api/auth/guards",
+      "handler": "closure",
+      "module": "auth",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": false
+    },
+    {
+      "id": "GET-_auth_memberships",
+      "method": "GET",
+      "path": "/auth/memberships",
+      "fullPath": "/api/auth/memberships",
+      "handler": "closure",
+      "module": "auth",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_auth_switch-center",
+      "method": "POST",
+      "path": "/auth/switch-center",
+      "fullPath": "/api/auth/switch-center",
+      "handler": "closure",
+      "module": "auth",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_auth_switch-tenant",
+      "method": "POST",
+      "path": "/auth/switch-tenant",
+      "fullPath": "/api/auth/switch-tenant",
+      "handler": "closure",
+      "module": "auth",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_branding",
+      "method": "GET",
+      "path": "/branding",
+      "fullPath": "/api/branding",
+      "handler": "closure",
+      "module": "branding",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_config",
+      "method": "GET",
+      "path": "/config",
+      "fullPath": "/api/config",
+      "handler": "closure",
+      "module": "config",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_dashboard",
+      "method": "GET",
+      "path": "/dashboard",
+      "fullPath": "/api/dashboard",
+      "handler": "closure",
+      "module": "dashboard",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_login",
+      "method": "POST",
+      "path": "/login",
+      "fullPath": "/api/login",
+      "handler": "closure",
+      "module": "login",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": false
+    },
+    {
+      "id": "POST-_logout",
+      "method": "POST",
+      "path": "/logout",
+      "fullPath": "/api/logout",
+      "handler": "closure",
+      "module": "logout",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_notifications",
+      "method": "GET",
+      "path": "/notifications",
+      "fullPath": "/api/notifications",
+      "handler": "closure",
+      "module": "notifications",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_notifications__id__read",
+      "method": "POST",
+      "path": "/notifications/{id}/read",
+      "fullPath": "/api/notifications/{id}/read",
+      "handler": "closure",
+      "module": "notifications",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_notifications_mark-all-read",
+      "method": "POST",
+      "path": "/notifications/mark-all-read",
+      "fullPath": "/api/notifications/mark-all-read",
+      "handler": "closure",
+      "module": "notifications",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_notifications_subscribe",
+      "method": "POST",
+      "path": "/notifications/subscribe",
+      "fullPath": "/api/notifications/subscribe",
+      "handler": "closure",
+      "module": "notifications",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_notifications_vapid-key",
+      "method": "GET",
+      "path": "/notifications/vapid-key",
+      "fullPath": "/api/notifications/vapid-key",
+      "handler": "closure",
+      "module": "notifications",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_parent_bootstrap",
+      "method": "GET",
+      "path": "/parent/bootstrap",
+      "fullPath": "/api/parent/bootstrap",
+      "handler": "closure",
+      "module": "parent",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_parent_portal",
+      "method": "GET",
+      "path": "/parent/portal",
+      "fullPath": "/api/parent/portal",
+      "handler": "closure",
+      "module": "parent",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_activity-logs",
+      "method": "GET",
+      "path": "/platform/activity-logs",
+      "fullPath": "/api/platform/activity-logs",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_branding",
+      "method": "GET",
+      "path": "/platform/branding",
+      "fullPath": "/api/platform/branding",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_platform_branding",
+      "method": "PUT",
+      "path": "/platform/branding",
+      "fullPath": "/api/platform/branding",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_centers",
+      "method": "GET",
+      "path": "/platform/centers",
+      "fullPath": "/api/platform/centers",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_platform_centers",
+      "method": "POST",
+      "path": "/platform/centers",
+      "fullPath": "/api/platform/centers",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_platform_centers__id_",
+      "method": "DELETE",
+      "path": "/platform/centers/{id}",
+      "fullPath": "/api/platform/centers/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_platform_centers__id_",
+      "method": "PUT",
+      "path": "/platform/centers/{id}",
+      "fullPath": "/api/platform/centers/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_roles",
+      "method": "GET",
+      "path": "/platform/roles",
+      "fullPath": "/api/platform/roles",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_subscriptions",
+      "method": "GET",
+      "path": "/platform/subscriptions",
+      "fullPath": "/api/platform/subscriptions",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_platform_subscriptions",
+      "method": "POST",
+      "path": "/platform/subscriptions",
+      "fullPath": "/api/platform/subscriptions",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_platform_subscriptions__id_",
+      "method": "DELETE",
+      "path": "/platform/subscriptions/{id}",
+      "fullPath": "/api/platform/subscriptions/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_platform_subscriptions__id_",
+      "method": "PUT",
+      "path": "/platform/subscriptions/{id}",
+      "fullPath": "/api/platform/subscriptions/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_tenants",
+      "method": "GET",
+      "path": "/platform/tenants",
+      "fullPath": "/api/platform/tenants",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_platform_tenants",
+      "method": "POST",
+      "path": "/platform/tenants",
+      "fullPath": "/api/platform/tenants",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_platform_tenants__id_",
+      "method": "DELETE",
+      "path": "/platform/tenants/{id}",
+      "fullPath": "/api/platform/tenants/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_platform_tenants__id_",
+      "method": "PUT",
+      "path": "/platform/tenants/{id}",
+      "fullPath": "/api/platform/tenants/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_platform_users",
+      "method": "GET",
+      "path": "/platform/users",
+      "fullPath": "/api/platform/users",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_platform_users",
+      "method": "POST",
+      "path": "/platform/users",
+      "fullPath": "/api/platform/users",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_platform_users__id_",
+      "method": "DELETE",
+      "path": "/platform/users/{id}",
+      "fullPath": "/api/platform/users/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_platform_users__id_",
+      "method": "PUT",
+      "path": "/platform/users/{id}",
+      "fullPath": "/api/platform/users/{id}",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_public_centers",
+      "method": "GET",
+      "path": "/public/centers",
+      "fullPath": "/api/public/centers",
+      "handler": "closure",
+      "module": "public",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_public_landing__slug_",
+      "method": "GET",
+      "path": "/public/landing/{slug}",
+      "fullPath": "/api/public/landing/{slug}",
+      "handler": "closure",
+      "module": "public",
+      "pathParams": [
+        "slug"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_register_parent",
+      "method": "POST",
+      "path": "/register/parent",
+      "fullPath": "/api/register/parent",
+      "handler": "closure",
+      "module": "register",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": false
+    },
+    {
+      "id": "POST-_register_student",
+      "method": "POST",
+      "path": "/register/student",
+      "fullPath": "/api/register/student",
+      "handler": "closure",
+      "module": "register",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": false
+    },
+    {
+      "id": "POST-_student_attendance",
+      "method": "POST",
+      "path": "/student/attendance",
+      "fullPath": "/api/student/attendance",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_student_attendance__id_",
+      "method": "DELETE",
+      "path": "/student/attendance/{id}",
+      "fullPath": "/api/student/attendance/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_student_attendance__id_",
+      "method": "PUT",
+      "path": "/student/attendance/{id}",
+      "fullPath": "/api/student/attendance/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_student_bootstrap",
+      "method": "GET",
+      "path": "/student/bootstrap",
+      "fullPath": "/api/student/bootstrap",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_student_grades",
+      "method": "POST",
+      "path": "/student/grades",
+      "fullPath": "/api/student/grades",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_student_grades__source___id_",
+      "method": "DELETE",
+      "path": "/student/grades/{source}/{id}",
+      "fullPath": "/api/student/grades/{source}/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "source",
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_student_grades__source___id_",
+      "method": "PUT",
+      "path": "/student/grades/{source}/{id}",
+      "fullPath": "/api/student/grades/{source}/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "source",
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_student_homework_submissions",
+      "method": "POST",
+      "path": "/student/homework/submissions",
+      "fullPath": "/api/student/homework/submissions",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_student_homework_submissions__id_",
+      "method": "DELETE",
+      "path": "/student/homework/submissions/{id}",
+      "fullPath": "/api/student/homework/submissions/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_student_homework_submissions__id_",
+      "method": "POST",
+      "path": "/student/homework/submissions/{id}",
+      "fullPath": "/api/student/homework/submissions/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_student_homework_submissions__id_",
+      "method": "PUT",
+      "path": "/student/homework/submissions/{id}",
+      "fullPath": "/api/student/homework/submissions/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_student_library",
+      "method": "POST",
+      "path": "/student/library",
+      "fullPath": "/api/student/library",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_student_library__id_",
+      "method": "DELETE",
+      "path": "/student/library/{id}",
+      "fullPath": "/api/student/library/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_student_library__id_",
+      "method": "PUT",
+      "path": "/student/library/{id}",
+      "fullPath": "/api/student/library/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_student_portal",
+      "method": "GET",
+      "path": "/student/portal",
+      "fullPath": "/api/student/portal",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_student_sessions",
+      "method": "POST",
+      "path": "/student/sessions",
+      "fullPath": "/api/student/sessions",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_student_sessions__id_",
+      "method": "DELETE",
+      "path": "/student/sessions/{id}",
+      "fullPath": "/api/student/sessions/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_student_sessions__id_",
+      "method": "PUT",
+      "path": "/student/sessions/{id}",
+      "fullPath": "/api/student/sessions/{id}",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_student_sessions__id__livekit-token",
+      "method": "GET",
+      "path": "/student/sessions/{id}/livekit-token",
+      "fullPath": "/api/student/sessions/{id}/livekit-token",
+      "handler": "closure",
+      "module": "student",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_teacher_bootstrap",
+      "method": "GET",
+      "path": "/teacher/bootstrap",
+      "fullPath": "/api/teacher/bootstrap",
+      "handler": "closure",
+      "module": "teacher",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_teacher_sessions",
+      "method": "GET",
+      "path": "/teacher/sessions",
+      "fullPath": "/api/teacher/sessions",
+      "handler": "closure",
+      "module": "teacher",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_teacher_sessions__id_",
+      "method": "DELETE",
+      "path": "/teacher/sessions/{id}",
+      "fullPath": "/api/teacher/sessions/{id}",
+      "handler": "closure",
+      "module": "teacher",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "PUT-_teacher_sessions__id_",
+      "method": "PUT",
+      "path": "/teacher/sessions/{id}",
+      "fullPath": "/api/teacher/sessions/{id}",
+      "handler": "closure",
+      "module": "teacher",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_teacher_sessions__id__livekit-token",
+      "method": "GET",
+      "path": "/teacher/sessions/{id}/livekit-token",
+      "fullPath": "/api/teacher/sessions/{id}/livekit-token",
+      "handler": "closure",
+      "module": "teacher",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_user",
+      "method": "GET",
+      "path": "/user",
+      "fullPath": "/api/user",
+      "handler": "closure",
+      "module": "user",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    }
+  ]
+}

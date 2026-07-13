@@ -10,7 +10,9 @@ use App\Notifications\ManualNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class NotificationDispatchService
 {
@@ -81,7 +83,13 @@ class NotificationDispatchService
         $body = $payload['body'];
         $url = $payload['url'] ?? null;
         $sendPush = $payload['send_push'] ?? true;
-        $notification = new ManualNotification($title, $body, $url);
+        $batchId = Str::uuid()->toString();
+        $sectionMeta = $this->resolveSectionMeta(isset($payload['section_id']) ? (int) $payload['section_id'] : null);
+        $notification = new ManualNotification($title, $body, $url, array_merge($sectionMeta, [
+            'batch_id' => $batchId,
+            'audience' => $payload['audience'],
+            'send_push' => $sendPush,
+        ]));
 
         $counts = ['students' => 0, 'parents' => 0];
 
@@ -163,5 +171,37 @@ class NotificationDispatchService
         }
 
         return ['title' => 'Notification', 'body' => ''];
+    }
+
+    /** @return array{section_id?: int, grade_name?: string, class_name?: string, section_name?: string} */
+    private function resolveSectionMeta(?int $sectionId): array
+    {
+        if (! $sectionId) {
+            return [];
+        }
+
+        $row = DB::connection('center')
+            ->table('sections')
+            ->leftJoin('classes', 'sections.class_id', '=', 'classes.id')
+            ->leftJoin('grades', 'classes.grade_id', '=', 'grades.id')
+            ->where('sections.id', $sectionId)
+            ->select(
+                'sections.id as section_id',
+                'sections.section_name as section_name',
+                'classes.class_name as class_name',
+                'grades.grade_name as grade_name',
+            )
+            ->first();
+
+        if (! $row) {
+            return ['section_id' => $sectionId];
+        }
+
+        return [
+            'section_id' => (int) $row->section_id,
+            'section_name' => (string) ($row->section_name ?? ''),
+            'class_name' => (string) ($row->class_name ?? ''),
+            'grade_name' => (string) ($row->grade_name ?? ''),
+        ];
     }
 }

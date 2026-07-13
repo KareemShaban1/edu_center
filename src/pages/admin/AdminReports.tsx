@@ -114,8 +114,8 @@ export default function AdminReports() {
                 return (
                   <div key={f.type}>
                     <div className="mb-1 flex justify-between text-sm">
-                      <span className="capitalize">{f.type.replace(/[_-]+/g, ' ')}</span>
-                      <span className="font-medium">${Number(f.collected || 0).toLocaleString()}</span>
+                      <span className="capitalize">{t(`payments.type.${f.type}`)} </span>
+                      <span className="font-medium">{Number(f.collected || 0).toLocaleString()}</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted">
                       <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />

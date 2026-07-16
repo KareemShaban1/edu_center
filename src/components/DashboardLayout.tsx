@@ -93,6 +93,8 @@ const platformNavBlocks: NavBlock[] = [
       items: [
         { labelKey: 'nav.tenants', path: '/platform/tenants', icon: Globe },
         { labelKey: 'nav.subscriptions', path: '/platform/subscriptions', icon: DollarSign },
+        { labelKey: 'nav.students', path: '/platform/students', icon: GraduationCap },
+        { labelKey: 'nav.parents', path: '/platform/parents', icon: UserCircle },
       ],
     },
   },

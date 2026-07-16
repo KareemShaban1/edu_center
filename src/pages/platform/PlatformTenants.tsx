@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { Eye, Plus, Trash2 } from 'lucide-react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import { platformApi } from '@/services/endpoints/platform';
@@ -165,7 +166,7 @@ function TenantForm({
             </label>
             {form.seed_default_accounts && (
               <ul className="text-xs text-muted-foreground space-y-1 ps-6 list-disc">
-                {(['admin', 'teacher', 'parent', 'student'] as const).map(role => (
+                {(['admin', 'teacher'] as const).map(role => (
                   <li key={role}>
                     {t(`role.${role}`)}: {defaultEmailPreview(slugPreview, role)} / password
                   </li>
@@ -267,9 +268,16 @@ function TenantForm({
 export default function PlatformTenants() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
+  const [viewId, setViewId] = useState<number | string | null>(null);
   const { data = [], isLoading } = useQuery({
     queryKey: ['platform-tenants'],
     queryFn: () => platformApi.listTenants(),
+  });
+
+  const { data: viewItem, isLoading: viewLoading } = useQuery({
+    queryKey: ['platform-tenant', viewId],
+    queryFn: () => platformApi.getTenant(viewId!),
+    enabled: viewId != null,
   });
 
   const columns: CrudColumn<Tenant>[] = [
@@ -307,15 +315,88 @@ export default function PlatformTenants() {
     await queryClient.invalidateQueries({ queryKey: ['platform-tenants'] });
   };
 
+  const detailRows: Array<{ label: string; value: React.ReactNode }> = viewItem
+    ? [
+        { label: t('col.id'), value: viewItem.id },
+        { label: t('col.name'), value: viewItem.name },
+        { label: t('auth.tenantCode'), value: viewItem.slug || '—' },
+        { label: t('col.domain'), value: viewItem.domain || '—' },
+        { label: t('col.email'), value: viewItem.email || '—' },
+        { label: t('col.phone'), value: viewItem.phone || '—' },
+        { label: t('col.city'), value: viewItem.city || '—' },
+        { label: t('col.address'), value: viewItem.address || '—' },
+        { label: t('col.plan'), value: viewItem.plan || '—' },
+        { label: t('col.status'), value: <StatusBadge status={viewItem.status} /> },
+        {
+          label: t('platform.tenant.subscriptionStatus'),
+          value: viewItem.subscription?.status || viewItem.subscription_status || '—',
+        },
+        {
+          label: t('platform.tenant.billingCycle'),
+          value: viewItem.subscription?.billing_cycle || '—',
+        },
+        {
+          label: t('platform.tenant.subscriptionAmount'),
+          value: viewItem.subscription?.amount != null
+            ? String(viewItem.subscription.amount)
+            : '—',
+        },
+        {
+          label: t('platform.tenant.nextBilling'),
+          value: viewItem.subscription?.next_billing_date || '—',
+        },
+        { label: t('nav.users'), value: viewItem.users_count ?? 0 },
+        { label: t('nav.teachers'), value: viewItem.teachers_count ?? 0 },
+        { label: t('nav.students'), value: viewItem.students_count ?? 0 },
+        { label: t('nav.parents'), value: viewItem.parents_count ?? 0 },
+        { label: t('col.date'), value: viewItem.created_at || '—' },
+        { label: t('platform.tenant.updatedAt'), value: viewItem.updated_at || '—' },
+      ]
+    : [];
+
   return (
-    <CrudPage<Tenant>
-      title={t('nav.tenants')}
-      description={t('page.tenants.desc')}
-      columns={columns}
-      data={isLoading ? [] : data}
-      searchKeys={['name', 'domain']}
-      renderForm={(item, onClose) => <TenantForm item={item} onClose={onClose} onSave={handleSave} />}
-      onDelete={handleDelete}
-    />
+    <>
+      <CrudPage<Tenant>
+        title={t('nav.tenants')}
+        description={t('page.tenants.desc')}
+        columns={columns}
+        data={isLoading ? [] : data}
+        searchKeys={['name', 'domain']}
+        renderForm={(item, onClose) => <TenantForm item={item} onClose={onClose} onSave={handleSave} />}
+        onDelete={handleDelete}
+        renderExtraActions={item => (
+          <button
+            type="button"
+            onClick={() => setViewId(item.id)}
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={t('crud.show')}
+            title={t('crud.show')}
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+        )}
+      />
+      <Dialog open={viewId != null} onOpenChange={open => !open && setViewId(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {viewItem?.name || t('platform.tenant.details')}
+            </DialogTitle>
+          </DialogHeader>
+          {viewLoading || !viewItem ? (
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+          ) : (
+            <dl className="grid gap-3 text-sm">
+              {detailRows.map(row => (
+                <div key={row.label} className="grid grid-cols-[9rem_1fr] gap-2 border-b border-border/60 pb-2 last:border-0">
+                  <dt className="font-medium text-muted-foreground">{row.label}</dt>
+                  <dd className="min-w-0 break-words">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

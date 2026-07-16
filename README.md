@@ -47,10 +47,15 @@ cd <YOUR_PROJECT_NAME>
 
 # Step 3: Install the necessary dependencies.
 npm i
+cd backend && composer install && cd ..
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Step 4: Start API + frontend together (one command).
+npm start
 ```
+
+Open **http://127.0.0.1:8080** (API runs on **http://127.0.0.1:8000**).
+
+Or start services separately: `npm run dev` (frontend) and `cd backend && php artisan serve` (API).
 
 **Edit a file directly in GitHub**
 

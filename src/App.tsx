@@ -105,6 +105,8 @@ import PlatformDashboard from "@/pages/platform/PlatformDashboard";
 import PlatformTenants from "@/pages/platform/PlatformTenants";
 import PlatformSubscriptions from "@/pages/platform/PlatformSubscriptions";
 import PlatformUsers from "@/pages/platform/PlatformUsers";
+import PlatformStudents from "@/pages/platform/PlatformStudents";
+import PlatformParents from "@/pages/platform/PlatformParents";
 import PlatformRoles from "@/pages/platform/PlatformRoles";
 import PlatformLogs from "@/pages/platform/PlatformLogs";
 import PlatformDocumentation from "@/pages/platform/PlatformDocumentation";
@@ -230,6 +232,8 @@ const App = () => (
               <Route path="/platform/tenants" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformTenants /></ProtectedRoute>} />
               <Route path="/platform/subscriptions" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSubscriptions /></ProtectedRoute>} />
               <Route path="/platform/users" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformUsers /></ProtectedRoute>} />
+              <Route path="/platform/students" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformStudents /></ProtectedRoute>} />
+              <Route path="/platform/parents" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformParents /></ProtectedRoute>} />
               <Route path="/platform/roles" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformRoles /></ProtectedRoute>} />
               <Route path="/platform/logs" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformLogs /></ProtectedRoute>} />
               <Route path="/platform/documentation" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />

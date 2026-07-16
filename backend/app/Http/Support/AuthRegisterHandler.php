@@ -89,11 +89,52 @@ class AuthRegisterHandler
             )],
             'password' => ['required', 'string', 'min:6', 'max:100', 'confirmed'],
             'gender' => ['required', 'in:male,female'],
-            'center_slug' => ['nullable', 'string', 'max:100'],
+            'center_slug' => ['required', 'string', 'max:100'],
             'tenant_slug' => ['nullable', 'string', 'max:100'],
+            'grade_id' => ['required', 'integer', 'min:1'],
+            'class_id' => ['required', 'integer', 'min:1'],
+            'section_id' => ['required', 'integer', 'min:1'],
         ]);
 
         $phone = $payload['phone'];
+        $center = $this->resolveRegistrationCenter($payload['center_slug'] ?? $payload['tenant_slug'] ?? null);
+        if (! $center) {
+            return response()->json(['message' => 'Center not found'], 422);
+        }
+
+        $gradeId = (int) $payload['grade_id'];
+        $classId = (int) $payload['class_id'];
+        $sectionId = (int) $payload['section_id'];
+
+        try {
+            app(\App\Centers\CenterContextManager::class)->initialize($center);
+            $db = DB::connection('center');
+
+            if (! Schema::connection('center')->hasTable('grades')
+                || ! Schema::connection('center')->hasTable('classes')
+                || ! Schema::connection('center')->hasTable('sections')) {
+                return response()->json(['message' => 'Academic structure unavailable for this center'], 422);
+            }
+
+            $gradeExists = $db->table('grades')->where('id', $gradeId)->exists();
+            $class = $db->table('classes')->where('id', $classId)->where('grade_id', $gradeId)->first();
+            $sectionQuery = $db->table('sections')->where('id', $sectionId)->where('class_id', $classId);
+            if (Schema::connection('center')->hasColumn('sections', 'grade_id')) {
+                $sectionQuery->where('grade_id', $gradeId);
+            }
+            $sectionExists = $sectionQuery->exists();
+
+            if (! $gradeExists || ! $class || ! $sectionExists) {
+                return response()->json([
+                    'message' => 'Invalid grade, class, or section for the selected center.',
+                    'errors' => [
+                        'section_id' => ['Select a valid grade, class, and section for this center.'],
+                    ],
+                ], 422);
+            }
+        } finally {
+            app(\App\Centers\CenterContextManager::class)->end();
+        }
 
         $academicYear = now()->year.'-'.(now()->year + 1);
         $insert = [
@@ -102,6 +143,9 @@ class AuthRegisterHandler
             'email' => $payload['email'],
             'password' => Hash::make($payload['password']),
             'gender' => $payload['gender'],
+            'grade_id' => $gradeId,
+            'class_id' => $classId,
+            'section_id' => $sectionId,
             'academic_year' => $academicYear,
             'created_at' => now(),
             'updated_at' => now(),
@@ -116,16 +160,10 @@ class AuthRegisterHandler
         }
 
         $studentId = (int) DB::connection('mysql')->table('students')->insertGetId($insert);
-        $center = $this->resolveRegistrationCenter($payload['center_slug'] ?? $payload['tenant_slug'] ?? null);
-
-        if ($center) {
-            $this->memberships->assignMembership($center, $studentId, Student::class);
-        }
+        $this->memberships->assignMembership($center, $studentId, Student::class);
 
         return response()->json([
-            'message' => $center
-                ? 'Student account created successfully. You can sign in now.'
-                : 'Student account created successfully. Sign in after your center completes enrollment.',
+            'message' => 'Student account created successfully. You can sign in now.',
             'user' => [
                 'id' => $studentId,
                 'name' => $payload['name'],
@@ -133,7 +171,10 @@ class AuthRegisterHandler
                 'phone' => $phone,
                 'code' => $insert['code'],
                 'role' => 'student',
-                'center_slug' => $center?->slug,
+                'center_slug' => $center->slug,
+                'grade_id' => $gradeId,
+                'class_id' => $classId,
+                'section_id' => $sectionId,
             ],
         ], 201);
     }

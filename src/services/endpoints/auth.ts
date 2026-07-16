@@ -26,6 +26,9 @@ export interface RegisterPayload {
   password_confirmation: string;
   gender?: 'male' | 'female';
   center_slug?: string;
+  grade_id?: number;
+  class_id?: number;
+  section_id?: number;
 }
 
 export interface RegisterResponse {
@@ -159,7 +162,13 @@ export const authApi = {
     return apiClient.post<RegisterResponse>('/register/parent', payload, false);
   },
 
-  async registerStudent(payload: RegisterPayload & { gender: 'male' | 'female' }): Promise<RegisterResponse> {
+  async registerStudent(payload: RegisterPayload & {
+    gender: 'male' | 'female';
+    grade_id: number;
+    class_id: number;
+    section_id: number;
+    center_slug: string;
+  }): Promise<RegisterResponse> {
     if (USE_MOCK) {
       return {
         message: 'Student account created.',

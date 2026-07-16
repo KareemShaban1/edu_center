@@ -34,6 +34,63 @@ class PublicApiController extends Controller
         );
     }
 
+    public function centerAcademic(Request $request, string $slug): JsonResponse
+    {
+        $center = Center::query()->where('slug', $slug)->first();
+        if (! $center) {
+            return response()->json(['message' => 'Center not found'], 404);
+        }
+
+        try {
+            $this->ensureCenterInitialized($center);
+            $db = DB::connection('center');
+            $sch = Schema::connection('center');
+
+            $grades = $sch->hasTable('grades')
+                ? $db->table('grades')->orderBy('grade_name')->get(['id', 'grade_name'])
+                    ->map(fn ($row) => [
+                        'id' => (int) $row->id,
+                        'name' => (string) $row->grade_name,
+                    ])
+                    ->values()
+                : collect();
+
+            $classes = $sch->hasTable('classes')
+                ? $db->table('classes')->orderBy('class_name')->get(['id', 'class_name', 'grade_id'])
+                    ->map(fn ($row) => [
+                        'id' => (int) $row->id,
+                        'name' => (string) $row->class_name,
+                        'grade_id' => (int) $row->grade_id,
+                    ])
+                    ->values()
+                : collect();
+
+            $sections = $sch->hasTable('sections')
+                ? $db->table('sections')->orderBy('section_name')->get(['id', 'section_name', 'class_id', 'grade_id'])
+                    ->map(fn ($row) => [
+                        'id' => (int) $row->id,
+                        'name' => (string) $row->section_name,
+                        'class_id' => (int) $row->class_id,
+                        'grade_id' => isset($row->grade_id) ? (int) $row->grade_id : null,
+                    ])
+                    ->values()
+                : collect();
+
+            return response()->json([
+                'center' => [
+                    'id' => $center->id,
+                    'slug' => $center->slug,
+                    'name' => $center->name,
+                ],
+                'grades' => $grades,
+                'classes' => $classes,
+                'sections' => $sections,
+            ]);
+        } finally {
+            $this->endCenterContext();
+        }
+    }
+
     public function stats(Request $request): JsonResponse
     {
         $centersCount = (int) Center::query()->where('status', 1)->count();

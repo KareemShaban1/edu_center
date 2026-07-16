@@ -48,10 +48,12 @@ export default function PlatformDashboard() {
       <DashboardHomeLinks
         mainLinks={[
           { labelKey: 'nav.tenants', path: '/platform/tenants' },
+          { labelKey: 'nav.students', path: '/platform/students' },
+          { labelKey: 'nav.parents', path: '/platform/parents' },
           { labelKey: 'nav.subscriptions', path: '/platform/subscriptions' },
-          { labelKey: 'nav.users', path: '/platform/users' },
         ]}
         extraLinks={[
+          { labelKey: 'nav.users', path: '/platform/users' },
           { labelKey: 'nav.roles', path: '/platform/roles' },
           { labelKey: 'nav.appearance', path: '/platform/settings' },
           { labelKey: 'nav.activityLogs', path: '/platform/logs' },

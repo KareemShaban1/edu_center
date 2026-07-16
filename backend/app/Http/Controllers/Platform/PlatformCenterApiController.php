@@ -68,25 +68,106 @@ class PlatformCenterApiController extends Controller
                 $this->endCenterContext();
             }
 
-            return [
-                'id' => $center->id,
-                'name' => $center->name,
-                'domain' => $center->domain ?: ($center->slug ? $center->slug.'.localhost' : ''),
-                'slug' => $center->slug,
-                'center_slug' => $center->slug,
-                'tenant_slug' => $center->slug,
-                'plan' => $center->plan(),
+            return $this->serializeCenter($center, [
                 'users_count' => $users_count,
                 'teachers_count' => $teachers_count,
                 'students_count' => $students_count,
                 'parents_count' => $parents_count,
-                'subscription_status' => data_get($center->data, 'subscription.status', 'trial'),
-                'status' => ((int) $center->status) === 1 ? 'active' : 'inactive',
-                'created_at' => optional($center->created_at)->format('Y-m-d') ?? now()->toDateString(),
-            ];
+            ]);
         })->values();
 
         return response()->json($centers);
+    }
+
+    public function show(Request $request, string $id): JsonResponse
+    {
+        if ($err = $this->denyUnlessPlatform($request)) {
+            return $err;
+        }
+
+        $center = Center::query()->where('id', $id)->orWhere('slug', $id)->first();
+        if (! $center) {
+            return response()->json(['message' => 'Center not found'], 404);
+        }
+
+        $counts = [
+            'users_count' => 0,
+            'teachers_count' => 0,
+            'students_count' => 0,
+            'parents_count' => 0,
+        ];
+
+        try {
+            $this->ensureCenterInitialized($center);
+            $db = DB::connection('center');
+            $sch = Schema::connection('center');
+            if ($sch->hasTable('users')) {
+                $counts['users_count'] = (int) $db->table('users')->count();
+            }
+            if ($sch->hasTable('teachers')) {
+                $counts['teachers_count'] = (int) $db->table('teachers')->count();
+            }
+            if ($sch->hasTable('students')) {
+                $counts['students_count'] = (int) $db->table('students')->count();
+            }
+            if ($sch->hasTable('parents')) {
+                $counts['parents_count'] = (int) $db->table('parents')->count();
+            }
+        } catch (\Throwable) {
+            // counts stay zero
+        } finally {
+            $this->endCenterContext();
+        }
+
+        return response()->json($this->serializeCenter($center, $counts, full: true));
+    }
+
+    /**
+     * @param  array{users_count: int, teachers_count: int, students_count: int, parents_count: int}  $counts
+     * @return array<string, mixed>
+     */
+    protected function serializeCenter(Center $center, array $counts, bool $full = false): array
+    {
+        $subscription = data_get($center->data, 'subscription', []);
+        if (! is_array($subscription)) {
+            $subscription = [];
+        }
+
+        $payload = [
+            'id' => $center->id,
+            'name' => $center->name,
+            'domain' => $center->domain ?: ($center->slug ? $center->slug.'.localhost' : ''),
+            'slug' => $center->slug,
+            'center_slug' => $center->slug,
+            'tenant_slug' => $center->slug,
+            'plan' => $center->plan(),
+            'users_count' => $counts['users_count'],
+            'teachers_count' => $counts['teachers_count'],
+            'students_count' => $counts['students_count'],
+            'parents_count' => $counts['parents_count'],
+            'subscription_status' => data_get($subscription, 'status', 'trial'),
+            'status' => ((int) $center->status) === 1 ? 'active' : 'inactive',
+            'created_at' => optional($center->created_at)->format('Y-m-d') ?? now()->toDateString(),
+        ];
+
+        if ($full) {
+            $payload = array_merge($payload, [
+                'email' => $center->email,
+                'phone' => $center->phone,
+                'address' => $center->address,
+                'city' => $center->city,
+                'updated_at' => optional($center->updated_at)->format('Y-m-d H:i') ?? null,
+                'subscription' => [
+                    'plan' => data_get($subscription, 'plan', $center->plan()),
+                    'amount' => data_get($subscription, 'amount', 0),
+                    'billing_cycle' => data_get($subscription, 'billing_cycle', 'monthly'),
+                    'status' => data_get($subscription, 'status', 'trial'),
+                    'next_billing_date' => data_get($subscription, 'next_billing_date'),
+                ],
+            ]);
+        }
+
+        return $payload;
     }
 
     public function store(Request $request): JsonResponse

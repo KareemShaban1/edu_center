@@ -24,6 +24,7 @@ class CenterProvisionerService
 
     /**
      * @param  array<string, mixed>|null  $overrides  Optional keys: admin, teachers[], parents[], students[]
+     *                                                  Default seed creates admin + teacher only.
      * @return array{accounts: list<array{role: string, name: string, email: string, password: string}>}
      */
     public function provisionDefaults(Center $center, ?array $overrides = null, bool $seedDefaults = true): array
@@ -43,20 +44,6 @@ class CenterProvisionerService
             if ($seedDefaults) {
                 if (empty($overrides['teachers'])) {
                     $accounts[] = $this->createTeacher($slug, $overrides['teacher'] ?? null);
-                }
-
-                $defaultParent = null;
-                if (empty($overrides['parents'])) {
-                    $defaultParent = $this->createParent($slug, $overrides['parent'] ?? null);
-                    $accounts[] = $defaultParent;
-                }
-
-                if (empty($overrides['students']) && $defaultParent) {
-                    $accounts[] = $this->createStudent(
-                        $slug,
-                        (int) $defaultParent['profile_id'],
-                        $overrides['student'] ?? null
-                    );
                 }
             }
 

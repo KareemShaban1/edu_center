@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { GraduationCap } from 'lucide-react';
@@ -20,6 +20,19 @@ interface PublicCenter {
   name: string;
 }
 
+interface AcademicOption {
+  id: number;
+  name: string;
+  grade_id?: number;
+  class_id?: number;
+}
+
+interface CenterAcademicPayload {
+  grades: AcademicOption[];
+  classes: AcademicOption[];
+  sections: AcademicOption[];
+}
+
 interface PortalRegisterPageProps {
   guard: 'parent' | 'student';
   role: UserRole;
@@ -36,7 +49,6 @@ export default function PortalRegisterPage({
   loginPath,
   titleKey,
   descKey,
-  icon: Icon,
 }: PortalRegisterPageProps) {
   const { loginPortal } = useAuth();
   const { t, locale, dir } = useLocale();
@@ -51,6 +63,9 @@ export default function PortalRegisterPage({
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [centerSlug, setCenterSlug] = useState('');
   const [centerSearch, setCenterSearch] = useState('');
+  const [gradeId, setGradeId] = useState('');
+  const [classId, setClassId] = useState('');
+  const [sectionId, setSectionId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +75,42 @@ export default function PortalRegisterPage({
     queryFn: async () => apiClient.get<PublicCenter[]>('/public/centers', undefined, false),
     staleTime: 60_000,
   });
+
+  const { data: academic, isLoading: academicLoading } = useQuery({
+    queryKey: ['public-center-academic', centerSlug],
+    queryFn: async () => apiClient.get<CenterAcademicPayload>(
+      `/public/centers/${encodeURIComponent(centerSlug)}/academic`,
+      undefined,
+      false,
+    ),
+    enabled: guard === 'student' && !!centerSlug,
+    staleTime: 60_000,
+  });
+
+  const grades = academic?.grades || [];
+  const classes = useMemo(
+    () => (academic?.classes || []).filter(c => !gradeId || c.grade_id === Number(gradeId)),
+    [academic?.classes, gradeId],
+  );
+  const sections = useMemo(
+    () => (academic?.sections || []).filter(s => !classId || s.class_id === Number(classId)),
+    [academic?.sections, classId],
+  );
+
+  useEffect(() => {
+    setGradeId('');
+    setClassId('');
+    setSectionId('');
+  }, [centerSlug]);
+
+  useEffect(() => {
+    setClassId('');
+    setSectionId('');
+  }, [gradeId]);
+
+  useEffect(() => {
+    setSectionId('');
+  }, [classId]);
 
   const filteredCenters = useMemo(() => {
     const query = centerSearch.trim().toLowerCase();
@@ -88,6 +139,18 @@ export default function PortalRegisterPage({
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (guard === 'student') {
+      if (!centerSlug) {
+        setError(t('auth.centerRequired'));
+        return;
+      }
+      if (!gradeId || !classId || !sectionId) {
+        setError(t('auth.academicRequired'));
+        return;
+      }
+    }
+
     setLoading(true);
 
     const payload = {
@@ -102,7 +165,14 @@ export default function PortalRegisterPage({
     try {
       const result = guard === 'parent'
         ? await authApi.registerParent(payload)
-        : await authApi.registerStudent({ ...payload, gender });
+        : await authApi.registerStudent({
+            ...payload,
+            gender,
+            center_slug: centerSlug,
+            grade_id: Number(gradeId),
+            class_id: Number(classId),
+            section_id: Number(sectionId),
+          });
 
       setSuccess(result.message);
 
@@ -124,6 +194,10 @@ export default function PortalRegisterPage({
         setError(fieldErrors.phone[0]);
       } else if (fieldErrors?.email?.[0]) {
         setError(fieldErrors.email[0]);
+      } else if (fieldErrors?.section_id?.[0]) {
+        setError(fieldErrors.section_id[0]);
+      } else if (fieldErrors?.center_slug?.[0]) {
+        setError(fieldErrors.center_slug[0]);
       } else {
         setError(apiErr.message || t('auth.registerFailed'));
       }
@@ -131,6 +205,11 @@ export default function PortalRegisterPage({
       setLoading(false);
     }
   };
+
+  const selectStyle = {
+    borderColor: `${C.crimsonBright}28`,
+    backgroundColor: C.bg,
+  } as const;
 
   return (
     <div
@@ -169,12 +248,6 @@ export default function PortalRegisterPage({
 
         <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end">
           <div className="mb-6 text-center lg:text-start">
-            {/* <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-md lg:mx-0"
-              style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
-            >
-              <Icon className="h-7 w-7 text-white" />
-            </div> */}
             <h1 className="font-display text-2xl font-bold sm:text-3xl">{t(titleKey)}</h1>
             <p className="mt-2 text-sm" style={{ color: C.textMuted }}>
               {t(descKey)}
@@ -197,7 +270,7 @@ export default function PortalRegisterPage({
                   onChange={e => setName(e.target.value)}
                   required
                   className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                  style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                  style={selectStyle}
                 />
               </div>
 
@@ -213,7 +286,7 @@ export default function PortalRegisterPage({
                   required
                   autoComplete="email"
                   className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                  style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                  style={selectStyle}
                 />
               </div>
 
@@ -229,7 +302,7 @@ export default function PortalRegisterPage({
                   required
                   autoComplete="tel"
                   className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                  style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                  style={selectStyle}
                 />
               </div>
 
@@ -243,7 +316,7 @@ export default function PortalRegisterPage({
                     value={gender}
                     onChange={e => setGender(e.target.value as 'male' | 'female')}
                     className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                    style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                    style={selectStyle}
                   >
                     <option value="male">{t('auth.genderMale')}</option>
                     <option value="female">{t('auth.genderFemale')}</option>
@@ -254,7 +327,7 @@ export default function PortalRegisterPage({
               {centers.length > 0 && (
                 <div className="relative">
                   <label htmlFor="center-search" className="mb-1.5 block text-[18px] font-medium">
-                    {t('auth.centerOptional')}
+                    {guard === 'student' ? t('auth.centerRequiredLabel') : t('auth.centerOptional')}
                   </label>
                   <input
                     id="center-search"
@@ -263,8 +336,9 @@ export default function PortalRegisterPage({
                     onChange={e => handleCenterSearchChange(e.target.value)}
                     placeholder={t('auth.centerSearchPlaceholder')}
                     autoComplete="off"
+                    required={guard === 'student'}
                     className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                    style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                    style={selectStyle}
                   />
                   {showCenterResults && (
                     <ul
@@ -293,6 +367,68 @@ export default function PortalRegisterPage({
                 </div>
               )}
 
+              {guard === 'student' && centerSlug && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="grade" className="mb-1.5 block text-[18px] font-medium">
+                      {t('col.grade')}
+                    </label>
+                    <select
+                      id="grade"
+                      value={gradeId}
+                      onChange={e => setGradeId(e.target.value)}
+                      required
+                      disabled={academicLoading || grades.length === 0}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm"
+                      style={selectStyle}
+                    >
+                      <option value="">{academicLoading ? t('common.loading') : t('auth.selectGrade')}</option>
+                      {grades.map(grade => (
+                        <option key={grade.id} value={grade.id}>{grade.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="class" className="mb-1.5 block text-[18px] font-medium">
+                      {t('col.class')}
+                    </label>
+                    <select
+                      id="class"
+                      value={classId}
+                      onChange={e => setClassId(e.target.value)}
+                      required
+                      disabled={!gradeId || classes.length === 0}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm"
+                      style={selectStyle}
+                    >
+                      <option value="">{gradeId ? t('auth.selectClass') : t('auth.selectGradeFirst')}</option>
+                      {classes.map(classroom => (
+                        <option key={classroom.id} value={classroom.id}>{classroom.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="section" className="mb-1.5 block text-[18px] font-medium">
+                      {t('col.section')}
+                    </label>
+                    <select
+                      id="section"
+                      value={sectionId}
+                      onChange={e => setSectionId(e.target.value)}
+                      required
+                      disabled={!classId || sections.length === 0}
+                      className="w-full rounded-lg border px-3 py-2.5 text-sm"
+                      style={selectStyle}
+                    >
+                      <option value="">{classId ? t('auth.selectSection') : t('auth.selectClassFirst')}</option>
+                      {sections.map(section => (
+                        <option key={section.id} value={section.id}>{section.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-[18px] font-medium">
                   {t('auth.password')}
@@ -306,7 +442,7 @@ export default function PortalRegisterPage({
                   minLength={6}
                   autoComplete="new-password"
                   className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                  style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                  style={selectStyle}
                 />
               </div>
 
@@ -323,7 +459,7 @@ export default function PortalRegisterPage({
                   minLength={6}
                   autoComplete="new-password"
                   className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                  style={{ borderColor: `${C.crimsonBright}28`, backgroundColor: C.bg }}
+                  style={selectStyle}
                 />
               </div>
 

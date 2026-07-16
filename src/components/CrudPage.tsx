@@ -92,7 +92,7 @@ export default function CrudPage<T extends { id: number | string }>({
     () => columns.filter(c => c.key !== primaryCol.key && !c.hideOnMobile),
     [columns, primaryCol.key],
   );
-  const showActions = !readOnly && (canEdit || canDelete || renderExtraActions);
+  const showActions = Boolean(renderExtraActions) || (!readOnly && (canEdit || canDelete));
 
   const filtered = useMemo(() => {
     let result = [...data];

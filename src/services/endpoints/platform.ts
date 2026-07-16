@@ -1,5 +1,5 @@
 import { apiClient, USE_MOCK } from '../api-client';
-import type { ActivityLog, Subscription, Tenant, TenantCreatePayload, TenantCreateResponse, User } from '@/types/models';
+import type { ActivityLog, PlatformParent, PlatformStudent, Subscription, Tenant, TenantCreatePayload, TenantCreateResponse, User } from '@/types/models';
 import {
   BRANDING_STORAGE_KEY,
   DEFAULT_APP_BRANDING,
@@ -110,6 +110,29 @@ export const platformApi = {
       return [...mockTenants];
     }
     return apiClient.get<Tenant[]>('/platform/tenants', undefined, false);
+  },
+
+  async getTenant(id: number | string): Promise<Tenant> {
+    if (USE_MOCK) {
+      await sleep(150);
+      const found = mockTenants.find(t => t.id === id);
+      if (!found) throw new Error('Tenant not found');
+      return {
+        ...found,
+        email: found.email ?? null,
+        phone: found.phone ?? null,
+        address: found.address ?? null,
+        city: found.city ?? null,
+        subscription: found.subscription ?? {
+          plan: found.plan,
+          amount: 0,
+          billing_cycle: 'monthly',
+          status: found.subscription_status || 'trial',
+          next_billing_date: null,
+        },
+      };
+    }
+    return apiClient.get<Tenant>(`/platform/tenants/${id}`, undefined, false);
   },
 
   async saveTenant(payload: TenantCreatePayload): Promise<TenantCreateResponse> {
@@ -278,6 +301,38 @@ export const platformApi = {
       return [...mockLogs];
     }
     return apiClient.get<ActivityLog[]>('/platform/activity-logs', undefined, false);
+  },
+
+  async listStudents(): Promise<PlatformStudent[]> {
+    if (USE_MOCK) {
+      await sleep(250);
+      return [];
+    }
+    return apiClient.get<PlatformStudent[]>('/platform/students', undefined, false);
+  },
+
+  async getStudent(id: number | string): Promise<PlatformStudent> {
+    if (USE_MOCK) {
+      await sleep(150);
+      throw new Error('Student not found');
+    }
+    return apiClient.get<PlatformStudent>(`/platform/students/${id}`, undefined, false);
+  },
+
+  async listParents(): Promise<PlatformParent[]> {
+    if (USE_MOCK) {
+      await sleep(250);
+      return [];
+    }
+    return apiClient.get<PlatformParent[]>('/platform/parents', undefined, false);
+  },
+
+  async getParent(id: number | string): Promise<PlatformParent> {
+    if (USE_MOCK) {
+      await sleep(150);
+      throw new Error('Parent not found');
+    }
+    return apiClient.get<PlatformParent>(`/platform/parents/${id}`, undefined, false);
   },
 
   async getBranding(): Promise<AppBranding> {

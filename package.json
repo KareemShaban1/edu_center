@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node scripts/dev-local.mjs",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

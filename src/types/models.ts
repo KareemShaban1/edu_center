@@ -380,13 +380,25 @@ export interface Tenant {
   slug?: string;
   database?: string;
   plan?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
   users_count?: number;
   teachers_count?: number;
   students_count?: number;
   parents_count?: number;
   subscription_status?: 'active' | 'trial' | 'past_due' | 'cancelled';
+  subscription?: {
+    plan?: string;
+    amount?: number;
+    billing_cycle?: string;
+    status?: string;
+    next_billing_date?: string | null;
+  };
   status: 'active' | 'inactive';
   created_at: string;
+  updated_at?: string | null;
 }
 
 export interface TenantInitialUserRow {
@@ -417,6 +429,65 @@ export interface TenantProvisionedAccount {
 
 export interface TenantCreateResponse extends Tenant {
   default_accounts?: TenantProvisionedAccount[];
+}
+
+export interface PlatformCenterRef {
+  id: number;
+  name: string;
+  slug?: string | null;
+  status?: string;
+}
+
+export interface PlatformStudent {
+  id: number;
+  name: string;
+  code?: string | null;
+  email: string;
+  phone?: string | null;
+  gender?: string | null;
+  grade_id?: number | null;
+  class_id?: number | null;
+  section_id?: number | null;
+  parent_id?: number | null;
+  parent_name?: string | null;
+  parent?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string | null;
+  } | null;
+  academic_year?: string | null;
+  notes?: string | null;
+  status: 'active' | 'inactive' | string;
+  centers: PlatformCenterRef[];
+  centers_count: number;
+  centers_label: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface PlatformParent {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  job?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  children_count: number;
+  children?: Array<{
+    id: number;
+    name: string;
+    code?: string | null;
+    email: string;
+    status: string;
+  }>;
+  status: 'active' | 'inactive' | string;
+  centers: PlatformCenterRef[];
+  centers_count: number;
+  centers_label: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface ActivityLog {

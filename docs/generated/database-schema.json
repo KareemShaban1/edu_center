@@ -1,7 +1,7 @@
 {
-  "syncedAt": "2026-07-08T21:42:18.270Z",
-  "tableCount": 54,
-  "centerScopedCount": 47,
+  "syncedAt": "2026-07-17T16:46:22.188Z",
+  "tableCount": 57,
+  "centerScopedCount": 49,
   "membershipScopedCount": 0,
   "tables": [
     {
@@ -115,7 +115,8 @@
       "name": "admins",
       "createMigration": "2025_08_11_221636_create_admins_table.php",
       "migrations": [
-        "2025_08_11_221636_create_admins_table.php"
+        "2025_08_11_221636_create_admins_table.php",
+        "2026_07_15_000001_add_push_subscription_to_admins_table.php"
       ],
       "columns": [
         {
@@ -4111,6 +4112,262 @@
       "incomingCount": 0
     },
     {
+      "name": "personal_notes",
+      "createMigration": "2026_07_17_000001_create_personal_productivity_tables.php",
+      "migrations": [
+        "2026_07_17_000001_create_personal_productivity_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "owner_guard",
+          "type": "varchar(32)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "owner_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "content",
+          "type": "longtext",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "color",
+          "type": "varchar(16)",
+          "nullable": false,
+          "default": "slate",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_pinned",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "center_id",
+            "owner_guard",
+            "owner_id"
+          ],
+          "unique": false,
+          "name": "personal_notes_owner_index"
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 10,
+      "indexCount": 1,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
+      "name": "personal_todos",
+      "createMigration": "2026_07_17_000001_create_personal_productivity_tables.php",
+      "migrations": [
+        "2026_07_17_000001_create_personal_productivity_tables.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "center_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "owner_guard",
+          "type": "varchar(32)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "owner_id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "priority",
+          "type": "varchar(16)",
+          "nullable": false,
+          "default": "medium",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "due_at",
+          "type": "datetime",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "completed_at",
+          "type": "datetime",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": true,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "center_id",
+            "owner_guard",
+            "owner_id"
+          ],
+          "unique": false,
+          "name": "personal_todos_owner_index"
+        },
+        {
+          "columns": [
+            "center_id",
+            "owner_guard",
+            "owner_id",
+            "completed_at"
+          ],
+          "unique": false,
+          "name": "personal_todos_status_index"
+        }
+      ],
+      "foreignKeys": [],
+      "scoping": "center",
+      "referencedBy": [],
+      "columnCount": 11,
+      "indexCount": 2,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
+    },
+    {
       "name": "platform_settings",
       "createMigration": "2026_06_17_000002_create_platform_settings_table.php",
       "migrations": [
@@ -5799,6 +6056,87 @@
       "indexCount": 0,
       "foreignKeyCount": 0,
       "incomingCount": 2
+    },
+    {
+      "name": "ui_translation_overrides",
+      "createMigration": "2026_07_13_000001_create_ui_translation_overrides_table.php",
+      "migrations": [
+        "2026_07_13_000001_create_ui_translation_overrides_table.php"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": true
+        },
+        {
+          "name": "translation_key",
+          "type": "varchar(255)",
+          "nullable": false,
+          "primary": false,
+          "unique": true,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "en_value",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "ar_value",
+          "type": "text",
+          "nullable": true,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp",
+          "nullable": false,
+          "primary": false,
+          "unique": false,
+          "indexed": false,
+          "autoIncrement": false
+        }
+      ],
+      "indexes": [],
+      "foreignKeys": [],
+      "scoping": "platform",
+      "referencedBy": [],
+      "columnCount": 7,
+      "indexCount": 0,
+      "foreignKeyCount": 0,
+      "incomingCount": 0
     },
     {
       "name": "units",

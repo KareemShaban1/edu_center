@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { TenantMembershipOption } from '@/types/models';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { GraduationCap, Shield, BookOpen, Languages, Building2 } from 'lucide-react';
+import { GraduationCap, Shield, BookOpen, Building2, UserCircle, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
@@ -13,9 +13,24 @@ import { authApi } from '@/services/endpoints/auth';
 import { apiClient } from '@/services/api-client';
 import { getTenantDefaultsForGuard, isPlatformGuard } from '@/config/login-defaults';
 import { brand } from '@/components/auth/login-theme';
-import { LoginDashboardPreview } from '@/components/auth/LoginDashboardPreview';
+import { LANDING_WHATSAPP } from '@/components/landing/platform-landing/constants';
 
 const C = brand;
+const TENANT_LOGIN_BG = '/images/tenant-login-egypt-bg.png';
+
+const portalButtonStyle = {
+  borderColor: `${C.crimsonBright}22`,
+  backgroundColor: C.bg,
+  color: C.crimson,
+};
+
+function buildCustomerServiceHref(isAr: boolean): string {
+  const message = isAr
+    ? 'مرحباً، أحتاج مساعدة في تسجيل الدخول.'
+    : 'Hello, I need help with login.';
+  const phone = LANDING_WHATSAPP.phone.replace(/\D/g, '');
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
 
 const guardToRoleMap: Record<string, UserRole> = {
   users: 'admin',
@@ -37,7 +52,7 @@ export default function LoginPage() {
   const tenantSlug = normalizeTenantSlug(tenantSlugParam);
 
   const { login } = useAuth();
-  const { t, locale, setLocale, dir } = useLocale();
+  const { t, locale, dir } = useLocale();
   const isAr = locale === 'ar';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -117,37 +132,24 @@ export default function LoginPage() {
     <div
       dir={dir}
       lang={locale}
-      className={cn('min-h-screen', isAr && 'font-arabic')}
-      style={{
-        color: C.charcoal,
-        background: `linear-gradient(160deg, ${C.bg} 0%, ${C.surface} 50%, ${C.bgAlt} 100%)`,
-      }}
+      className={cn('relative min-h-screen overflow-hidden', isAr && 'font-arabic')}
+      style={{ color: C.charcoal, backgroundColor: C.bg }}
     >
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div
-          className="absolute -top-24 start-0 h-96 w-96 rounded-full blur-3xl"
-          style={{ background: `${C.crimsonBright}14` }}
-        />
-        <div
-          className="absolute bottom-0 end-0 h-80 w-80 rounded-full blur-3xl"
-          style={{ background: `${C.crimson}10` }}
-        />
-      </div>
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          backgroundImage: `url('${TENANT_LOGIN_BG}')`,
+          backgroundPosition: 'right center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+        }}
+      />
 
-      {/* <button
-        type="button"
-        onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
-        className="fixed top-4 z-50 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition-colors ltr:right-4 rtl:left-4"
-        style={{ borderColor: `${C.crimsonBright}33`, backgroundColor: C.surface, color: C.charcoal }}
-        aria-label={t('misc.language')}
-      >
-        <Languages className="h-4 w-4 opacity-60" />
-        {locale === 'en' ? 'العربية' : 'English'}
-      </button> */}
-
-      <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-12">
-        <div className="hidden lg:block">
-          <div className="mb-8 flex items-center gap-2.5">
+      {/* Layout stays LTR so the form remains on the visual left; content keeps locale direction */}
+      <div dir="ltr" className="relative flex min-h-screen items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16">
+        <div dir={dir} className="w-full max-w-md">
+          <div className="mb-6 flex items-center gap-2.5">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-xl shadow-md"
               style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
@@ -156,24 +158,8 @@ export default function LoginPage() {
             </div>
             <span className="font-display text-lg font-bold">{t('app.name')}</span>
           </div>
-          <LoginDashboardPreview guard={selectedGuard} isAr={isAr} />
-        </div>
 
-        <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end">
-          <div className="mb-6 lg:hidden hidden">
-            <LoginDashboardPreview guard={selectedGuard} isAr={isAr} className="scale-[0.92] origin-top" />
-          </div>
-
-          <div className="mb-6 text-center lg:hidden">
-            <div
-              className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl shadow-md"
-              style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
-            >
-              <GraduationCap className="h-6 w-6 text-white" aria-hidden />
-            </div>
-          </div>
-
-          <div className="mb-6 text-center lg:text-start">
+          <div className="mb-6 text-start">
             <div
               className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide"
               style={{
@@ -316,7 +302,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="mt-4 text-center">
+            <p className="mt-4 text-start">
               <Link
                 to="/"
                 className="text-sm text-black font-medium underline-offset-4 hover:underline"
@@ -324,14 +310,38 @@ export default function LoginPage() {
                 {isAr ? 'العودة للرئيسية' : 'Back to home'}
               </Link>
             </p>
-            <div className="mt-3 flex flex-col gap-1.5 text-center text-sm">
-              <Link to={getStudentLoginPath()} style={{ color: C.crimson }}>
-                {isAr ? 'تسجيل دخول الطالب' : 'Student portal login'}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link
+                to={getStudentLoginPath()}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition-all hover:opacity-90"
+                style={portalButtonStyle}
+              >
+                <GraduationCap className="h-4 w-4" aria-hidden />
+                <span className="text-center leading-tight">
+                  {isAr ? 'تسجيل الطالب' : 'Student login'}
+                </span>
               </Link>
-              <Link to={getParentLoginPath()} style={{ color: C.crimson }}>
-                {isAr ? 'تسجيل دخول ولي الأمر' : 'Parent portal login'}
+              <Link
+                to={getParentLoginPath()}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-medium transition-all hover:opacity-90"
+                style={portalButtonStyle}
+              >
+                <UserCircle className="h-4 w-4" aria-hidden />
+                <span className="text-center leading-tight">
+                  {isAr ? 'تسجيل ولي الأمر' : 'Parent login'}
+                </span>
               </Link>
             </div>
+            <a
+              href={buildCustomerServiceHref(isAr)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all hover:opacity-90"
+              style={portalButtonStyle}
+            >
+              <Headphones className="h-4 w-4 shrink-0" aria-hidden />
+              <span>{isAr ? 'خدمة العملاء' : 'Customer service'}</span>
+            </a>
           </div>
 
           {/* <p className="mt-4 text-center text-xs" style={{ color: C.textSoft }}>

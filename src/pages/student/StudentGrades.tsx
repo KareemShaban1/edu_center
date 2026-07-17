@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import StudentPageFilterBar, { dateOnly, uniqueSorted } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { FormInput, FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
-import { studentSelfApi, type StudentGradePayload } from '@/services/endpoints/student-self';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
+import { studentSelfApi } from '@/services/endpoints/student-self';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { CenterScopedRow } from '@/types/models';
 
-interface GradeRow {
+interface GradeRow extends CenterScopedRow {
   id: number;
   source: 'exam' | 'quiz';
   subject: string;
@@ -46,23 +50,31 @@ export default function StudentGrades() {
   const queryClient = useQueryClient();
   const { data } = useStudentBootstrap();
   const rows = (data?.grades || []) as GradeRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    showCenterTabs,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
+
   const [showItem, setShowItem] = useState<GradeRow | null>(null);
   const [subjectFilter, setSubjectFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  const subjects = useMemo(() => uniqueSorted(rows.map(r => r.subject)), [rows]);
+  const subjects = useMemo(() => uniqueSorted(scopedRows.map(r => r.subject)), [scopedRows]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter(row => {
+    return scopedRows.filter(row => {
       if (subjectFilter && row.subject !== subjectFilter) return false;
       if (sourceFilter && row.source !== sourceFilter) return false;
       if (dateFilter && dateOnly(row.date) !== dateFilter) return false;
       if (statusFilter && (row.attendance_status || 'present') !== statusFilter) return false;
       return true;
     });
-  }, [rows, subjectFilter, sourceFilter, dateFilter, statusFilter]);
+  }, [scopedRows, subjectFilter, sourceFilter, dateFilter, statusFilter]);
 
   const appliedFilters = [subjectFilter, sourceFilter, dateFilter, statusFilter].filter(Boolean).length;
 
@@ -78,7 +90,10 @@ export default function StudentGrades() {
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
   });
 
-  const columns: CrudColumn<GradeRow>[] = [
+  const columns: CrudColumn<GradeRow>[] = useMemo(() => [
+    ...(showCenterTabs
+      ? [{ key: 'center_name', label: t('col.center'), render: (g: GradeRow) => <CenterLabel name={g.center_name} />, hideOnMobile: true } as CrudColumn<GradeRow>]
+      : []),
     { key: 'subject', label: t('col.subject'), sortable: true, primary: true, hideOnMobile: Boolean(subjectFilter) },
     {
       key: 'source',
@@ -104,7 +119,7 @@ export default function StudentGrades() {
         </button>
       ),
     },
-  ];
+  ], [showCenterTabs, sourceFilter, statusFilter, subjectFilter, t]);
 
   return (
     <>
@@ -113,64 +128,72 @@ export default function StudentGrades() {
         description={t('page.grades.desc')}
         columns={columns}
         data={filteredRows}
-        searchKeys={['subject', 'source', 'date']}
+        searchKeys={['subject', 'source', 'date', 'center_name']}
+        rowKey={g => portalRowKey(g.center_id, `${g.source}-${g.id}`)}
         onDelete={item => { void deleteMutation.mutateAsync({ source: item.source, id: item.id }); }}
         topContent={(
-          <StudentPageFilterBar
-            appliedCount={appliedFilters}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-            renderFilters={idPrefix => (
-              <>
-                <StudentFilterField id={`${idPrefix}-subject`} label={t('col.subject')}>
-                  <FormSelect
-                    id={`${idPrefix}-subject`}
-                    title={t('col.subject')}
-                    value={subjectFilter}
-                    onChange={e => setSubjectFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    {subjects.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-source`} label={t('nav.exams')}>
-                  <FormSelect
-                    id={`${idPrefix}-source`}
-                    title={t('nav.exams')}
-                    value={sourceFilter}
-                    onChange={e => setSourceFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    <option value="exam">{t('nav.exams')}</option>
-                    <option value="quiz">{t('nav.quizzes')}</option>
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
-                  <FormInput
-                    id={`${idPrefix}-date`}
-                    type="date"
-                    value={dateFilter}
-                    onChange={e => setDateFilter(e.target.value)}
-                  />
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
-                  <FormSelect
-                    id={`${idPrefix}-status`}
-                    title={t('col.status')}
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    <option value="present">{t('attendance.present')}</option>
-                    <option value="absent">{t('attendance.absent')}</option>
-                    <option value="late">{t('attendance.late')}</option>
-                  </FormSelect>
-                </StudentFilterField>
-              </>
-            )}
-          />
+          <>
+            <StudentCenterTabsBar
+              centers={centerOptions}
+              value={selectedCenterId}
+              onValueChange={setSelectedCenterId}
+            />
+            <StudentPageFilterBar
+              appliedCount={appliedFilters}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+              renderFilters={idPrefix => (
+                <>
+                  <StudentFilterField id={`${idPrefix}-subject`} label={t('col.subject')}>
+                    <FormSelect
+                      id={`${idPrefix}-subject`}
+                      title={t('col.subject')}
+                      value={subjectFilter}
+                      onChange={e => setSubjectFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      {subjects.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </FormSelect>
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-source`} label={t('nav.exams')}>
+                    <FormSelect
+                      id={`${idPrefix}-source`}
+                      title={t('nav.exams')}
+                      value={sourceFilter}
+                      onChange={e => setSourceFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      <option value="exam">{t('nav.exams')}</option>
+                      <option value="quiz">{t('nav.quizzes')}</option>
+                    </FormSelect>
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
+                    <FormInput
+                      id={`${idPrefix}-date`}
+                      type="date"
+                      value={dateFilter}
+                      onChange={e => setDateFilter(e.target.value)}
+                    />
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
+                    <FormSelect
+                      id={`${idPrefix}-status`}
+                      title={t('col.status')}
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      <option value="present">{t('attendance.present')}</option>
+                      <option value="absent">{t('attendance.absent')}</option>
+                      <option value="late">{t('attendance.late')}</option>
+                    </FormSelect>
+                  </StudentFilterField>
+                </>
+              )}
+            />
+          </>
         )}
       />
       {showItem && <GradeShowDialog item={showItem} onClose={() => setShowItem(null)} />}

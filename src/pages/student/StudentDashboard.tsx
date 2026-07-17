@@ -8,6 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/endpoints/dashboard';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import StudentCentersSection from '@/components/student/StudentCentersSection';
+import StudentMobileCenterTabs from '@/components/student/StudentMobileCenterTabs';
+import StudentDashboardBanner from '@/components/dashboard/StudentDashboardBanner';
 import { portalRowKey } from '@/components/CenterLabel';
 import type { DashboardStat } from '@/types/models';
 
@@ -24,6 +26,9 @@ export default function StudentDashboard() {
   });
 
   const isLoading = portalMode ? bootstrapLoading : dashboardLoading;
+  const centers = bootstrap?.centers || [];
+  const hasCenters = centers.length > 0;
+  const showMobileCenterTabs = bootstrapLoading || hasCenters;
 
   const portalStats = portalMode && bootstrap ? (() => {
     const attendance = bootstrap.attendance || [];
@@ -64,85 +69,116 @@ export default function StudentDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="page-header">
-        <h1 className="page-title">{t('dashboard.student')}</h1>
-        <p className="page-description">{t('dashboard.student.desc')}</p>
-      </div>
-
-      <StudentCentersSection
-        centers={bootstrap?.centers || []}
+      <StudentDashboardBanner
+        userName={user?.name}
+        bootstrap={bootstrap}
         loading={bootstrapLoading}
       />
 
-      <DashboardHomeLinks
-        mainLinks={[
-          { labelKey: 'nav.mySessions', path: '/student/sessions' },
-          { labelKey: 'nav.attendance', path: '/student/attendance' },
-          { labelKey: 'nav.myGrades', path: '/student/grades' },
-        ]}
-        extraLinks={[
-          { labelKey: 'nav.homework', path: '/student/homework' },
-          { labelKey: 'nav.library', path: '/student/library' },
-        ]}
-      />
+      {showMobileCenterTabs ? (
+        <StudentMobileCenterTabs
+          centers={centers}
+          bootstrap={bootstrap}
+          loading={bootstrapLoading}
+        />
+      ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        {isLoading ? (
-          <>
-            <StatCard title={t('stat.enrolledCourses')} value="..." icon={BookOpen} />
-            <StatCard title={t('stat.attendanceRate')} value="..." icon={CalendarCheck} />
-            <StatCard title={t('stat.gpa')} value="..." icon={Trophy} />
-            <StatCard title={t('stat.pendingHomework')} value="..." icon={ClipboardList} />
-          </>
-        ) : portalMode ? (
-          <>
-            <StatCard title={t('nav.mySessions')} value={stats[0]?.value || '0'} icon={BookOpen} />
-            <StatCard title={t('stat.attendanceRate')} value={stats[1]?.value || '—'} icon={CalendarCheck} variant="attendance" />
-            <StatCard title={t('stat.gpa')} value={stats[2]?.value || '—'} icon={Trophy} />
-            <StatCard title={t('stat.pendingHomework')} value={stats[3]?.value || '0'} icon={ClipboardList} />
-          </>
-        ) : (
-          stats.map(s => {
-            const iconMap = { users: BookOpen, 'book-open': BookOpen, 'calendar-check': CalendarCheck, trophy: Trophy, 'clipboard-list': ClipboardList } as const;
-            const Icon = iconMap[s.icon as keyof typeof iconMap] || BookOpen;
-            return <StatCard key={s.id} title={s.title} value={s.value} icon={Icon} trend={s.trend} variant={s.variant} />;
-          })
-        )}
-      </div>
+      <div className={showMobileCenterTabs ? 'hidden md:block' : undefined}>
+        <StudentCentersSection
+          centers={centers}
+          loading={bootstrapLoading}
+        />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div>
-          <h3 className="mb-3 font-display font-semibold">{portalMode ? t('nav.homework') : (dashboardData?.sections.find(s => s.key === 'assignments')?.title || t('section.upcomingAssignments'))}</h3>
-          <div className="space-y-2">
-            {assignments.map((hw) => (
-              <div key={hw.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="text-sm font-medium">{hw.title}</h4>
-                    <p className="text-xs text-muted-foreground">{hw.subtitle}</p>
+        {/* <DashboardHomeLinks
+          mainLinks={[
+            { labelKey: 'nav.mySessions', path: '/student/sessions' },
+            { labelKey: 'nav.attendance', path: '/student/attendance' },
+            { labelKey: 'nav.myGrades', path: '/student/grades' },
+          ]}
+          extraLinks={[
+            { labelKey: 'nav.homework', path: '/student/homework' },
+            { labelKey: 'nav.library', path: '/student/library' },
+            { labelKey: 'nav.todos', path: '/student/todos' },
+            { labelKey: 'nav.notes', path: '/student/notes' },
+          ]}
+        /> */}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          {isLoading ? (
+            <>
+              <StatCard title={t('stat.enrolledCourses')} value="..." icon={BookOpen} />
+              <StatCard title={t('stat.attendanceRate')} value="..." icon={CalendarCheck} />
+              <StatCard title={t('stat.gpa')} value="..." icon={Trophy} />
+              <StatCard title={t('stat.pendingHomework')} value="..." icon={ClipboardList} />
+            </>
+          ) : portalMode ? (
+            <>
+              <StatCard title={t('nav.mySessions')} value={stats[0]?.value || '0'} icon={BookOpen} />
+              <StatCard title={t('stat.attendanceRate')} value={stats[1]?.value || '—'} icon={CalendarCheck} variant="attendance" />
+              <StatCard title={t('stat.gpa')} value={stats[2]?.value || '—'} icon={Trophy} />
+              <StatCard title={t('stat.pendingHomework')} value={stats[3]?.value || '0'} icon={ClipboardList} />
+            </>
+          ) : (
+            stats.map(s => {
+              const iconMap = { users: BookOpen, 'book-open': BookOpen, 'calendar-check': CalendarCheck, trophy: Trophy, 'clipboard-list': ClipboardList } as const;
+              const Icon = iconMap[s.icon as keyof typeof iconMap] || BookOpen;
+              return <StatCard key={s.id} title={s.title} value={s.value} icon={Icon} trend={s.trend} variant={s.variant} />;
+            })
+          )}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-3 font-display font-semibold">{portalMode ? t('nav.homework') : (dashboardData?.sections.find(s => s.key === 'assignments')?.title || t('section.upcomingAssignments'))}</h3>
+            <div className="space-y-2">
+              {assignments.map((hw) => (
+                <div key={hw.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-medium">{hw.title}</h4>
+                      <p className="text-xs text-muted-foreground">{hw.subtitle}</p>
+                    </div>
+                    <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning shrink-0">{hw.meta}</span>
                   </div>
-                  <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning shrink-0">{hw.meta}</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div>
-          <h3 className="mb-3 font-display font-semibold">{portalMode ? t('section.recentGrades') : (dashboardData?.sections.find(s => s.key === 'grades')?.title || t('section.recentGrades'))}</h3>
-          <div className="space-y-2">
-            {grades.map((g) => (
-              <div key={g.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-card">
-                <span className="text-sm font-medium">{g.title}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{g.subtitle}</span>
-                  <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">{g.status}</span>
+          <div>
+            <h3 className="mb-3 font-display font-semibold">{portalMode ? t('section.recentGrades') : (dashboardData?.sections.find(s => s.key === 'grades')?.title || t('section.recentGrades'))}</h3>
+            <div className="space-y-2">
+              {grades.map((g) => (
+                <div key={g.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-card">
+                  <span className="text-sm font-medium">{g.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{g.subtitle}</span>
+                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">{g.status}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* {showMobileCenterTabs ? (
+        <div className="md:hidden">
+          <DashboardHomeLinks
+            mainLinks={[
+              { labelKey: 'nav.mySessions', path: '/student/sessions' },
+              { labelKey: 'nav.attendance', path: '/student/attendance' },
+              { labelKey: 'nav.myGrades', path: '/student/grades' },
+            ]}
+            extraLinks={[
+              { labelKey: 'nav.homework', path: '/student/homework' },
+              { labelKey: 'nav.library', path: '/student/library' },
+              { labelKey: 'nav.todos', path: '/student/todos' },
+              { labelKey: 'nav.notes', path: '/student/notes' },
+            ]}
+          />
+        </div>
+      ) : null} */}
     </DashboardLayout>
   );
 }

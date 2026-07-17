@@ -35,6 +35,7 @@ class MultiCenterPortalService
         $quizzes = collect();
         $exams = collect();
         $reports = collect();
+        $homework = collect();
 
         foreach ($memberships as $membership) {
             $center = Center::query()->find($membership->center_id);
@@ -62,6 +63,7 @@ class MultiCenterPortalService
             $quizzes = $quizzes->merge(collect($block['quizzes'])->map($tag));
             $exams = $exams->merge(collect($block['exams'])->map($tag));
             $reports = $reports->merge(collect($block['reports'])->map($tag));
+            $homework = $homework->merge(collect($block['homework'] ?? [])->map($tag));
         }
 
         $childKey = fn (array $row): string => ($row['center_id'] ?? '0').':'.($row['id'] ?? '0');
@@ -76,6 +78,7 @@ class MultiCenterPortalService
             'quizzes' => $quizzes->unique($recordKey)->values()->all(),
             'exams' => $exams->unique($recordKey)->values()->all(),
             'reports' => $reports->unique($reportKey)->values()->all(),
+            'homework' => $homework->unique($recordKey)->values()->all(),
         ];
     }
 
@@ -120,6 +123,9 @@ class MultiCenterPortalService
         $grades = collect();
         $homework = collect();
         $library = collect();
+        $announcements = collect();
+        $fees = collect();
+        $certifications = collect();
 
         foreach ($memberships as $membership) {
             $center = Center::query()->find($membership->center_id);
@@ -144,6 +150,9 @@ class MultiCenterPortalService
             $grades = $grades->merge(collect($block['grades'])->map($tag));
             $homework = $homework->merge(collect($block['homework'])->map($tag));
             $library = $library->merge(collect($block['library'])->map($tag));
+            $announcements = $announcements->merge(collect($block['announcements'] ?? [])->map($tag));
+            $fees = $fees->merge(collect($block['fees'] ?? [])->map($tag));
+            $certifications = $certifications->merge(collect($block['certifications'] ?? [])->map($tag));
         }
 
         return [
@@ -154,6 +163,9 @@ class MultiCenterPortalService
             'grades' => $grades->values()->all(),
             'homework' => $homework->values()->all(),
             'library' => $library->values()->all(),
+            'announcements' => $announcements->values()->all(),
+            'fees' => $fees->values()->all(),
+            'certifications' => $certifications->values()->all(),
         ];
     }
 
@@ -221,6 +233,9 @@ class MultiCenterPortalService
                 ->map(fn ($row) => [
                     'id' => (int) $row->id,
                     'name' => $row->name,
+                    'grade_id' => (int) ($row->grade_id ?? 0),
+                    'class_id' => (int) ($row->class_id ?? 0),
+                    'section_id' => (int) ($row->section_id ?? 0),
                     'grade' => $row->grade_name ?: ('Grade '.($row->grade_id ?? '-')),
                     'class' => $row->class_name ?: ('Class '.($row->class_id ?? '-')),
                     'section' => $row->section_name ?: ('Section '.($row->section_id ?? '-')),
@@ -380,6 +395,49 @@ class MultiCenterPortalService
             ];
         })->values();
 
+        $homework = collect();
+        if ($children->isNotEmpty() && $has('homeworks')) {
+            $submissionsByStudent = $has('student_homework')
+                ? $scoped->table('student_homework')
+                    ->whereIn('student_id', $childrenIds->all())
+                    ->get()
+                    ->groupBy(fn ($row) => (int) $row->student_id.':'.(int) $row->homework_id)
+                : collect();
+
+            foreach ($children as $child) {
+                $gradeId = (int) ($child['grade_id'] ?? 0);
+                $classId = (int) ($child['class_id'] ?? 0);
+                $sectionId = (int) ($child['section_id'] ?? 0);
+                if ($gradeId <= 0 || $classId <= 0 || $sectionId <= 0) {
+                    continue;
+                }
+
+                $homeworkRows = $scoped->table('homeworks')
+                    ->where('grade_id', $gradeId)
+                    ->where('class_id', $classId)
+                    ->where('section_id', $sectionId)
+                    ->orderByDesc('due_date')
+                    ->limit(100)
+                    ->get(['id', 'title', 'due_date']);
+
+                foreach ($homeworkRows as $row) {
+                    $submissionKey = (int) $child['id'].':'.(int) $row->id;
+                    $submission = $submissionsByStudent->get($submissionKey)?->first();
+
+                    $homework->push([
+                        'id' => $submission ? (int) $submission->id : ('h-'.$child['id'].'-'.$row->id),
+                        'homework_id' => (int) $row->id,
+                        'student_id' => (int) $child['id'],
+                        'student_name' => $child['name'],
+                        'title' => $row->title,
+                        'due_date' => (string) $row->due_date,
+                        'status' => $submission->status ?? 'not_submitted',
+                        'grade' => $submission->degree ?? '—',
+                    ]);
+                }
+            }
+        }
+
         return [
             'children' => $children->values()->all(),
             'attendance' => $attendance->all(),
@@ -387,6 +445,7 @@ class MultiCenterPortalService
             'quizzes' => $quizzes->all(),
             'exams' => $exams->all(),
             'reports' => $reports->all(),
+            'homework' => $homework->values()->all(),
         ];
     }
 
@@ -480,6 +539,9 @@ class MultiCenterPortalService
                     'grades' => [],
                     'homework' => [],
                     'library' => [],
+                    'announcements' => [],
+                    'fees' => [],
+                    'certifications' => [],
                 ];
             }
 
@@ -648,6 +710,84 @@ class MultiCenterPortalService
                     ->values();
             }
 
+            $announcements = collect();
+            if (Schema::connection('center')->hasTable('announcements')) {
+                $query = $db->table('announcements')
+                    ->where('grade_id', $gradeId)
+                    ->where('class_id', $classId)
+                    ->where('section_id', $sectionId)
+                    ->orderByDesc('id')
+                    ->limit(50);
+                if (Schema::connection('center')->hasColumn('announcements', 'deleted_at')) {
+                    $query->whereNull('deleted_at');
+                }
+                $announcements = $query
+                    ->get(['id', 'title', 'body', 'time', 'announcement_type', 'created_at'])
+                    ->map(fn ($row) => [
+                        'id' => (int) $row->id,
+                        'title' => (string) $row->title,
+                        'content' => (string) ($row->body ?? ''),
+                        'time' => $row->time ? (string) $row->time : null,
+                        'type' => $row->announcement_type ?: 'others',
+                        'created_at' => $row->created_at ? (string) $row->created_at : null,
+                    ])
+                    ->values();
+            }
+
+            $fees = collect();
+            if (Schema::connection('center')->hasTable('payments')) {
+                $fees = $db->table('payments')
+                    ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
+                    ->where('payments.student_id', $studentId)
+                    ->orderByDesc('payments.payment_date')
+                    ->orderByDesc('payments.id')
+                    ->limit(100)
+                    ->get([
+                        'payments.id',
+                        'payments.payment_date',
+                        'payments.payment_status',
+                        'payments.amount',
+                        'payments.month',
+                        'fees.title as fee_title',
+                    ])
+                    ->map(function ($row) {
+                        $status = isset($row->payment_status) && (int) $row->payment_status === 1 ? 'paid' : 'unpaid';
+
+                        return [
+                            'id' => (int) $row->id,
+                            'item' => $row->fee_title ?: ('Fee '.($row->month ?? '')),
+                            'amount' => (float) ($row->amount ?? 0),
+                            'status' => $status,
+                            'due_date' => $row->payment_date ?? now()->toDateString(),
+                            'month' => $row->month ?? '',
+                        ];
+                    })
+                    ->values();
+            }
+
+            $certifications = collect();
+            if (Schema::connection('center')->hasTable('student_certifications')) {
+                $certifications = $db->table('student_certifications')
+                    ->where('student_id', $studentId)
+                    ->orderByDesc('issued_at')
+                    ->limit(200)
+                    ->get(['id', 'template_id', 'title', 'content', 'design', 'context', 'context_date', 'issued_at', 'is_custom'])
+                    ->map(function ($row) {
+                        return [
+                            'id' => (int) $row->id,
+                            'template_id' => $row->template_id ? (int) $row->template_id : null,
+                            'title' => $row->title,
+                            'content' => $row->content,
+                            'design' => $row->design ? json_decode((string) $row->design, true) : null,
+                            'context' => $row->context ?? 'manual',
+                            'context_date' => $row->context_date ? (string) $row->context_date : null,
+                            'issued_at' => $row->issued_at ? (string) $row->issued_at : null,
+                            'is_custom' => (bool) ($row->is_custom ?? false),
+                        ];
+                    })
+                    ->values();
+            }
+
             return [
                 'profile' => $profile,
                 'sessions' => $sessions->all(),
@@ -655,6 +795,9 @@ class MultiCenterPortalService
                 'grades' => $grades->sortByDesc('date')->values()->all(),
                 'homework' => $homework->all(),
                 'library' => $library->all(),
+                'announcements' => $announcements->all(),
+                'fees' => $fees->all(),
+                'certifications' => $certifications->all(),
             ];
         } finally {
             $this->centerContext->end();

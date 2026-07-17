@@ -1,17 +1,27 @@
 import { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import { Download } from 'lucide-react';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import StudentPageFilterBar, { uniqueSorted } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
-import { studentSelfApi, type StudentLibraryPayload } from '@/services/endpoints/student-self';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
+import { studentSelfApi } from '@/services/endpoints/student-self';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { CenterScopedRow } from '@/types/models';
 
-interface LibRow { id: number; title: string; type: string; notes?: string; url?: string | null; }
+interface LibRow extends CenterScopedRow {
+  id: number;
+  title: string;
+  type: string;
+  notes?: string;
+  url?: string | null;
+}
 
 function LibraryShowDialog({ item, onClose }: { item: LibRow; onClose: () => void }) {
   const { t } = useLocale();
@@ -36,17 +46,25 @@ export default function StudentLibrary() {
   const queryClient = useQueryClient();
   const { data } = useStudentBootstrap();
   const rows = (data?.library || []) as LibRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    showCenterTabs,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
+
   const [showItem, setShowItem] = useState<LibRow | null>(null);
   const [typeFilter, setTypeFilter] = useState('');
 
-  const types = useMemo(() => uniqueSorted(rows.map(r => r.type)), [rows]);
+  const types = useMemo(() => uniqueSorted(scopedRows.map(r => r.type)), [scopedRows]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter(row => {
+    return scopedRows.filter(row => {
       if (typeFilter && row.type !== typeFilter) return false;
       return true;
     });
-  }, [rows, typeFilter]);
+  }, [scopedRows, typeFilter]);
 
   const appliedFilters = typeFilter ? 1 : 0;
 
@@ -57,7 +75,10 @@ export default function StudentLibrary() {
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
   });
 
-  const columns: CrudColumn<LibRow>[] = [
+  const columns: CrudColumn<LibRow>[] = useMemo(() => [
+    ...(showCenterTabs
+      ? [{ key: 'center_name', label: t('col.center'), render: (l: LibRow) => <CenterLabel name={l.center_name} />, hideOnMobile: true } as CrudColumn<LibRow>]
+      : []),
     { key: 'title', label: t('col.title'), sortable: true, primary: true },
     { key: 'type', label: t('col.type'), hideOnMobile: Boolean(typeFilter) },
     { key: 'notes', label: t('col.notes'), render: l => l.notes || '—', hideOnMobile: true },
@@ -87,7 +108,7 @@ export default function StudentLibrary() {
         </button>
       ),
     },
-  ];
+  ], [showCenterTabs, t, typeFilter]);
 
   return (
     <>
@@ -96,29 +117,37 @@ export default function StudentLibrary() {
         description={t('page.library.desc')}
         columns={columns}
         data={filteredRows}
-        searchKeys={['title', 'type', 'notes']}
+        searchKeys={['title', 'type', 'notes', 'center_name']}
+        rowKey={l => portalRowKey(l.center_id, l.id)}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}
         topContent={(
-          <StudentPageFilterBar
-            appliedCount={appliedFilters}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-            renderFilters={idPrefix => (
-              <StudentFilterField id={`${idPrefix}-type`} label={t('col.type')}>
-                <FormSelect
-                  id={`${idPrefix}-type`}
-                  title={t('col.type')}
-                  value={typeFilter}
-                  onChange={e => setTypeFilter(e.target.value)}
-                >
-                  <option value="">{t('filter.all')}</option>
-                  {types.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </FormSelect>
-              </StudentFilterField>
-            )}
-          />
+          <>
+            <StudentCenterTabsBar
+              centers={centerOptions}
+              value={selectedCenterId}
+              onValueChange={setSelectedCenterId}
+            />
+            <StudentPageFilterBar
+              appliedCount={appliedFilters}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+              renderFilters={idPrefix => (
+                <StudentFilterField id={`${idPrefix}-type`} label={t('col.type')}>
+                  <FormSelect
+                    id={`${idPrefix}-type`}
+                    title={t('col.type')}
+                    value={typeFilter}
+                    onChange={e => setTypeFilter(e.target.value)}
+                  >
+                    <option value="">{t('filter.all')}</option>
+                    {types.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </FormSelect>
+                </StudentFilterField>
+              )}
+            />
+          </>
         )}
       />
       {showItem && <LibraryShowDialog item={showItem} onClose={() => setShowItem(null)} />}

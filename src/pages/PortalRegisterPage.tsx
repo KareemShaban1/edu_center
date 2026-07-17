@@ -13,6 +13,7 @@ import { apiClient } from '@/services/api-client';
 import type { ApiError } from '@/types/models';
 
 const C = brand;
+const TENANT_LOGIN_BG = '/images/tenant-login-egypt-bg.png';
 
 interface PublicCenter {
   id: number;
@@ -215,26 +216,23 @@ export default function PortalRegisterPage({
     <div
       dir={dir}
       lang={locale}
-      className={cn('min-h-screen', isAr && 'font-arabic')}
-      style={{
-        color: C.charcoal,
-        background: `linear-gradient(160deg, ${C.bg} 0%, ${C.surface} 50%, ${C.bgAlt} 100%)`,
-      }}
+      className={cn('relative min-h-screen overflow-hidden', isAr && 'font-arabic')}
+      style={{ color: C.charcoal, backgroundColor: C.bg }}
     >
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div
-          className="absolute -top-24 start-0 h-96 w-96 rounded-full blur-3xl"
-          style={{ background: `${C.crimsonBright}14` }}
-        />
-        <div
-          className="absolute bottom-0 end-0 h-80 w-80 rounded-full blur-3xl"
-          style={{ background: `${C.crimson}10` }}
-        />
-      </div>
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          backgroundImage: `url('${TENANT_LOGIN_BG}')`,
+          backgroundPosition: 'right center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+        }}
+      />
 
-      <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-12">
-        <div className="hidden lg:block">
-          <div className="mb-8 flex items-center gap-2.5">
+      <div dir="ltr" className="relative flex min-h-screen items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16">
+        <div dir={dir} className="w-full max-w-md">
+          <div className="mb-6 flex items-center gap-2.5">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-xl shadow-md"
               style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
@@ -243,11 +241,8 @@ export default function PortalRegisterPage({
             </div>
             <span className="font-display text-lg font-bold">{t('app.name')}</span>
           </div>
-          <img src="/images/student_login.png" alt="" className="mb-8" />
-        </div>
 
-        <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end">
-          <div className="mb-6 text-center lg:text-start">
+          <div className="mb-6 text-start">
             <h1 className="font-display text-2xl font-bold sm:text-3xl">{t(titleKey)}</h1>
             <p className="mt-2 text-sm" style={{ color: C.textMuted }}>
               {t(descKey)}
@@ -485,7 +480,7 @@ export default function PortalRegisterPage({
               </button>
             </form>
 
-            <div className="mt-4 flex flex-col gap-2 text-center text-[16px] lg:text-start">
+            <div className="mt-4 flex flex-col gap-2 text-start text-[16px]">
               <Link to={loginPath} style={{ color: C.crimson }}>
                 {t('auth.alreadyHaveAccount')}
               </Link>

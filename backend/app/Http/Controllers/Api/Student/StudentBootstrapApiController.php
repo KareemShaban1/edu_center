@@ -9,6 +9,7 @@ use App\Http\Support\ApiBearerAuth;
 use App\Http\Support\MediaUrlHelper;
 use App\Http\Support\MultiCenterPortalService;
 use App\Http\Support\ResolvesStudentApiContext;
+use App\Centers\CenterContext;
 use App\Models\Library;
 use App\Models\Student;
 use App\Models\StudentHomework;
@@ -257,6 +258,63 @@ $bearer = ApiBearerAuth::resolve($request);
                 ->values();
         }
 
+        $announcements = collect();
+        if (Schema::connection('center')->hasTable('announcements')) {
+            $query = $tenantDb->table('announcements')
+                ->where('grade_id', $gradeId)
+                ->where('class_id', $classId)
+                ->where('section_id', $sectionId)
+                ->orderByDesc('id')
+                ->limit(50);
+            if (Schema::connection('center')->hasColumn('announcements', 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+            $announcements = $query
+                ->get(['id', 'title', 'body', 'time', 'announcement_type', 'created_at'])
+                ->map(fn ($row) => [
+                    'id' => (int) $row->id,
+                    'title' => (string) $row->title,
+                    'content' => (string) ($row->body ?? ''),
+                    'time' => $row->time ? (string) $row->time : null,
+                    'type' => $row->announcement_type ?: 'others',
+                    'created_at' => $row->created_at ? (string) $row->created_at : null,
+                ])
+                ->values();
+        }
+
+        $fees = collect();
+        if (Schema::connection('center')->hasTable('payments')) {
+            $fees = $tenantDb->table('payments')
+                ->leftJoin('fees', 'payments.fee_id', '=', 'fees.id')
+                ->where('payments.student_id', $studentId)
+                ->orderByDesc('payments.payment_date')
+                ->orderByDesc('payments.id')
+                ->limit(100)
+                ->get([
+                    'payments.id',
+                    'payments.payment_date',
+                    'payments.payment_status',
+                    'payments.amount',
+                    'payments.month',
+                    'fees.title as fee_title',
+                ])
+                ->map(function ($row) {
+                    $status = isset($row->payment_status) && (int) $row->payment_status === 1 ? 'paid' : 'unpaid';
+
+                    return [
+                        'id' => (int) $row->id,
+                        'item' => $row->fee_title ?: ('Fee '.($row->month ?? '')),
+                        'amount' => (float) ($row->amount ?? 0),
+                        'status' => $status,
+                        'due_date' => $row->payment_date ?? now()->toDateString(),
+                        'month' => $row->month ?? '',
+                    ];
+                })
+                ->values();
+        }
+
+        $center = CenterContext::center();
+
         return response()->json([
             'sessions' => $sessions,
             'attendance' => $attendance,
@@ -265,8 +323,10 @@ $bearer = ApiBearerAuth::resolve($request);
             'homework_options' => $homeworkOptions,
             'library' => $library,
             'certifications' => $certifications,
-            'centers' => CenterContext::center()
-                ? [app(MultiCenterPortalService::class)->buildStudentCenterSummary(CenterContext::center(), $studentId)]
+            'announcements' => $announcements,
+            'fees' => $fees,
+            'centers' => $center
+                ? [app(MultiCenterPortalService::class)->buildStudentCenterSummary($center, $studentId)]
                 : [],
         ]);
     }

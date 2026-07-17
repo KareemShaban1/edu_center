@@ -94,6 +94,24 @@ export interface StudentSelfBootstrapPayload {
     is_custom?: boolean;
   }>;
 
+  announcements?: Array<CenterScopedRow & {
+    id: number;
+    title: string;
+    content: string;
+    time?: string | null;
+    type?: string;
+    created_at?: string | null;
+  }>;
+
+  fees?: Array<CenterScopedRow & {
+    id: number;
+    item: string;
+    amount: number;
+    status: 'paid' | 'unpaid' | 'pending';
+    due_date: string;
+    month?: string;
+  }>;
+
   centers?: StudentCenterSummary[];
 }
 

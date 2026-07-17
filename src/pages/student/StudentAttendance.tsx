@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import StudentPageFilterBar, { dateOnly } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { FormInput, FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
-import { studentSelfApi, type StudentAttendancePayload } from '@/services/endpoints/student-self';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
+import { studentSelfApi } from '@/services/endpoints/student-self';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { CenterScopedRow } from '@/types/models';
 
-interface AttRow {
+interface AttRow extends CenterScopedRow {
   id: number;
   date: string;
   status: 'present' | 'absent' | 'late';
@@ -40,17 +44,25 @@ export default function StudentAttendance() {
   const queryClient = useQueryClient();
   const { data } = useStudentBootstrap();
   const rows = (data?.attendance || []) as AttRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    showCenterTabs,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
+
   const [showItem, setShowItem] = useState<AttRow | null>(null);
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   const filteredRows = useMemo(() => {
-    return rows.filter(row => {
+    return scopedRows.filter(row => {
       if (dateFilter && dateOnly(row.date) !== dateFilter) return false;
       if (statusFilter && row.status !== statusFilter) return false;
       return true;
     });
-  }, [rows, dateFilter, statusFilter]);
+  }, [scopedRows, dateFilter, statusFilter]);
 
   const appliedFilters = [dateFilter, statusFilter].filter(Boolean).length;
 
@@ -64,7 +76,10 @@ export default function StudentAttendance() {
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] }); },
   });
 
-  const columns: CrudColumn<AttRow>[] = [
+  const columns: CrudColumn<AttRow>[] = useMemo(() => [
+    ...(showCenterTabs
+      ? [{ key: 'center_name', label: t('col.center'), render: (a: AttRow) => <CenterLabel name={a.center_name} />, hideOnMobile: true } as CrudColumn<AttRow>]
+      : []),
     { key: 'date', label: t('col.date'), sortable: true, primary: true },
     {
       key: 'status',
@@ -82,7 +97,7 @@ export default function StudentAttendance() {
         </button>
       ),
     },
-  ];
+  ], [showCenterTabs, statusFilter, t]);
 
   return (
     <>
@@ -91,39 +106,47 @@ export default function StudentAttendance() {
         description={t('page.attendance.desc')}
         columns={columns}
         data={filteredRows}
-        searchKeys={['date', 'status', 'notes']}
+        searchKeys={['date', 'status', 'notes', 'center_name']}
+        rowKey={a => portalRowKey(a.center_id, a.id)}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}
         topContent={(
-          <StudentPageFilterBar
-            appliedCount={appliedFilters}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-            renderFilters={idPrefix => (
-              <>
-                <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
-                  <FormInput
-                    id={`${idPrefix}-date`}
-                    type="date"
-                    value={dateFilter}
-                    onChange={e => setDateFilter(e.target.value)}
-                  />
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
-                  <FormSelect
-                    id={`${idPrefix}-status`}
-                    title={t('col.status')}
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    <option value="present">{t('attendance.present')}</option>
-                    <option value="absent">{t('attendance.absent')}</option>
-                    <option value="late">{t('attendance.late')}</option>
-                  </FormSelect>
-                </StudentFilterField>
-              </>
-            )}
-          />
+          <>
+            <StudentCenterTabsBar
+              centers={centerOptions}
+              value={selectedCenterId}
+              onValueChange={setSelectedCenterId}
+            />
+            <StudentPageFilterBar
+              appliedCount={appliedFilters}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+              renderFilters={idPrefix => (
+                <>
+                  <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
+                    <FormInput
+                      id={`${idPrefix}-date`}
+                      type="date"
+                      value={dateFilter}
+                      onChange={e => setDateFilter(e.target.value)}
+                    />
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
+                    <FormSelect
+                      id={`${idPrefix}-status`}
+                      title={t('col.status')}
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      <option value="present">{t('attendance.present')}</option>
+                      <option value="absent">{t('attendance.absent')}</option>
+                      <option value="late">{t('attendance.late')}</option>
+                    </FormSelect>
+                  </StudentFilterField>
+                </>
+              )}
+            />
+          </>
         )}
       />
       {showItem && <AttendanceShowDialog item={showItem} onClose={() => setShowItem(null)} />}

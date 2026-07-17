@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-07-08T21:42:18.270Z
+> Last synced: 2026-07-17T16:46:22.188Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -35,6 +35,7 @@
 | `/admin/landing/:pageId/edit` |
 | `/admin/lessons` |
 | `/admin/library` |
+| `/admin/notes` |
 | `/admin/notifications` |
 | `/admin/parents` |
 | `/admin/payments` |
@@ -47,6 +48,9 @@
 | `/admin/quizzes/section/:sectionId/today` |
 | `/admin/reports` |
 | `/admin/reports/:type` |
+| `/admin/reports/attendance` |
+| `/admin/reports/attendance/section/:sectionId` |
+| `/admin/reports/payments` |
 | `/admin/roles` |
 | `/admin/sections` |
 | `/admin/sections/:sectionId/sessions` |
@@ -54,6 +58,7 @@
 | `/admin/settings` |
 | `/admin/students` |
 | `/admin/teachers` |
+| `/admin/todos` |
 | `/admin/units` |
 | `/admin/users` |
 | `/admin/whatsapp` |
@@ -77,8 +82,10 @@
 | `/platform/documentation/:docId` |
 | `/platform/login` |
 | `/platform/logs` |
+| `/platform/parents` |
 | `/platform/roles` |
 | `/platform/settings` |
+| `/platform/students` |
 | `/platform/subscriptions` |
 | `/platform/tenants` |
 | `/platform/users` |
@@ -90,19 +97,25 @@
 | `/student/homework` |
 | `/student/library` |
 | `/student/login` |
+| `/student/notes` |
 | `/student/register` |
 | `/student/sessions` |
 | `/student/sessions/:sessionId/livekit` |
+| `/student/todos` |
 | `/teacher` |
 | `/teacher/attendance` |
 | `/teacher/classes` |
 | `/teacher/exams` |
 | `/teacher/homework` |
 | `/teacher/library` |
+| `/teacher/notes` |
 | `/teacher/quizzes` |
 | `/teacher/sessions` |
 | `/teacher/sessions/:sessionId/livekit` |
+| `/teacher/todos` |
 | `apis` |
 | `database` |
 | `documentation` |
 | `documentation/:docId` |
+| `images` |
+| `translations` |

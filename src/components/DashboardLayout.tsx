@@ -37,6 +37,8 @@ import {
   Layout,
   MessageCircle,
   Award,
+  ListTodo,
+  NotebookPen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
@@ -117,6 +119,8 @@ const platformNavBlocks: NavBlock[] = [
 
 const adminNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/admin', icon: LayoutDashboard } },
+  { type: 'link', item: { labelKey: 'nav.todos', path: '/admin/todos', icon: ListTodo } },
+  { type: 'link', item: { labelKey: 'nav.notes', path: '/admin/notes', icon: NotebookPen } },
   {
     type: 'group',
     group: {
@@ -242,6 +246,8 @@ const adminNavBlocks: NavBlock[] = [
 
 const teacherNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/teacher', icon: LayoutDashboard } },
+  { type: 'link', item: { labelKey: 'nav.todos', path: '/teacher/todos', icon: ListTodo } },
+  { type: 'link', item: { labelKey: 'nav.notes', path: '/teacher/notes', icon: NotebookPen } },
   {
     type: 'group',
     group: {
@@ -281,6 +287,8 @@ const teacherNavBlocks: NavBlock[] = [
 
 const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/student', icon: LayoutDashboard } },
+  { type: 'link', item: { labelKey: 'nav.todos', path: '/student/todos', icon: ListTodo } },
+  { type: 'link', item: { labelKey: 'nav.notes', path: '/student/notes', icon: NotebookPen } },
   { type: 'link', item: { labelKey: 'nav.mySessions', path: '/student/sessions', icon: BookOpen } },
   { type: 'link', item: { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck } },
   { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
@@ -464,7 +472,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md lg:gap-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 justify-between items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md lg:gap-4 lg:px-6">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}

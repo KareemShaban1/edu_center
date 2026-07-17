@@ -56,7 +56,7 @@ export default function ParentDashboardHero({
           </div>
         </div>
 
-        <DashboardHomeLinks mainLinks={mainLinks} extraLinkGroups={linkGroups} />
+        {/* <DashboardHomeLinks mainLinks={mainLinks} extraLinkGroups={linkGroups} /> */}
       </div>
     </motion.section>
   );

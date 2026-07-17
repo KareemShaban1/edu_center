@@ -19,6 +19,8 @@ import {
   PieChart,
   Shield,
   SlidersHorizontal,
+  ListTodo,
+  NotebookPen,
 } from 'lucide-react';
 
 export interface AdminDashboardLink {
@@ -36,6 +38,8 @@ export const adminMainLinks: AdminDashboardLink[] = [
   { labelKey: 'nav.students', path: '/admin/students', icon: GraduationCap },
   { labelKey: 'nav.teachers', path: '/admin/teachers', icon: Users },
   { labelKey: 'nav.parents', path: '/admin/parents', icon: UserCircle },
+  { labelKey: 'nav.todos', path: '/admin/todos', icon: ListTodo },
+  { labelKey: 'nav.notes', path: '/admin/notes', icon: NotebookPen },
 ];
 
 export const adminLinkGroups: AdminDashboardLinkGroup[] = [

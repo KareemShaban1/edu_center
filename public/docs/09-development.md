@@ -78,20 +78,24 @@ VITE_USE_MOCK=false
 
 ### 2.5 Run development servers
 
-Terminal 1 — Laravel:
+One command (API + frontend):
 
 ```bash
-cd backend
-php artisan serve
+npm start
 ```
 
-Terminal 2 — Vite:
+Or separately:
 
 ```bash
+# Terminal 1 — Laravel
+cd backend
+php artisan serve
+
+# Terminal 2 — Vite
 npm run dev
 ```
 
-Open `http://127.0.0.1:8080`
+Open `http://127.0.0.1:8080` (API on `http://127.0.0.1:8000`).
 
 ---
 
@@ -214,6 +218,7 @@ npm run docs:sync
 
 | Task | Command |
 |------|---------|
+| Run API + frontend | `npm start` |
 | Build SPA | `npm run build` |
 | Preview build | `npm run preview` |
 | Run frontend tests | `npm test` |

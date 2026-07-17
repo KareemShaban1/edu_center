@@ -4,9 +4,11 @@ import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import StudentPageFilterBar, { dateOnly, uniqueSorted } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { FormInput, FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { CenterScopedRow } from '@/types/models';
@@ -67,45 +69,43 @@ export default function StudentSessions() {
   const { t } = useLocale();
   const { data } = useStudentBootstrap();
   const [showItem, setShowItem] = useState<SessionRow | null>(null);
-  const [centerFilter, setCenterFilter] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
 
   const rows = (data?.sessions || []) as SessionRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    showCenterTabs,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
 
-  const centers = useMemo(
-    () => uniqueSorted(rows.map(r => r.center_name || '')),
-    [rows],
-  );
-  const teachers = useMemo(() => uniqueSorted(rows.map(r => r.teacher)), [rows]);
-  const providers = useMemo(() => uniqueSorted(rows.map(r => r.provider)), [rows]);
+  const teachers = useMemo(() => uniqueSorted(scopedRows.map(r => r.teacher)), [scopedRows]);
+  const providers = useMemo(() => uniqueSorted(scopedRows.map(r => r.provider)), [scopedRows]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter(row => {
-      if (centerFilter && row.center_name !== centerFilter) return false;
+    return scopedRows.filter(row => {
       if (teacherFilter && row.teacher !== teacherFilter) return false;
       if (providerFilter && row.provider !== providerFilter) return false;
       if (dateFilter && dateOnly(row.start_at) !== dateFilter) return false;
       return true;
     });
-  }, [rows, centerFilter, teacherFilter, providerFilter, dateFilter]);
+  }, [scopedRows, teacherFilter, providerFilter, dateFilter]);
 
-  const appliedFilters = [centerFilter, teacherFilter, providerFilter, dateFilter].filter(Boolean).length;
+  const appliedFilters = [teacherFilter, providerFilter, dateFilter].filter(Boolean).length;
 
   const clearFilters = () => {
-    setCenterFilter('');
     setTeacherFilter('');
     setProviderFilter('');
     setDateFilter('');
   };
 
-  const showCenterFilter = centers.length > 1;
-
   const columns: CrudColumn<SessionRow>[] = useMemo(() => {
     const cols: CrudColumn<SessionRow>[] = [];
-    if (showCenterFilter && !centerFilter) {
-      cols.push({ key: 'center_name', label: t('col.center'), render: c => <CenterLabel name={c.center_name} /> });
+    if (showCenterTabs) {
+      cols.push({ key: 'center_name', label: t('col.center'), render: c => <CenterLabel name={c.center_name} />, hideOnMobile: true });
     }
     cols.push(
       { key: 'topic', label: t('col.title'), sortable: true, primary: true },
@@ -140,7 +140,7 @@ export default function StudentSessions() {
       },
     );
     return cols;
-  }, [centerFilter, providerFilter, showCenterFilter, teacherFilter, t]);
+  }, [providerFilter, showCenterTabs, teacherFilter, t]);
 
   return (
     <>
@@ -155,64 +155,56 @@ export default function StudentSessions() {
         canEdit={false}
         canDelete={false}
         topContent={(
-          <StudentPageFilterBar
-            appliedCount={appliedFilters}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-            renderFilters={idPrefix => (
-              <>
-                {showCenterFilter ? (
-                  <StudentFilterField id={`${idPrefix}-center`} label={t('col.center')}>
+          <>
+            <StudentCenterTabsBar
+              centers={centerOptions}
+              value={selectedCenterId}
+              onValueChange={setSelectedCenterId}
+            />
+            <StudentPageFilterBar
+              appliedCount={appliedFilters}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+              renderFilters={idPrefix => (
+                <>
+                  <StudentFilterField id={`${idPrefix}-teacher`} label={t('col.teacher')}>
                     <FormSelect
-                      id={`${idPrefix}-center`}
-                      title={t('col.center')}
-                      value={centerFilter}
-                      onChange={e => setCenterFilter(e.target.value)}
+                      id={`${idPrefix}-teacher`}
+                      title={t('col.teacher')}
+                      value={teacherFilter}
+                      onChange={e => setTeacherFilter(e.target.value)}
                     >
                       <option value="">{t('filter.all')}</option>
-                      {centers.map(name => (
+                      {teachers.map(name => (
                         <option key={name} value={name}>{name}</option>
                       ))}
                     </FormSelect>
                   </StudentFilterField>
-                ) : null}
-                <StudentFilterField id={`${idPrefix}-teacher`} label={t('col.teacher')}>
-                  <FormSelect
-                    id={`${idPrefix}-teacher`}
-                    title={t('col.teacher')}
-                    value={teacherFilter}
-                    onChange={e => setTeacherFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    {teachers.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-provider`} label={t('col.provider')}>
-                  <FormSelect
-                    id={`${idPrefix}-provider`}
-                    title={t('col.provider')}
-                    value={providerFilter}
-                    onChange={e => setProviderFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    {providers.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
-                  <FormInput
-                    id={`${idPrefix}-date`}
-                    type="date"
-                    value={dateFilter}
-                    onChange={e => setDateFilter(e.target.value)}
-                  />
-                </StudentFilterField>
-              </>
-            )}
-          />
+                  <StudentFilterField id={`${idPrefix}-provider`} label={t('col.provider')}>
+                    <FormSelect
+                      id={`${idPrefix}-provider`}
+                      title={t('col.provider')}
+                      value={providerFilter}
+                      onChange={e => setProviderFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      {providers.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </FormSelect>
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
+                    <FormInput
+                      id={`${idPrefix}-date`}
+                      type="date"
+                      value={dateFilter}
+                      onChange={e => setDateFilter(e.target.value)}
+                    />
+                  </StudentFilterField>
+                </>
+              )}
+            />
+          </>
         )}
       />
       {showItem && <SessionShowDialog item={showItem} onClose={() => setShowItem(null)} />}

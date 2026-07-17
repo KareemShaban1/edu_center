@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ParentPortalFilterBar from '@/components/parent/ParentPortalFilterBar';
+import ParentChildTabsBar from '@/components/parent/ParentChildTabsBar';
 import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import { useParentChildTabs } from '@/hooks/use-parent-child-tabs';
 import {
   matchesParentPortalFilters,
   PARENT_ATTENDANCE_STATUS_OPTIONS,
@@ -18,7 +20,9 @@ function sameChildScope<T extends { student_id?: number; center_id?: string | nu
   row: T,
   child: ChildRow,
 ): boolean {
-  return row.student_id === child.id && String(row.center_id) === String(child.center_id);
+  if (row.student_id !== child.id) return false;
+  if (child.center_id == null || row.center_id == null) return true;
+  return String(row.center_id) === String(child.center_id);
 }
 
 export default function ParentReports() {
@@ -29,6 +33,14 @@ export default function ParentReports() {
   const feeRows = data?.fees || [];
   const quizRows = data?.quizzes || [];
   const examRows = data?.exams || [];
+
+  const {
+    childTabs,
+    selectedChildId,
+    setSelectedChildId,
+    showChildTabs,
+    scopedRows: scopedChildren,
+  } = useParentChildTabs(children, children, { rowsAreChildren: true });
 
   const {
     centerFilter,
@@ -43,7 +55,7 @@ export default function ParentReports() {
     appliedCount,
     clearFilters,
   } = useParentPortalFilters({
-    rows: children,
+    rows: scopedChildren,
   });
 
   const recordFilters = useMemo(
@@ -121,7 +133,7 @@ export default function ParentReports() {
         pending_amount: pendingAmount,
       };
     });
-  }, [attendanceRows, attendanceStatusActive, examRows, feeRows, feeStatusActive, filteredChildren, quizRows, recordFilters]);
+  }, [attendanceRows, attendanceStatusActive, examRows, feeRows, feeStatusActive, filteredChildren, quizRows, recordFilters, statusFilter]);
 
   return (
     <DashboardLayout>
@@ -129,6 +141,12 @@ export default function ParentReports() {
         <h1 className="page-title">{t('nav.reports')}</h1>
         <p className="page-description">{t('page.reports.desc')}</p>
       </div>
+
+      <ParentChildTabsBar
+        tabs={childTabs}
+        value={selectedChildId}
+        onValueChange={setSelectedChildId}
+      />
 
       <ParentPortalFilterBar
         centers={centers}
@@ -155,7 +173,9 @@ export default function ParentReports() {
             <div key={portalRowKey(c.center_id, c.student_id)} className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
               <div className="border-b border-border bg-muted/30 px-5 py-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-display font-semibold">{c.student_name} — {c.grade}</h3>
+                  <h3 className="font-display font-semibold">
+                    {showChildTabs ? c.grade : `${c.student_name} — ${c.grade}`}
+                  </h3>
                   {showCenterFilter && !centerFilter ? <CenterLabel name={c.center_name} /> : null}
                 </div>
               </div>

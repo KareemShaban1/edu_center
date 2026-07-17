@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
 import ParentDashboardHero from '@/components/dashboard/ParentDashboardHero';
+import ParentMobileChildTabs from '@/components/parent/ParentMobileChildTabs';
 import DashboardStatCard from '@/components/dashboard/DashboardStatCard';
 import StatusBadge from '@/components/StatusBadge';
 import { Users, CalendarCheck, DollarSign, FileText } from 'lucide-react';
@@ -29,6 +30,7 @@ export default function ParentDashboard() {
   const attendanceRows = data?.attendance || [];
   const feeRows = data?.fees || [];
   const reportsCount = data?.reports?.length || 0;
+  const showMobileChildTabs = isLoading || children.length > 0;
 
   const avgAttendance = useMemo(() => {
     if (attendanceRows.length === 0) return 0;
@@ -68,113 +70,78 @@ export default function ParentDashboard() {
           linkGroups={parentLinkGroups}
         />
 
-        <div className="mb-6 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-          {isLoading
-            ? skeletonStats.map((s, i) => (
-                <DashboardStatCard
-                  key={s.id}
-                  title={s.title}
-                  value="—"
-                  icon={s.icon}
-                  statKey={s.id}
-                  variant={s.variant}
-                  index={i}
-                  loading
-                />
-              ))
-            : stats?.map((s, i) => (
-                <DashboardStatCard
-                  key={s.id}
-                  title={s.title}
-                  value={s.value}
-                  icon={s.icon}
-                  statKey={s.id}
-                  variant={s.variant}
-                  index={i}
-                />
-              ))}
-        </div>
+        {showMobileChildTabs ? (
+          <ParentMobileChildTabs bootstrap={data} loading={isLoading} />
+        ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.45 }}
-          >
-            <h3 className="mb-3 font-display font-semibold">{t('section.childrenOverview')}</h3>
-            {children.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-                {t('crud.noData')}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {children.map((child, i) => (
-                  <motion.div
-                    key={portalRowKey(child.center_id, child.id)}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + i * 0.05 }}
-                    className="rounded-xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-md"
-                  >
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-                        {child.name.charAt(0)}
-                      </div>
+        <div className={showMobileChildTabs ? 'hidden md:block' : undefined}>
+          <div className="mb-6 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            {isLoading
+              ? skeletonStats.map((s, i) => (
+                  <DashboardStatCard
+                    key={s.id}
+                    title={s.title}
+                    value="—"
+                    icon={s.icon}
+                    statKey={s.id}
+                    variant={s.variant}
+                    index={i}
+                    loading
+                  />
+                ))
+              : stats?.map((s, i) => (
+                  <DashboardStatCard
+                    key={s.id}
+                    title={s.title}
+                    value={s.value}
+                    icon={s.icon}
+                    statKey={s.id}
+                    variant={s.variant}
+                    index={i}
+                  />
+                ))}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.45 }}
+            >
+              <h3 className="mb-3 font-display font-semibold">{t('section.recentPayments')}</h3>
+              {recentPayments.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t('crud.noData')}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {recentPayments.map((f, i) => (
+                    <motion.div
+                      key={portalRowKey(f.center_id, f.id)}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.45 + i * 0.05 }}
+                      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-card sm:flex-row sm:items-center sm:justify-between"
+                    >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="font-medium">{child.name}</h4>
-                          <CenterLabel name={child.center_name} />
+                          <span className="text-sm font-medium">{f.item} - {f.student_name}</span>
+                          <CenterLabel name={f.center_name} />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {child.grade} - {child.class} - {child.section}
+                          ${f.amount.toLocaleString()} - {f.due_date}
                         </p>
                       </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{t('nav.attendance')}</p>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div> */}
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.45 }}
-          >
-            <h3 className="mb-3 font-display font-semibold">{t('section.recentPayments')}</h3>
-            {recentPayments.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-                {t('crud.noData')}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {recentPayments.map((f, i) => (
-                  <motion.div
-                    key={portalRowKey(f.center_id, f.id)}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.45 + i * 0.05 }}
-                    className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-card sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium">{f.item} - {f.student_name}</span>
-                        <CenterLabel name={f.center_name} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        ${f.amount.toLocaleString()} - {f.due_date}
-                      </p>
-                    </div>
-                    <StatusBadge
-                      status={f.status === 'paid' ? 'paid' : 'pending'}
-                      label={feeStatusLabel(f.status, t)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
+                      <StatusBadge
+                        status={f.status === 'paid' ? 'paid' : 'pending'}
+                        label={feeStatusLabel(f.status, t)}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
         </div>
       </div>
     </DashboardLayout>

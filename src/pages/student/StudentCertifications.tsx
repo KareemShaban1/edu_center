@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Award } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
 import CertificatePreview from '@/components/certification/CertificatePreview';
 import CertificateDownloadActions from '@/components/certification/CertificateDownloadActions';
 import { designConfigFromPreset } from '@/lib/certification/design-presets';
 import type { CertificateDesignConfig } from '@/lib/certification/types';
+import type { CenterScopedRow } from '@/types/models';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-interface CertRow {
+interface CertRow extends CenterScopedRow {
   id: number;
   title: string;
   content: string;
@@ -47,87 +52,105 @@ export default function StudentCertifications() {
   const { t } = useLocale();
   const { data } = useStudentBootstrap();
   const rows = (data?.certifications || []) as CertRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    showCenterTabs,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
   const [viewItem, setViewItem] = useState<CertRow | null>(null);
 
   const sorted = useMemo(
-    () => [...rows].sort((a, b) => (b.issued_at ?? '').localeCompare(a.issued_at ?? '')),
-    [rows],
+    () => [...scopedRows].sort((a, b) => (b.issued_at ?? '').localeCompare(a.issued_at ?? '')),
+    [scopedRows],
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <Award className="h-6 w-6 text-amber-600" />
-          {t('nav.certifications')}
-        </h1>
-        <p className="mt-1 text-muted-foreground">{t('certification.studentDesc')}</p>
-      </div>
-
-      {sorted.length === 0 ? (
-        <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-          {t('certification.noCertsYet')}
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <Award className="h-6 w-6 text-amber-600" />
+            {t('nav.certifications')}
+          </h1>
+          <p className="mt-1 text-muted-foreground">{t('certification.studentDesc')}</p>
         </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {sorted.map(item => {
-            const design = resolveCertDesign(item);
-            return (
-              <div
-                key={item.id}
-                className="overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-amber-300 hover:shadow-md"
-              >
-                <button
-                  type="button"
-                  onClick={() => setViewItem(item)}
-                  className="w-full text-start"
+
+        <StudentCenterTabsBar
+          centers={centerOptions}
+          value={selectedCenterId}
+          onValueChange={setSelectedCenterId}
+        />
+
+        {sorted.length === 0 ? (
+          <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
+            {t('certification.noCertsYet')}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {sorted.map(item => {
+              const design = resolveCertDesign(item);
+              return (
+                <div
+                  key={portalRowKey(item.center_id, item.id)}
+                  className="overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-amber-300 hover:shadow-md"
                 >
-                  <div className="border-b bg-slate-50 p-2 dark:bg-slate-900/30">
-                    <CertificatePreview design={design} compact />
+                  <button
+                    type="button"
+                    onClick={() => setViewItem(item)}
+                    className="w-full text-start"
+                  >
+                    <div className="border-b bg-slate-50 p-2 dark:bg-slate-900/30">
+                      <CertificatePreview design={design} compact />
+                    </div>
+                    <div className="p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold">{item.title}</p>
+                        {showCenterTabs ? <CenterLabel name={item.center_name} /> : null}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.issued_at ? new Date(item.issued_at).toLocaleDateString() : '—'}
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center justify-between border-t px-4 py-2">
+                    <span className="text-xs text-muted-foreground">{t('certification.downloadAs')}</span>
+                    <CertificateDownloadActions
+                      design={design}
+                      title={downloadTitle(item)}
+                      variant="compact"
+                    />
                   </div>
-                  <div className="p-4">
-                    <p className="font-semibold">{item.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {item.issued_at ? new Date(item.issued_at).toLocaleDateString() : '—'}
-                    </p>
-                  </div>
-                </button>
-                <div className="flex items-center justify-between border-t px-4 py-2">
-                  <span className="text-xs text-muted-foreground">{t('certification.downloadAs')}</span>
-                  <CertificateDownloadActions
-                    design={design}
-                    title={downloadTitle(item)}
-                    variant="compact"
-                  />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {viewItem && (
-        <Dialog open onOpenChange={v => !v && setViewItem(null)}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-amber-600" />
-                {viewItem.title}
-              </DialogTitle>
-            </DialogHeader>
-            <CertificatePreview design={resolveCertDesign(viewItem)} />
-            <CertificateDownloadActions
-              design={resolveCertDesign(viewItem)}
-              title={downloadTitle(viewItem)}
-            />
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setViewItem(null)}>
-                {t('misc.close')}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+        {viewItem && (
+          <Dialog open onOpenChange={v => !v && setViewItem(null)}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-600" />
+                  {viewItem.title}
+                </DialogTitle>
+              </DialogHeader>
+              <CertificatePreview design={resolveCertDesign(viewItem)} />
+              <CertificateDownloadActions
+                design={resolveCertDesign(viewItem)}
+                title={downloadTitle(viewItem)}
+              />
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setViewItem(null)}>
+                  {t('misc.close')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,10 +1,10 @@
 {
-  "syncedAt": "2026-07-08T21:42:18.270Z",
-  "apiRouteCount": 164,
-  "frontendRouteCount": 100,
-  "migrationTableCount": 46,
-  "databaseTableCount": 54,
-  "scopedTableCount": 47,
+  "syncedAt": "2026-07-17T16:46:22.188Z",
+  "apiRouteCount": 70,
+  "frontendRouteCount": 113,
+  "migrationTableCount": 48,
+  "databaseTableCount": 57,
+  "scopedTableCount": 49,
   "userRoles": [
     "admin",
     "teacher",
@@ -39,10 +39,14 @@
     "index",
     "notifications",
     "parent",
+    "personal-productivity",
     "platform",
+    "public",
     "session-types",
     "student-self",
     "teacher",
-    "teacher-sessions"
+    "teacher-sessions",
+    "ui-translations",
+    "website-images"
   ]
 }

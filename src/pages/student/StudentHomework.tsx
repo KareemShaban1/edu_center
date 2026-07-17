@@ -5,12 +5,15 @@ import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
 import StudentPageFilterBar, { dateOnly, uniqueSorted } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
+import StudentCenterTabsBar from '@/components/student/StudentCenterTabsBar';
 import { FormField, FormInput, FormSelect, FormTextarea } from '@/components/FormFields';
 import FormDialog from '@/components/FormDialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
+import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
 import { studentSelfApi, type StudentHomeworkPayload, type StudentSelfBootstrapPayload } from '@/services/endpoints/student-self';
+import { portalRowKey } from '@/components/CenterLabel';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -188,22 +191,28 @@ export default function StudentHomework() {
   const queryClient = useQueryClient();
   const { data } = useStudentBootstrap();
   const rows = (data?.homework || []) as HWRow[];
+  const {
+    centerOptions,
+    selectedCenterId,
+    setSelectedCenterId,
+    scopedRows,
+  } = useStudentCenterTabs(data?.centers, rows);
   const [showItem, setShowItem] = useState<HWRow | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
   const [dueDateFilter, setDueDateFilter] = useState('');
 
-  const grades = useMemo(() => uniqueSorted(rows.map(r => r.grade)), [rows]);
-  const statuses = useMemo(() => uniqueSorted(rows.map(r => r.status)), [rows]);
+  const grades = useMemo(() => uniqueSorted(scopedRows.map(r => r.grade)), [scopedRows]);
+  const statuses = useMemo(() => uniqueSorted(scopedRows.map(r => r.status)), [scopedRows]);
 
   const filteredRows = useMemo(() => {
-    return rows.filter(row => {
+    return scopedRows.filter(row => {
       if (statusFilter && row.status !== statusFilter) return false;
       if (gradeFilter && row.grade !== gradeFilter) return false;
       if (dueDateFilter && dateOnly(row.due_date) !== dueDateFilter) return false;
       return true;
     });
-  }, [rows, statusFilter, gradeFilter, dueDateFilter]);
+  }, [scopedRows, statusFilter, gradeFilter, dueDateFilter]);
 
   const appliedFilters = [statusFilter, gradeFilter, dueDateFilter].filter(Boolean).length;
 
@@ -293,54 +302,62 @@ export default function StudentHomework() {
         columns={columns}
         data={filteredRows}
         searchKeys={['title', 'status', 'student_notes', 'file_name']}
+        rowKey={h => portalRowKey(h.center_id, h.id)}
         canCreate={false}
         canDelete={false}
         canEdit
         canEditItem={row => !isHomeworkSubmissionLocked(row.status)}
         topContent={(
-          <StudentPageFilterBar
-            appliedCount={appliedFilters}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-            renderFilters={idPrefix => (
-              <>
-                <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
-                  <FormSelect
-                    id={`${idPrefix}-status`}
-                    title={t('col.status')}
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    {statuses.map(status => (
-                      <option key={status} value={status}>{homeworkStatusLabel(status, t)}</option>
-                    ))}
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-grade`} label={t('col.grade')}>
-                  <FormSelect
-                    id={`${idPrefix}-grade`}
-                    title={t('col.grade')}
-                    value={gradeFilter}
-                    onChange={e => setGradeFilter(e.target.value)}
-                  >
-                    <option value="">{t('filter.all')}</option>
-                    {grades.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </FormSelect>
-                </StudentFilterField>
-                <StudentFilterField id={`${idPrefix}-due`} label={t('col.dueDate')}>
-                  <FormInput
-                    id={`${idPrefix}-due`}
-                    type="date"
-                    value={dueDateFilter}
-                    onChange={e => setDueDateFilter(e.target.value)}
-                  />
-                </StudentFilterField>
-              </>
-            )}
-          />
+          <>
+            <StudentCenterTabsBar
+              centers={centerOptions}
+              value={selectedCenterId}
+              onValueChange={setSelectedCenterId}
+            />
+            <StudentPageFilterBar
+              appliedCount={appliedFilters}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+              renderFilters={idPrefix => (
+                <>
+                  <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
+                    <FormSelect
+                      id={`${idPrefix}-status`}
+                      title={t('col.status')}
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      {statuses.map(status => (
+                        <option key={status} value={status}>{homeworkStatusLabel(status, t)}</option>
+                      ))}
+                    </FormSelect>
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-grade`} label={t('col.grade')}>
+                    <FormSelect
+                      id={`${idPrefix}-grade`}
+                      title={t('col.grade')}
+                      value={gradeFilter}
+                      onChange={e => setGradeFilter(e.target.value)}
+                    >
+                      <option value="">{t('filter.all')}</option>
+                      {grades.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </FormSelect>
+                  </StudentFilterField>
+                  <StudentFilterField id={`${idPrefix}-due`} label={t('col.dueDate')}>
+                    <FormInput
+                      id={`${idPrefix}-due`}
+                      type="date"
+                      value={dueDateFilter}
+                      onChange={e => setDueDateFilter(e.target.value)}
+                    />
+                  </StudentFilterField>
+                </>
+              )}
+            />
+          </>
         )}
         renderForm={(item, onClose) => (
           item ? (

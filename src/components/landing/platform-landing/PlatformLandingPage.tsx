@@ -34,6 +34,36 @@ import {
   getCtaButtonPulse,
 } from './animations';
 
+function MobileDashboardMockup({
+  src,
+  alt,
+  role,
+}: {
+  src: string;
+  alt: string;
+  role: 'teacher' | 'student';
+}) {
+  return (
+    <div className="relative mx-auto w-[154px] rounded-[2rem] bg-[#111827] p-[6px] shadow-[0_18px_40px_rgba(17,24,39,0.28)]">
+      <div className="absolute left-1/2 top-[9px] z-10 h-[14px] w-[58px] -translate-x-1/2 rounded-full bg-[#111827]" aria-hidden />
+      <div className="relative aspect-[9/16] overflow-hidden rounded-[1.65rem] bg-white">
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+          style={{ objectPosition: role === 'teacher' ? '34% top' : '30% top' }}
+          loading="lazy"
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-7 items-center justify-between bg-gradient-to-b from-black/20 to-transparent px-3 pt-1 text-[7px] font-semibold text-white" aria-hidden>
+          <span>9:41</span>
+          <span className="tracking-[1px]">● ◔ ▰</span>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 mx-auto h-1 w-14 rounded-full bg-black/70" aria-hidden />
+      </div>
+    </div>
+  );
+}
+
 export function PlatformLandingPage() {
   const navigate = useNavigate();
   const { locale, setLocale, dir, t } = useLocale();
@@ -323,6 +353,7 @@ export function PlatformLandingPage() {
             {roles.map((role, i) => {
               const Preview = dashboardPreviews[role.key];
               const previewImage = 'previewImage' in role ? role.previewImage : undefined;
+              const usesMobileMockup = role.key === 'teacher' || role.key === 'student';
               return (
                 <motion.div
                   key={role.key}
@@ -339,9 +370,18 @@ export function PlatformLandingPage() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true }}
-                    className="mb-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-2"
+                    className={cn(
+                      'mb-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-2',
+                      usesMobileMockup && 'flex min-h-[292px] items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 py-3',
+                    )}
                   >
-                    {previewImage ? (
+                    {previewImage && usesMobileMockup ? (
+                      <MobileDashboardMockup
+                        src={previewImage}
+                        alt={isAr ? role.titleAr : role.titleEn}
+                        role={role.key}
+                      />
+                    ) : previewImage ? (
                       <img
                         src={previewImage}
                         alt={isAr ? role.titleAr : role.titleEn}

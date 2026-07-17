@@ -7,6 +7,8 @@ import {
   FileText,
   Trophy,
   Library,
+  ListTodo,
+  NotebookPen,
 } from 'lucide-react';
 
 export interface TeacherDashboardLink {
@@ -24,6 +26,7 @@ export const teacherMainLinks: TeacherDashboardLink[] = [
   { labelKey: 'nav.myClasses', path: '/teacher/classes', icon: BookOpen },
   { labelKey: 'nav.teacherSessions', path: '/teacher/sessions', icon: Video },
   { labelKey: 'nav.attendance', path: '/teacher/attendance', icon: CalendarCheck },
+  { labelKey: 'nav.todos', path: '/teacher/todos', icon: ListTodo },
 ];
 
 export const teacherLinkGroups: TeacherDashboardLinkGroup[] = [
@@ -39,6 +42,7 @@ export const teacherLinkGroups: TeacherDashboardLinkGroup[] = [
     labelKey: 'nav.group.content',
     links: [
       { labelKey: 'nav.library', path: '/teacher/library', icon: Library },
+      { labelKey: 'nav.notes', path: '/teacher/notes', icon: NotebookPen },
     ],
   },
 ];

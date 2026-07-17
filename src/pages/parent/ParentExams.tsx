@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import StatusBadge from '@/components/StatusBadge';
 import ParentPortalFilterBar from '@/components/parent/ParentPortalFilterBar';
+import ParentChildTabsBar from '@/components/parent/ParentChildTabsBar';
 import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useParentBootstrap } from '@/hooks/use-parent-bootstrap';
+import { useParentChildTabs } from '@/hooks/use-parent-child-tabs';
 import {
   PARENT_ATTENDANCE_STATUS_OPTIONS,
   useParentPortalFilters,
@@ -13,6 +15,7 @@ import type { CenterScopedRow } from '@/types/models';
 
 interface ParentExamRow extends CenterScopedRow {
   id: number;
+  student_id: number;
   student_name: string;
   grade?: string;
   date: string;
@@ -25,6 +28,13 @@ export default function ParentExams() {
   const { t } = useLocale();
   const { data } = useParentBootstrap();
   const exams = (data?.exams || []) as ParentExamRow[];
+  const {
+    childTabs,
+    selectedChildId,
+    setSelectedChildId,
+    showChildTabs,
+    scopedRows,
+  } = useParentChildTabs(data?.children, exams);
 
   const {
     centerFilter,
@@ -39,7 +49,7 @@ export default function ParentExams() {
     appliedCount,
     clearFilters,
   } = useParentPortalFilters({
-    rows: exams,
+    rows: scopedRows,
     getDate: row => row.date,
     getStatus: row => row.attendance_status || 'present',
   });
@@ -48,8 +58,10 @@ export default function ParentExams() {
     ...(showCenterFilter && !centerFilter
       ? [{ key: 'center_name', label: t('col.center'), render: (e: ParentExamRow) => <CenterLabel name={e.center_name} /> } as CrudColumn<ParentExamRow>]
       : []),
-    { key: 'student_name', label: t('col.child'), sortable: true, primary: true },
-    { key: 'grade', label: t('col.grade') },
+    ...(!showChildTabs
+      ? [{ key: 'student_name', label: t('col.child'), sortable: true, primary: true } as CrudColumn<ParentExamRow>]
+      : []),
+    { key: 'grade', label: t('col.grade'), primary: showChildTabs },
     { key: 'date', label: t('col.date'), sortable: true, hideOnMobile: Boolean(dateFilter) },
     { key: 'degree', label: t('col.score'), render: e => (e.degree ?? '—') },
     {
@@ -59,7 +71,7 @@ export default function ParentExams() {
       render: e => <StatusBadge status={e.attendance_status || 'present'} label={t(`attendance.${e.attendance_status || 'present'}`)} />,
     },
     { key: 'notes', label: t('col.notes'), render: e => e.notes || '—' },
-  ], [centerFilter, dateFilter, showCenterFilter, statusFilter, t]);
+  ], [centerFilter, dateFilter, showCenterFilter, showChildTabs, statusFilter, t]);
 
   return (
     <CrudPage<ParentExamRow>
@@ -71,20 +83,27 @@ export default function ParentExams() {
       rowKey={e => portalRowKey(e.center_id, e.id)}
       readOnly
       topContent={(
-        <ParentPortalFilterBar
-          centers={centers}
-          showCenterFilter={showCenterFilter}
-          centerFilter={centerFilter}
-          dateFilter={dateFilter}
-          statusFilter={statusFilter}
-          onCenterChange={setCenterFilter}
-          onDateChange={setDateFilter}
-          onStatusChange={setStatusFilter}
-          statusOptions={PARENT_ATTENDANCE_STATUS_OPTIONS}
-          appliedCount={appliedCount}
-          onClear={clearFilters}
-          resultCount={filteredRows.length}
-        />
+        <>
+          <ParentChildTabsBar
+            tabs={childTabs}
+            value={selectedChildId}
+            onValueChange={setSelectedChildId}
+          />
+          <ParentPortalFilterBar
+            centers={centers}
+            showCenterFilter={showCenterFilter}
+            centerFilter={centerFilter}
+            dateFilter={dateFilter}
+            statusFilter={statusFilter}
+            onCenterChange={setCenterFilter}
+            onDateChange={setDateFilter}
+            onStatusChange={setStatusFilter}
+            statusOptions={PARENT_ATTENDANCE_STATUS_OPTIONS}
+            appliedCount={appliedCount}
+            onClear={clearFilters}
+            resultCount={filteredRows.length}
+          />
+        </>
       )}
     />
   );

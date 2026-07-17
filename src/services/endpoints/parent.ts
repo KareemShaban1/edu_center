@@ -8,6 +8,9 @@ export interface ParentBootstrapPayload {
     grade: string;
     class: string;
     section: string;
+    grade_id?: number;
+    class_id?: number;
+    section_id?: number;
   }>;
   attendance: Array<CenterScopedRow & {
     id: number;
@@ -56,13 +59,23 @@ export interface ParentBootstrapPayload {
     paid_amount: number;
     pending_amount: number;
   }>;
-  centers?: Array<{ center_id: string; center_name: string; center_slug?: string }>;
+  homework?: Array<CenterScopedRow & {
+    id: number | string;
+    homework_id: number;
+    student_id: number;
+    student_name: string;
+    title: string;
+    due_date: string;
+    status: string;
+    grade?: string;
+  }>;
+  centers?: Array<{ center_id: string | number; center_name: string; center_slug?: string }>;
 }
 
 export const parentApi = {
   async bootstrap(): Promise<ParentBootstrapPayload> {
     if (USE_MOCK) {
-      return { children: [], attendance: [], fees: [], quizzes: [], exams: [], reports: [] };
+      return { children: [], attendance: [], fees: [], quizzes: [], exams: [], reports: [], homework: [] };
     }
     return apiClient.get<ParentBootstrapPayload>('/parent/bootstrap', undefined, false);
   },

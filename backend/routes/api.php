@@ -31,6 +31,21 @@ Route::middleware([
         ->where('key', '[A-Za-z0-9_.-]+');
     Route::delete('/developer/ui-translations/{key}', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'destroy'])
         ->where('key', '[A-Za-z0-9_.-]+');
+    Route::get('/website-images', [App\Http\Controllers\Api\Platform\WebsiteImageApiController::class, 'index']);
+    Route::post('/developer/website-images/{key}', [App\Http\Controllers\Api\Platform\WebsiteImageApiController::class, 'update'])
+        ->where('key', '[A-Za-z0-9_.-]+');
+    Route::delete('/developer/website-images/{key}', [App\Http\Controllers\Api\Platform\WebsiteImageApiController::class, 'destroy'])
+        ->where('key', '[A-Za-z0-9_.-]+');
+
+    Route::get('/personal/todos', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'todos']);
+    Route::post('/personal/todos', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'storeTodo']);
+    Route::put('/personal/todos/{id}', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'updateTodo'])->whereNumber('id');
+    Route::put('/personal/todos/{id}/complete', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'completeTodo'])->whereNumber('id');
+    Route::delete('/personal/todos/{id}', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'destroyTodo'])->whereNumber('id');
+    Route::get('/personal/notes', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'notes']);
+    Route::post('/personal/notes', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'storeNote']);
+    Route::put('/personal/notes/{id}', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'updateNote'])->whereNumber('id');
+    Route::delete('/personal/notes/{id}', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'destroyNote'])->whereNumber('id');
 
     require __DIR__ . '/api/admin.php';
     require __DIR__ . '/api/teacher.php';

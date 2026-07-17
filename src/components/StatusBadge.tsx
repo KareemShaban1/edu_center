@@ -12,7 +12,7 @@ const autoVariant = (status: string): StatusBadgeProps['variant'] => {
   const s = status.toLowerCase();
   if (['active', 'present', 'paid', 'completed', 'approved'].includes(s)) return 'success';
   if (['pending', 'late', 'partial', 'draft', 'past_due'].includes(s)) return 'warning';
-  if (['inactive', 'absent', 'overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'destructive';
+  if (['inactive', 'absent', 'overdue', 'rejected', 'failed', 'cancelled', 'unpaid', 'not_submitted'].includes(s)) return 'destructive';
   if (['new', 'in_progress', 'processing', 'trial'].includes(s)) return 'info';
   return 'default';
 };

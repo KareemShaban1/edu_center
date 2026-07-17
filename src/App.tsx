@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
+import { WebsiteImagesProvider } from "@/contexts/WebsiteImagesContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
 import UserGuidePage from "@/pages/UserGuidePage";
@@ -99,6 +100,8 @@ import ParentExams from "@/pages/parent/ParentExams";
 import ParentQuizzes from "@/pages/parent/ParentQuizzes";
 import ParentFees from "@/pages/parent/ParentFees";
 import ParentReports from "@/pages/parent/ParentReports";
+import PersonalTodosPage from "@/pages/personal/PersonalTodosPage";
+import PersonalNotesPage from "@/pages/personal/PersonalNotesPage";
 
 // Platform
 import PlatformDashboard from "@/pages/platform/PlatformDashboard";
@@ -117,6 +120,7 @@ import DeveloperApisPage from "@/pages/developer/DeveloperApisPage";
 import DeveloperDatabasePage from "@/pages/developer/DeveloperDatabasePage";
 import DeveloperDocumentationPage from "@/pages/developer/DeveloperDocumentationPage";
 import DeveloperTranslationsPage from "@/pages/developer/DeveloperTranslationsPage";
+import DeveloperImagesPage from "@/pages/developer/DeveloperImagesPage";
 import PlatformSettings from "@/pages/platform/PlatformSettings";
 
 const queryClient = new QueryClient();
@@ -126,7 +130,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <WebsiteImagesProvider>
+        <BrowserRouter>
         <LocaleProvider>
           <BrandingProvider>
           <AuthProvider>
@@ -195,6 +200,8 @@ const App = () => (
               <Route path="/admin/landing" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingPages /></ProtectedRoute>} />
               <Route path="/admin/landing/:pageId/edit" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingBuilder /></ProtectedRoute>} />
               <Route path="/admin/landing/:pageId/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminLandingAnalytics /></ProtectedRoute>} />
+              <Route path="/admin/todos" element={<ProtectedRoute allowedRoles={['admin']}><PersonalTodosPage /></ProtectedRoute>} />
+              <Route path="/admin/notes" element={<ProtectedRoute allowedRoles={['admin']}><PersonalNotesPage /></ProtectedRoute>} />
 
               {/* Teacher Routes */}
               <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherDashboard /></ProtectedRoute>} />
@@ -206,6 +213,8 @@ const App = () => (
               <Route path="/teacher/quizzes" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherQuizzes /></ProtectedRoute>} />
               <Route path="/teacher/homework" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherHomework /></ProtectedRoute>} />
               <Route path="/teacher/library" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLibrary /></ProtectedRoute>} />
+              <Route path="/teacher/todos" element={<ProtectedRoute allowedRoles={['teacher']}><PersonalTodosPage /></ProtectedRoute>} />
+              <Route path="/teacher/notes" element={<ProtectedRoute allowedRoles={['teacher']}><PersonalNotesPage /></ProtectedRoute>} />
 
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentDashboard /></ProtectedRoute>} />
@@ -217,6 +226,8 @@ const App = () => (
               <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />
               <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLibrary /></ProtectedRoute>} />
               <Route path="/student/certifications" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentCertifications /></ProtectedRoute>} />
+              <Route path="/student/todos" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><PersonalTodosPage /></ProtectedRoute>} />
+              <Route path="/student/notes" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><PersonalNotesPage /></ProtectedRoute>} />
 
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentDashboard /></ProtectedRoute>} />
@@ -247,6 +258,7 @@ const App = () => (
                 <Route path="apis" element={<DeveloperApisPage />} />
                 <Route path="database" element={<DeveloperDatabasePage />} />
                 <Route path="translations" element={<DeveloperTranslationsPage />} />
+                <Route path="images" element={<DeveloperImagesPage />} />
                 <Route path="documentation" element={<DeveloperDocumentationPage />} />
                 <Route path="documentation/:docId" element={<DeveloperDocumentationPage />} />
               </Route>
@@ -256,7 +268,8 @@ const App = () => (
           </AuthProvider>
           </BrandingProvider>
         </LocaleProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </WebsiteImagesProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

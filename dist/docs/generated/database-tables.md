@@ -1,6 +1,6 @@
 # Database Tables (auto-generated)
 
-> Last synced: 2026-07-08T21:42:18.270Z
+> Last synced: 2026-07-17T16:46:22.188Z
 > Sources: `backend/database/migrations/`, `backend/config/centers.php`
 > Regenerate: `npm run docs:sync`
 
@@ -54,6 +54,8 @@
 | `platform_settings` | `2026_06_17_000002_create_platform_settings_table.php` |
 | `centers_new` | `2026_06_20_000002_convert_centers_id_to_integer.php` |
 | `student_certifications` | `2026_07_06_000001_create_student_certifications_table.php` |
+| `ui_translation_overrides` | `2026_07_13_000001_create_ui_translation_overrides_table.php` |
+| `personal_todos` | `2026_07_17_000001_create_personal_productivity_tables.php` |
 
 ## Center-scoped tables (`center_id`)
 
@@ -85,6 +87,8 @@
 - `rooms`
 - `sessions`
 - `notes`
+- `personal_todos`
+- `personal_notes`
 - `units`
 - `lessons`
 - `questions`

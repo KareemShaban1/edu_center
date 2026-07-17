@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Languages } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
@@ -8,10 +8,9 @@ import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
 import { getTenantDefaultsForGuard } from '@/config/login-defaults';
 import { brand } from '@/components/auth/login-theme';
-import { LoginDashboardPreview } from '@/components/auth/LoginDashboardPreview';
-import { EgyptEducationScene } from '@/components/illustrations/EgyptEducationArt';
 
 const C = brand;
+const TENANT_LOGIN_BG = '/images/tenant-login-egypt-bg.png';
 
 interface PortalLoginPageProps {
   guard: 'parent' | 'student';
@@ -27,11 +26,10 @@ export default function PortalLoginPage({
   role,
   titleKey,
   descKey,
-  icon: Icon,
 }: PortalLoginPageProps) {
   const defaults = getTenantDefaultsForGuard(guard);
   const { loginPortal } = useAuth();
-  const { t, locale, setLocale, dir } = useLocale();
+  const { t, locale, dir } = useLocale();
   const isAr = locale === 'ar';
   const navigate = useNavigate();
 
@@ -58,37 +56,22 @@ export default function PortalLoginPage({
     <div
       dir={dir}
       lang={locale}
-      className={cn('min-h-screen', isAr && 'font-arabic')}
+      className={cn('relative min-h-[100dvh] w-full overflow-hidden', isAr && 'font-arabic')}
       style={{
         color: C.charcoal,
-        background: `linear-gradient(160deg, ${C.bg} 0%, ${C.surface} 50%, ${C.bgAlt} 100%)`,
+        backgroundColor: C.bg,
+        backgroundImage: `url('${TENANT_LOGIN_BG}')`,
+        backgroundPosition: 'top right',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
       }}
     >
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div
-          className="absolute -top-24 start-0 h-96 w-96 rounded-full blur-3xl"
-          style={{ background: `${C.crimsonBright}14` }}
-        />
-        <div
-          className="absolute bottom-0 end-0 h-80 w-80 rounded-full blur-3xl"
-          style={{ background: `${C.crimson}10` }}
-        />
-      </div>
-
-      {/* <button
-        type="button"
-        onClick={() => setLocale(locale === 'en' ? 'ar' : 'en')}
-        className="fixed top-4 z-50 flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition-colors ltr:right-4 rtl:left-4"
-        style={{ borderColor: `${C.crimsonBright}33`, backgroundColor: C.surface, color: C.charcoal }}
-        aria-label={t('misc.language')}
+      <div
+        className="relative flex min-h-[100dvh] w-full items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16"
+        dir="ltr"
       >
-        <Languages className="h-4 w-4 opacity-60" />
-        {locale === 'en' ? 'العربية' : 'English'}
-      </button> */}
-
-      <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-12">
-        <div className="hidden lg:block">
-          <div className="mb-8 flex items-center gap-2.5">
+        <div dir={dir} className="w-full max-w-md">
+          <div className="mb-6 flex items-center gap-2.5">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-xl shadow-md"
               style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
@@ -97,19 +80,8 @@ export default function PortalLoginPage({
             </div>
             <span className="font-display text-lg font-bold">{t('app.name')}</span>
           </div>
-	<img src="/images/student_login.png" alt="Login Dashboard Preview" className="mb-8" />
-          {/* <EgyptEducationScene variant={guard} className="mb-8" /> */}
-          {/* <LoginDashboardPreview guard={guard} isAr={isAr} /> */}
-        </div>
 
-        <div className="w-full max-w-md justify-self-center lg:max-w-none lg:justify-self-end">
-          <div className="mb-6 text-center lg:text-start">
-            {/* <div
-              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-md lg:mx-0"
-              style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
-            >
-              <Icon className="h-7 w-7 text-white" />
-            </div> */}
+          <div className="mb-6 text-start">
             <h1 className="font-display text-2xl font-bold sm:text-3xl">{t(titleKey)}</h1>
             <p className="mt-2 text-sm" style={{ color: C.textMuted }}>
               {t(descKey)}
@@ -168,7 +140,7 @@ export default function PortalLoginPage({
               </button>
             </form>
 
-            <div className="mt-4 flex flex-col gap-2 text-center text-sm lg:text-start">
+            <div className="mt-4 flex flex-col gap-2 text-start text-sm">
               <Link to={guard === 'parent' ? '/parent/register' : '/student/register'} style={{ color: C.crimson }}>
                 {t('auth.createAccountLink')}
               </Link>

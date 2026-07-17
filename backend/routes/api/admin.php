@@ -4,10 +4,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/admin/bootstrap', [App\Http\Controllers\Api\Admin\AdminBootstrapApiController::class, 'show']);
 Route::get('/admin/sessions', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'index']);
+Route::post('/admin/sessions/generate', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'generate']);
 Route::post('/admin/sessions', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'store']);
 Route::put('/admin/sessions/{id}', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'update']);
 Route::delete('/admin/sessions/{id}', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'destroy']);
+Route::get('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'show']);
+Route::put('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'update']);
 Route::get('/admin/students/search-by-code', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'searchByCode']);
+Route::get('/admin/students/{id}', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'show'])->whereNumber('id');
 Route::post('/admin/students/{id}/assign-center', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'postAssignCenter']);
 Route::post('/admin/students/{id}/unassign-center', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'postUnassignCenter']);
 Route::post('/admin/students', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'store']);

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Support\ResolvesAdminApiContext;
 use App\Http\Support\SessionTypeHelper;
+use App\Services\AutoGenerateSessionsService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,41 @@ use Illuminate\Support\Str;
 class AdminSessionsApiController extends Controller
 {
     use ResolvesAdminApiContext;
+
+    public function generate(Request $request): JsonResponse
+    {
+        $ctx = $this->resolveAdminWebContext($request);
+        if ($ctx['error']) {
+            return $ctx['error'];
+        }
+
+        $payload = $request->validate([
+            'force' => ['nullable', 'boolean'],
+            'days_ahead' => ['nullable', 'integer', 'min:1', 'max:60'],
+        ]);
+
+        $result = app(AutoGenerateSessionsService::class)->generateForCurrentCenter(
+            respectSetting: empty($payload['force']),
+            daysAhead: isset($payload['days_ahead']) ? (int) $payload['days_ahead'] : null,
+        );
+
+        if (! $result['enabled'] && empty($payload['force'])) {
+            return response()->json([
+                'message' => 'Automatic session generation is disabled in settings.',
+                'generation' => $result,
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => sprintf(
+                'Generated %d session(s); skipped %d existing.',
+                $result['created'],
+                $result['skipped']
+            ),
+            'generation' => $result,
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
 $guard = $request->session()->get('api_auth_guard', 'web');

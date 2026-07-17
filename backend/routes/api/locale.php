@@ -11,6 +11,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->group(function () {
     Route::post('/notifications/subscribe', [NotificationApiController::class, 'subscribe']);
     Route::post('/notifications/mark-all-read', [NotificationApiController::class, 'markAllRead']);
     Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markRead'])->whereUuid('id');
+    Route::get('/admin/notifications', [NotificationApiController::class, 'adminIndex']);
     Route::post('/admin/notifications/send', [NotificationApiController::class, 'adminSend']);
 
     Route::get('/admin/whatsapp/templates', [WhatsAppApiController::class, 'listTemplates']);

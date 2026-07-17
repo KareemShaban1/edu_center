@@ -27,6 +27,13 @@ class SettingsSeeder extends Seeder
             ['key' => 'address', 'value' => 'القاهرة'],
             ['key' => 'center_email', 'value' => 'info@educenter.com'],
             ['key' => 'logo', 'value' => '1.jpg'],
+            ['key' => 'timezone', 'value' => 'Africa/Cairo'],
+            ['key' => 'auto_generate_sessions', 'value' => '0'],
+            ['key' => 'auto_session_days_ahead', 'value' => '14'],
+            ['key' => 'auto_session_duration', 'value' => '60'],
+            ['key' => 'auto_session_type', 'value' => 'offline'],
+            ['key' => 'auto_session_provider', 'value' => 'offline'],
+            ['key' => 'auto_session_location', 'value' => ''],
         ] as $row) {
             $this->insertScopedRow('settings', $row);
         }

@@ -65,6 +65,10 @@ $guard = $request->session()->get('api_auth_guard', 'web');
         }
         $weekDays = SectionWeekDays::decode($insert['week_days'] ?? null);
 
+        if ($weekDays !== []) {
+            app(\App\Services\AutoGenerateSessionsService::class)->generateForCurrentCenter(respectSetting: true);
+        }
+
         return response()->json(['section' => [
             'id' => $id,
             'name' => $payload['name'],
@@ -121,13 +125,18 @@ $guard = $request->session()->get('api_auth_guard', 'web');
             }
         }
 
+        $weekDays = SectionWeekDays::decode($update['week_days'] ?? null);
+        if ($weekDays !== []) {
+            app(\App\Services\AutoGenerateSessionsService::class)->generateForCurrentCenter(respectSetting: true);
+        }
+
         return response()->json(['section' => [
             'id' => $id,
             'name' => $payload['name'],
             'grade_id' => $payload['grade_id'],
             'class_id' => $payload['class_id'],
             'teacher_id' => $payload['teacher_id'] ?? null,
-            'week_days' => SectionWeekDays::decode($update['week_days'] ?? null),
+            'week_days' => $weekDays,
         ]]);
     }
 

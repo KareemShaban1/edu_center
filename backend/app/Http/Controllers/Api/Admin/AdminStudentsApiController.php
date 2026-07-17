@@ -10,6 +10,7 @@ use App\Http\Support\ResolvesAdminApiContext;
 use App\Models\Parents;
 use App\Models\Platform\CenterMembership;
 use App\Models\Student;
+use App\Services\AdminStudentDetailsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,22 @@ use Illuminate\Support\Str;
 class AdminStudentsApiController extends Controller
 {
     use ResolvesAdminApiContext;
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $ctx = $this->resolveAdminWebContext($request);
+        if ($ctx['error']) {
+            return $ctx['error'];
+        }
+
+        $payload = app(AdminStudentDetailsService::class)->build($ctx['tenantDb'], $id);
+        if (! $payload) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        return response()->json($payload);
+    }
+
     public function searchByCode(Request $request): JsonResponse
     {
 $guard = $request->session()->get('api_auth_guard', 'web');

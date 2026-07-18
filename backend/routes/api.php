@@ -24,8 +24,9 @@ Route::middleware([
     \App\Http\Middleware\RestoreApiSessionFromBearer::class,
 ])->group(function () {
     Route::get('/config', [ConfigApiController::class, 'show']);
-    Route::get('/storage/{path}', [App\Http\Controllers\Api\StorageFileApiController::class, 'show'])
-        ->where('path', '.*');
+    Route::get('/storage/{mediaId}/{fileName}', [App\Http\Controllers\Api\StorageFileApiController::class, 'show'])
+        ->whereNumber('mediaId')
+        ->where('fileName', '[^/]+');
     Route::get('/branding', [PlatformBrandingApiController::class, 'show']);
     Route::get('/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'index']);
     Route::post('/developer/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'store']);

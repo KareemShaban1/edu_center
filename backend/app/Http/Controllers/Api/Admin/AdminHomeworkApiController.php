@@ -113,21 +113,132 @@ $guard = $request->session()->get('api_auth_guard', 'web');
 
     public function submissions(Request $request, int $id): JsonResponse
     {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
         $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
         $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
+        if (! $tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
         $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+        if (! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
 
-        if (!Schema::connection('center')->hasTable('student_homework')) {
+        $tenantDb = DB::connection('center');
+        if (! Schema::connection('center')->hasTable('homeworks')) {
+            return response()->json(['message' => 'Module unavailable'], 422);
+        }
+
+        $homework = $tenantDb->table('homeworks')
+            ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
+            ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
+            ->leftJoin('sections', 'homeworks.section_id', '=', 'sections.id')
+            ->where('homeworks.id', $id)
+            ->first([
+                'homeworks.id',
+                'homeworks.title',
+                'homeworks.content',
+                'homeworks.grade_id',
+                'homeworks.class_id',
+                'homeworks.section_id',
+                'homeworks.submit_date as start_date',
+                'homeworks.due_date',
+                'grades.grade_name',
+                'classes.class_name',
+                'sections.section_name',
+            ]);
+        if (! $homework) {
+            return response()->json(['message' => 'Homework not found'], 404);
+        }
+
+        $studentsQuery = $tenantDb->table('students')->where('section_id', (int) $homework->section_id);
+        if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
+            $studentsQuery->whereNull('deleted_at');
+        }
+        $students = $studentsQuery->orderBy('name')->get(['id', 'name']);
+
+        $submissionsByStudent = collect();
+        if (Schema::connection('center')->hasTable('student_homework')) {
+            $submissionsByStudent = StudentHomework::query()
+                ->where('homework_id', $id)
+                ->get()
+                ->keyBy('student_id');
+        }
+
+        $rows = $students->map(function ($student) use ($submissionsByStudent) {
+            $submission = $submissionsByStudent->get($student->id);
+            if (! $submission) {
+                return [
+                    'student_id' => (int) $student->id,
+                    'student_name' => (string) $student->name,
+                    'submission_id' => null,
+                    'status' => 'not_submitted',
+                    'degree' => '',
+                    'rate' => '',
+                    'student_notes' => '',
+                    'response' => '',
+                    'upload_date' => '',
+                    'file_url' => null,
+                    'file_name' => null,
+                    'correction_url' => null,
+                    'correction_name' => null,
+                ];
+            }
+
+            return $submission->toAdminSubmissionArray((string) $student->name);
+        })->values();
+
+        return response()->json([
+            'homework' => [
+                'id' => (int) $homework->id,
+                'title' => (string) $homework->title,
+                'content' => (string) ($homework->content ?? ''),
+                'grade_id' => (int) $homework->grade_id,
+                'classroom_id' => (int) $homework->class_id,
+                'section_id' => (int) $homework->section_id,
+                'grade_name' => (string) ($homework->grade_name ?? ''),
+                'class_name' => (string) ($homework->class_name ?? ''),
+                'section_name' => (string) ($homework->section_name ?? ''),
+                'start_date' => (string) $homework->start_date,
+                'due_date' => (string) $homework->due_date,
+            ],
+            'submissions' => $rows,
+        ]);
+    }
+
+    public function showSubmission(Request $request, int $id): JsonResponse
+    {
+        $guard = $request->session()->get('api_auth_guard', 'web');
+        if ($guard !== 'web') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        $tenantId = $request->session()->get('api_tenant_id');
+        $tenantSlug = $request->session()->get('api_tenant_slug')
+            ?? $request->header('X-Tenant-Slug')
+            ?? $request->query('tenant_slug');
+        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
+        if (! $tenant) {
+            return response()->json(['message' => 'Tenant not found'], 422);
+        }
+        $this->ensureTenantInitialized($tenant);
+        if (! Auth::guard('web')->check()) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        if (! Schema::connection('center')->hasTable('student_homework')) {
             return response()->json(['message' => 'Module unavailable'], 422);
         }
 
         $submission = StudentHomework::query()->find($id);
-        if (!$submission) return response()->json(['message' => 'Submission not found'], 404);
+        if (! $submission) {
+            return response()->json(['message' => 'Submission not found'], 404);
+        }
 
         $tenantDb = DB::connection('center');
         $homework = $tenantDb->table('homeworks')
@@ -148,7 +259,9 @@ $guard = $request->session()->get('api_auth_guard', 'web');
                 'classes.class_name',
                 'sections.section_name',
             ]);
-        if (!$homework) return response()->json(['message' => 'Homework not found'], 404);
+        if (! $homework) {
+            return response()->json(['message' => 'Homework not found'], 404);
+        }
 
         $student = $tenantDb->table('students')->where('id', $submission->student_id)->first();
 

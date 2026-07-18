@@ -35,10 +35,10 @@ Route::post('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsA
 Route::put('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'update']);
 Route::post('/admin/homework', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'store']);
 Route::put('/admin/homework/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'update']);
-Route::get('/admin/homework/{id}/submissions', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'submissions']);
-Route::put('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'updateSubmissions']);
-Route::get('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'submissions']);
-Route::post('/admin/homework/submissions/{id}/correction', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'postSubmissionsCorrection']);
+Route::get('/admin/homework/{id}/submissions', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'submissions'])->whereNumber('id');
+Route::put('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'updateSubmissions'])->whereNumber('id');
+Route::get('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'showSubmission'])->whereNumber('id');
+Route::post('/admin/homework/submissions/{id}/correction', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'postSubmissionsCorrection'])->whereNumber('id');
 Route::post('/admin/fees', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'store']);
 Route::put('/admin/fees/{id}', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'update']);
 Route::delete('/admin/fees/{id}', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'destroy']);

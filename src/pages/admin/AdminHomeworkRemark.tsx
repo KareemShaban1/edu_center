@@ -89,7 +89,7 @@ export default function AdminHomeworkRemark() {
 
       {!isLoading && submission?.file_url && (
         <HomeworkRemarkEditor
-          fileUrl={submission.file_url}
+          fileUrl={resolveAssetUrl(submission.file_url)}
           fileName={submission.file_name || 'homework.pdf'}
           submitting={saveMutation.isPending}
           labels={remarkLabels}

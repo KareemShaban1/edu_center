@@ -6,7 +6,8 @@ import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import StatusBadge from '@/components/StatusBadge';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
-import { Search, UserMinus, UserPlus } from 'lucide-react';
+import { Eye, Search, UserMinus, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { adminStudentsApi } from '@/services/endpoints/admin-students';
@@ -266,16 +267,26 @@ export default function AdminStudents() {
       canEdit={false}
       canDelete={false}
       renderExtraActions={student => (
-        <button
-          type="button"
-          onClick={() => void handleUnassignStudent(student)}
-          disabled={unassignMutation.isPending}
-          className="rounded-lg p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-          aria-label={t('admin.unassignFromCenter')}
-          title={t('admin.unassignFromCenter')}
-        >
-          <UserMinus className="h-4 w-4" />
-        </button>
+        <>
+          <Link
+            to={`/admin/students/${student.id}`}
+            className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors inline-flex"
+            aria-label={t('admin.viewStudentDetails')}
+            title={t('admin.viewStudentDetails')}
+          >
+            <Eye className="h-4 w-4" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => void handleUnassignStudent(student)}
+            disabled={unassignMutation.isPending}
+            className="rounded-lg p-1.5 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={t('admin.unassignFromCenter')}
+            title={t('admin.unassignFromCenter')}
+          >
+            <UserMinus className="h-4 w-4" />
+          </button>
+        </>
       )}
     />
   );

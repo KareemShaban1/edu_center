@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import FormDialog from '@/components/FormDialog';
@@ -12,11 +13,14 @@ import {
   type AdminSessionRow,
   type AdminSessionSavePayload,
 } from '@/services/endpoints/admin-sessions';
+import { adminSettingsApi } from '@/services/endpoints/admin-settings';
 import type { SessionOnlineProvider } from '@/services/endpoints/session-types';
 import SessionProviderPicker, { type SessionProviderValue } from '@/components/admin/SessionProviderPicker';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CalendarPlus, Settings } from 'lucide-react';
+import { weekDayFromStartAt, weekDayLabel } from '@/lib/section-week-days';
 
 const urlProviders: SessionOnlineProvider[] = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
 
@@ -63,6 +67,13 @@ function SessionShowDialog({ item, onClose }: { item: AdminSessionRow; onClose: 
           </p>
           <p>
             <strong>{t('col.startDate')}:</strong> {item.start_at}
+          </p>
+          <p>
+            <strong>{t('col.weekday')}:</strong>{' '}
+            {(() => {
+              const day = weekDayFromStartAt(item.start_at);
+              return day ? weekDayLabel(day, t) : '—';
+            })()}
           </p>
           <p>
             <strong>{t('col.durationMinutes')}:</strong> {item.duration}
@@ -284,6 +295,11 @@ export default function AdminSessions() {
     queryFn: () => adminSessionsApi.list(),
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: () => adminSettingsApi.get(),
+  });
+
   const grades = (boot?.grades || []) as BootstrapGrade[];
   const classes = (boot?.classes || []) as BootstrapClass[];
   const sections = (boot?.sections || []) as BootstrapSection[];
@@ -331,9 +347,33 @@ export default function AdminSessions() {
     },
   });
 
+  const generateMutation = useMutation({
+    mutationFn: () => adminSessionsApi.generate({ force: true }),
+    onSuccess: async result => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-sessions'] });
+      toast({
+        title: t('settings.generateNow'),
+        description: t('settings.sessionsGenerated')
+          .replace('{created}', String(result.generation.created))
+          .replace('{skipped}', String(result.generation.skipped)),
+      });
+    },
+    onError: (error: unknown) => {
+      toast({ title: t('settings.generateNow'), description: errMessage(error), variant: 'destructive' });
+    },
+  });
+
   const columns: CrudColumn<AdminSessionRow>[] = [
     { key: 'topic', label: t('col.title'), sortable: true },
     { key: 'section_label', label: t('col.section'), sortable: true },
+    {
+      key: '_weekday',
+      label: t('col.weekday'),
+      render: r => {
+        const day = weekDayFromStartAt(r.start_at);
+        return day ? weekDayLabel(day, t) : '—';
+      },
+    },
     { key: 'start_at', label: t('col.startDate'), sortable: true },
     { key: 'duration', label: t('col.durationMinutes'), render: r => `${r.duration} min` },
     { key: 'provider', label: t('col.provider'), sortable: true },
@@ -374,25 +414,53 @@ export default function AdminSessions() {
         data={filteredRows}
         canCreate={sections.length > 0}
         searchKeys={['topic', 'section_label', 'start_at', 'provider', 'created_by']}
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link to="/admin/settings">
+                <Settings className="h-4 w-4" />
+                {t('nav.settings')}
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="gap-1.5"
+              disabled={generateMutation.isPending}
+              onClick={() => generateMutation.mutate()}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              {generateMutation.isPending ? t('common.loading') : t('settings.generateNow')}
+            </Button>
+          </div>
+        )}
         topContent={(
-          <AdminScopeFilterBar
-            grades={gradeOptions}
-            classesByGrade={classesByGrade}
-            sectionsByClass={sectionsByClass}
-            gradeFilter={gradeFilter}
-            classFilter={classFilter}
-            sectionFilter={sectionFilter}
-            dateFilter={dateFilter}
-            showDate
-            dateLabel={t('col.startDate')}
-            onGradeChange={handleGradeChange}
-            onClassChange={handleClassChange}
-            onSectionChange={setSectionFilter}
-            onDateChange={setDateFilter}
-            appliedCount={appliedCount}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-          />
+          <>
+            {settings?.auto_generate_sessions ? (
+              <p className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {t('settings.autoSessionsDesc')} ({settings.auto_session_days_ahead} {t('settings.daysAhead').toLowerCase()})
+              </p>
+            ) : null}
+            <AdminScopeFilterBar
+              grades={gradeOptions}
+              classesByGrade={classesByGrade}
+              sectionsByClass={sectionsByClass}
+              gradeFilter={gradeFilter}
+              classFilter={classFilter}
+              sectionFilter={sectionFilter}
+              dateFilter={dateFilter}
+              showDate
+              dateLabel={t('col.startDate')}
+              onGradeChange={handleGradeChange}
+              onClassChange={handleClassChange}
+              onSectionChange={setSectionFilter}
+              onDateChange={setDateFilter}
+              appliedCount={appliedCount}
+              onClear={clearFilters}
+              resultCount={filteredRows.length}
+            />
+          </>
         )}
         renderForm={(item, onClose) => {
           const formSections =

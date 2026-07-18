@@ -149,7 +149,7 @@ export default function LoginPage() {
       {/* Layout stays LTR so the form remains on the visual left; content keeps locale direction */}
       <div dir="ltr" className="relative flex min-h-screen items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16">
         <div dir={dir} className="w-full max-w-md">
-          <div className="mb-6 flex items-center gap-2.5">
+          {/* <div className="mb-6 flex items-center gap-2.5">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-xl shadow-md"
               style={{ background: `linear-gradient(135deg, ${C.crimsonBright}, ${C.crimsonDark})` }}
@@ -157,7 +157,7 @@ export default function LoginPage() {
               <GraduationCap className="h-5 w-5 text-white" aria-hidden />
             </div>
             <span className="font-display text-lg font-bold">{t('app.name')}</span>
-          </div>
+          </div> */}
 
           <div className="mb-6 text-start">
             <div
@@ -171,7 +171,9 @@ export default function LoginPage() {
               <Building2 className="h-3.5 w-3.5" aria-hidden />
               {isAr ? `مركز: ${tenantSlug}` : `Center: ${tenantSlug}`}
             </div>
-            <h1 className="font-display text-2xl font-bold sm:text-3xl">{t('app.welcome')}</h1>
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">{t('app.welcome')}
+              <span className="text-2xl font-bold sm:text-3xl" style={{ color: C.crimsonBright }}> {t('app.name')}</span>
+	</h1>
             <p className="mt-1 text-sm" style={{ color: C.textMuted }}>
               {t('app.signIn')}
             </p>

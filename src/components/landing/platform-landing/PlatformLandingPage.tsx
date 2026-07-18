@@ -34,63 +34,6 @@ import {
   getCtaButtonPulse,
 } from './animations';
 
-function MobileDashboardMockup({
-  src,
-  alt,
-  role,
-}: {
-  src: string;
-  alt: string;
-  role: 'student' | 'parent';
-}) {
-  return (
-    <div className="relative mx-auto w-[154px] rounded-[2rem] bg-[#111827] p-[6px] shadow-[0_18px_40px_rgba(17,24,39,0.28)]">
-      <div className="absolute left-1/2 top-[9px] z-10 h-[14px] w-[58px] -translate-x-1/2 rounded-full bg-[#111827]" aria-hidden />
-      <div className="relative aspect-[9/16] overflow-hidden rounded-[1.65rem] bg-white">
-        <img
-          src={src}
-          alt={alt}
-          className="h-full w-full object-cover"
-          style={{ objectPosition: role === 'parent' ? '35% top' : '30% top' }}
-          loading="lazy"
-        />
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-7 items-center justify-between bg-gradient-to-b from-black/20 to-transparent px-3 pt-1 text-[7px] font-semibold text-white" aria-hidden>
-          <span>9:41</span>
-          <span className="tracking-[1px]">● ◔ ▰</span>
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-1.5 mx-auto h-1 w-14 rounded-full bg-black/70" aria-hidden />
-      </div>
-    </div>
-  );
-}
-
-function LaptopDashboardMockup({
-  src,
-  alt,
-}: {
-  src: string;
-  alt: string;
-}) {
-  return (
-    <div className="mx-auto w-full max-w-[310px]">
-      <div className="overflow-hidden rounded-t-xl border-[5px] border-b-0 border-[#1f2937] bg-[#1f2937] shadow-[0_18px_36px_rgba(17,24,39,0.22)]">
-        <div className="relative aspect-[16/10] overflow-hidden rounded-t-md bg-white">
-          <img
-            src={src}
-            alt={alt}
-            className="h-full w-full object-cover object-top"
-            loading="lazy"
-          />
-        </div>
-      </div>
-      <div className="relative mx-auto h-3 w-[106%] -translate-x-[3%] rounded-b-lg bg-gradient-to-b from-gray-300 to-gray-400">
-        <div className="absolute left-1/2 top-0 h-1.5 w-12 -translate-x-1/2 rounded-b-md bg-gray-200" />
-      </div>
-      <div className="mx-auto h-1 w-[38%] rounded-b-full bg-gray-400/80" />
-    </div>
-  );
-}
-
 export function PlatformLandingPage() {
   const navigate = useNavigate();
   const { locale, setLocale, dir, t } = useLocale();
@@ -380,8 +323,6 @@ export function PlatformLandingPage() {
             {roles.map((role, i) => {
               const Preview = dashboardPreviews[role.key];
               const previewImage = 'previewImage' in role ? role.previewImage : undefined;
-              const usesMobileMockup = role.key === 'student' || role.key === 'parent';
-              const usesLaptopMockup = role.key === 'admin' || role.key === 'teacher';
               return (
                 <motion.div
                   key={role.key}
@@ -398,24 +339,9 @@ export function PlatformLandingPage() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true }}
-                    className={cn(
-                      'mb-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-2',
-                      usesMobileMockup && 'flex min-h-[292px] items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 py-3',
-                      usesLaptopMockup && 'flex min-h-[220px] items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100/80 px-3 py-5',
-                    )}
+                    className="mb-4 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 p-2"
                   >
-                    {previewImage && usesMobileMockup ? (
-                      <MobileDashboardMockup
-                        src={previewImage}
-                        alt={isAr ? role.titleAr : role.titleEn}
-                        role={role.key}
-                      />
-                    ) : previewImage && usesLaptopMockup ? (
-                      <LaptopDashboardMockup
-                        src={previewImage}
-                        alt={isAr ? role.titleAr : role.titleEn}
-                      />
-                    ) : previewImage ? (
+                    {previewImage ? (
                       <img
                         src={previewImage}
                         alt={isAr ? role.titleAr : role.titleEn}
@@ -480,7 +406,7 @@ export function PlatformLandingPage() {
               whileInView="visible"
               viewport={{ once: true }}
               variants={staggerContainer}
-              className="grid w-full flex-1 grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-3"
+              className="grid w-full flex-1 grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-4"
             >
               {whyUs.map((item, i) => (
                 <motion.div
@@ -506,7 +432,7 @@ export function PlatformLandingPage() {
               ))}
             </motion.div>
 
-            <motion.div
+            {/* <motion.div
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
@@ -516,7 +442,7 @@ export function PlatformLandingPage() {
               <motion.div animate={heroFloat}>
                 <img src="/images/image_1.png" alt="Egypt Landmark" width={500} height={500} />
               </motion.div>
-            </motion.div>
+            </motion.div> */}
           </div>
         </div>
       </section>

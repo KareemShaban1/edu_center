@@ -39,6 +39,24 @@ export function weekDayLabel(day: string, t: (key: string) => string): string {
   return label === key ? day : label;
 }
 
+/** Resolve weekday key (monday…sunday) from a session start_at datetime string. */
+export function weekDayFromStartAt(startAt: string | null | undefined): WeekDayName | '' {
+  if (!startAt) return '';
+  const normalized = startAt.includes('T') ? startAt : startAt.replace(' ', 'T');
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return '';
+  const map: WeekDayName[] = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ];
+  return map[date.getDay()] ?? '';
+}
+
 export function formatWeekDays(
   items: SectionWeekDay[] | null | undefined,
   t: (key: string) => string,

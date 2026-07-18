@@ -72,6 +72,16 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     reactRefreshGetRefreshRegShim(),
+    {
+      name: "inject-build-meta",
+      transformIndexHtml(html) {
+        const buildId = new Date().toISOString();
+        return html.replace(
+          /<head>/i,
+          `<head>\n    <meta name="app-build" content="${buildId}" />`,
+        );
+      },
+    },
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["pwa-192.png", "pwa-512.png", "pwa-badge.png", "apple-touch-icon.png", "favicon-32.png", "brand/app-icon.svg"],
@@ -110,6 +120,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/api/, /^\/storage/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         importScripts: ["/push-handler.js"],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
       devOptions: {
         enabled: mode === "development",

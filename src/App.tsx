@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 // Admin
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminStudents from "@/pages/admin/AdminStudents";
+import AdminStudentDetail from "@/pages/admin/AdminStudentDetail";
 import AdminTeachers from "@/pages/admin/AdminTeachers";
 import AdminParents from "@/pages/admin/AdminParents";
 import AdminGrades from "@/pages/admin/AdminGrades";
@@ -151,6 +152,7 @@ const App = () => (
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/students" element={<ProtectedRoute allowedRoles={['admin']}><AdminStudents /></ProtectedRoute>} />
+              <Route path="/admin/students/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminStudentDetail /></ProtectedRoute>} />
               <Route path="/admin/teachers" element={<ProtectedRoute allowedRoles={['admin']}><AdminTeachers /></ProtectedRoute>} />
               <Route path="/admin/parents" element={<ProtectedRoute allowedRoles={['admin']}><AdminParents /></ProtectedRoute>} />
               <Route path="/admin/grades" element={<ProtectedRoute allowedRoles={['admin']}><AdminGrades /></ProtectedRoute>} />

@@ -119,4 +119,14 @@ export const adminSessionsApi = {
     if (USE_MOCK) return;
     await apiClient.delete(`/admin/sessions/${id}`, false);
   },
+
+  async generate(payload?: { force?: boolean; days_ahead?: number }): Promise<{
+    message: string;
+    generation: { created: number; skipped: number; sections: number; enabled: boolean };
+  }> {
+    if (USE_MOCK) {
+      return { message: 'Generated', generation: { created: 0, skipped: 0, sections: 0, enabled: true } };
+    }
+    return apiClient.post('/admin/sessions/generate', payload ?? {}, false);
+  },
 };

@@ -140,9 +140,10 @@ function AnnouncementForm({
         </FormField>
         <FormField label={t('col.type')} id="ann-type">
           <FormSelect id="ann-type" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-            <option value="quiz">Quiz</option>
-            <option value="exam">Exam</option>
-            <option value="others">Others</option>
+	  <option value="homework">{t('announcements.homework')}</option>
+            <option value="quiz">{t('announcements.quiz')}</option>
+            <option value="exam">{t('announcements.exam')}</option>
+            <option value="others">{t('announcements.others')}</option>
           </FormSelect>
         </FormField>
         <FormField label={t('col.date')} id="ann-time">

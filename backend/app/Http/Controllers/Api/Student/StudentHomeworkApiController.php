@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Student;
 
+use App\Centers\CenterContext;
 use App\Http\Controllers\Controller;
 use App\Http\Support\AdminUploadHelper;
 use App\Http\Support\ResolvesStudentApiContext;
@@ -104,7 +105,7 @@ $ctx = $this->resolveStudentContext($request);
         $submission->status = $status;
         $submission->student_notes = $payload['student_notes'] ?? null;
         $submission->upload_date_time = now();
-        $centerId = CenterContext::id()
+        $centerId = \App\Centers\CenterContext::id()
             ?? ($request->input('center_id') ? (int) $request->input('center_id') : null)
             ?? ($request->session()->get('api_tenant_id') ? (int) $request->session()->get('api_tenant_id') : null);
         if ($centerId && Schema::connection('center')->hasColumn('student_homework', 'center_id') && empty($submission->center_id)) {
@@ -143,7 +144,7 @@ $ctx = $this->resolveStudentContext($request);
         $submission->status = $status;
         $submission->student_notes = $payload['student_notes'] ?? null;
         $submission->upload_date_time = now();
-        $centerId = CenterContext::id()
+        $centerId = \App\Centers\CenterContext::id()
             ?? ($request->input('center_id') ? (int) $request->input('center_id') : null)
             ?? ($request->session()->get('api_tenant_id') ? (int) $request->session()->get('api_tenant_id') : null);
         if ($centerId && Schema::connection('center')->hasColumn('student_homework', 'center_id') && empty($submission->center_id)) {

@@ -9,9 +9,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 final class MediaUrlHelper
 {
     /**
-     * Return a same-origin path (/storage/...) for SPA + nginx alias.
-     * Avoids broken absolute URLs when APP_URL / disk URL is misconfigured
-     * (e.g. https://storage/1/file.png).
+     * Return a same-origin API path so files work when nginx root is SPA dist/
+     * and only /api is proxied to Laravel (typical Contabo/aaPanel setup).
      */
     public static function publicPath(?Media $media): ?string
     {
@@ -19,26 +18,33 @@ final class MediaUrlHelper
             return null;
         }
 
+        $relative = self::relativePath($media);
+        if ($relative === '') {
+            return null;
+        }
+
+        return '/api/storage/'.$relative;
+    }
+
+    private static function relativePath(Media $media): string
+    {
         $url = (string) $media->getUrl();
 
-        // Use ~ delimiter so # in the character class is safe.
-        if (preg_match('~(/storage/[^\s?]+)~', $url, $matches)) {
-            return $matches[1];
+        if (preg_match('~/storage/([^\s?]+)~', $url, $matches)) {
+            return ltrim($matches[1], '/');
         }
 
-        // Host mistakenly became "storage" (https://storage/1/file.png)
-        if (preg_match('~^https?://storage(/[^\s?]+)~i', $url, $matches)) {
-            return '/storage'.$matches[1];
+        if (preg_match('~^https?://storage/([^\s?]+)~i', $url, $matches)) {
+            return ltrim($matches[1], '/');
         }
 
-        $relative = '';
         if (method_exists($media, 'getPathRelativeToRoot')) {
             $relative = ltrim((string) $media->getPathRelativeToRoot(), '/');
-        }
-        if ($relative === '') {
-            $relative = trim((string) $media->id.'/'.(string) $media->file_name, '/');
+            if ($relative !== '') {
+                return $relative;
+            }
         }
 
-        return '/storage/'.$relative;
+        return trim((string) $media->id.'/'.(string) $media->file_name, '/');
     }
 }

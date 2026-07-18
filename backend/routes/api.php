@@ -24,6 +24,8 @@ Route::middleware([
     \App\Http\Middleware\RestoreApiSessionFromBearer::class,
 ])->group(function () {
     Route::get('/config', [ConfigApiController::class, 'show']);
+    Route::get('/storage/{path}', [App\Http\Controllers\Api\StorageFileApiController::class, 'show'])
+        ->where('path', '.*');
     Route::get('/branding', [PlatformBrandingApiController::class, 'show']);
     Route::get('/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'index']);
     Route::post('/developer/ui-translations', [App\Http\Controllers\Api\Platform\UiTranslationApiController::class, 'store']);

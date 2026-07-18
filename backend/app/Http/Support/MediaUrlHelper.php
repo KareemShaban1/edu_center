@@ -21,12 +21,13 @@ final class MediaUrlHelper
 
         $url = (string) $media->getUrl();
 
-        if (preg_match('#(/storage/[^\s?#]+)#', $url, $matches)) {
+        // Use ~ delimiter so # in the character class is safe.
+        if (preg_match('~(/storage/[^\s?]+)~', $url, $matches)) {
             return $matches[1];
         }
 
         // Host mistakenly became "storage" (https://storage/1/file.png)
-        if (preg_match('#^https?://storage(/[^\s?#]+)#i', $url, $matches)) {
+        if (preg_match('~^https?://storage(/[^\s?]+)~i', $url, $matches)) {
             return '/storage'.$matches[1];
         }
 

@@ -143,19 +143,19 @@ export default function UserGuidePage() {
   );
 
   return (
-    <div dir="rtl" lang="ar" className={cn('min-h-screen bg-[#FAFAFA] font-arabic')}>
+    <div dir="rtl" lang="ar" className={cn('min-h-screen bg-[#FAFAFA] font-arabic text-[17px] sm:text-[18px]')}>
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link to="/" className="flex shrink-0 items-center gap-2.5 text-gray-900 hover:opacity-80">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-md">
               <GraduationCap className="h-4 w-4" aria-hidden />
             </div>
-            <span className="font-bold">{t('app.name')}</span>
+            <span className="text-base font-bold sm:text-lg">{t('app.name')}</span>
           </Link>
 
           <Link
             to="/"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-base font-medium text-gray-600 transition hover:bg-gray-50"
           >
             <ArrowRight className="h-4 w-4" />
             الرئيسية
@@ -164,17 +164,17 @@ export default function UserGuidePage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">دليل استخدام المنصة</h1>
-          <p className="mt-2 text-gray-600">
+        <div className="mb-8 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+          <h1 className="text-3xl font-bold leading-snug text-gray-900 sm:text-4xl">دليل استخدام المنصة</h1>
+          <p className="mt-3 text-lg leading-relaxed text-gray-600">
             شرح بسيط لكل صفحة في المنصة — للإدارة والمعلمين والطلاب وأولياء الأمور.
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900">
                 <List className="h-4 w-4 text-primary" aria-hidden />
                 محتويات الدليل
               </div>
@@ -196,7 +196,7 @@ export default function UserGuidePage() {
                         <a
                           key={section.id}
                           href={`#${section.id}`}
-                          className="block rounded-lg px-3 py-2 text-sm font-medium text-gray-800 transition hover:bg-gray-50"
+                          className="block rounded-lg px-3 py-2.5 text-base font-medium leading-snug text-gray-800 transition hover:bg-gray-50"
                         >
                           {section.text}
                         </a>
@@ -212,7 +212,7 @@ export default function UserGuidePage() {
                         <div className="flex items-center gap-1">
                           <a
                             href={`#${section.id}`}
-                            className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 transition hover:bg-gray-50"
+                            className="min-w-0 flex-1 rounded-lg px-3 py-2.5 text-base font-medium leading-snug text-gray-800 transition hover:bg-gray-50"
                           >
                             {section.text}
                           </a>
@@ -234,7 +234,7 @@ export default function UserGuidePage() {
                               <li key={`${section.id}-${item.id}`}>
                                 <a
                                   href={`#${item.id}`}
-                                  className="block rounded-md px-3 py-1.5 text-xs text-gray-600 transition hover:bg-primary/5 hover:text-primary"
+                                  className="block rounded-md px-3 py-2 text-sm leading-snug text-gray-600 transition hover:bg-primary/5 hover:text-primary"
                                 >
                                   {item.text}
                                 </a>
@@ -250,7 +250,7 @@ export default function UserGuidePage() {
             </div>
           </aside>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
             {isLoading && (
               <div className="space-y-3">
                 <Skeleton className="h-8 w-2/3" />
@@ -260,13 +260,21 @@ export default function UserGuidePage() {
               </div>
             )}
             {isError && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-base">
                 <p className="font-medium text-destructive">تعذر تحميل الدليل</p>
                 <p className="mt-1 text-muted-foreground">حاول تحديث الصفحة. إذا استمرت المشكلة، تواصل مع إدارة المركز.</p>
               </div>
             )}
             {!isLoading && !isError && markdown && (
-              <article className="prose prose-slate max-w-none prose-headings:scroll-mt-28 prose-img:rounded-xl prose-img:border prose-img:border-gray-200 prose-a:text-primary">
+              <article
+                className={cn(
+                  'prose prose-slate max-w-none prose-lg sm:prose-xl',
+                  'prose-headings:scroll-mt-28 prose-headings:font-bold prose-headings:leading-snug',
+                  'prose-p:leading-8 prose-li:leading-8',
+                  'prose-img:rounded-xl prose-img:border prose-img:border-gray-200',
+                  'prose-a:text-primary',
+                )}
+              >
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {resolvedMarkdown}
                 </ReactMarkdown>
@@ -277,7 +285,7 @@ export default function UserGuidePage() {
       </main>
 
       <footer className="border-t border-gray-100 bg-white py-6">
-        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-gray-500 sm:px-6">
+        <div className="mx-auto max-w-6xl px-4 text-center text-base text-gray-500 sm:px-6">
           © {new Date().getFullYear()} {t('app.name')}.{' '}
           <Link to="/" className="text-primary hover:underline">
             العودة للرئيسية

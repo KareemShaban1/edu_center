@@ -44,6 +44,7 @@ Manual sections (business goals, user stories, security policies) are edited dir
 | Document | Notes |
 |----------|-------|
 | [PROJECT_DESCRIPTION.md](./PROJECT_DESCRIPTION.md) | High-level overview (some tenancy wording is legacy) |
+| [PROJECT_DESCRIPTION_AR.md](./PROJECT_DESCRIPTION_AR.md) | وصف عربي مبسّط للمستخدمين غير التقنيين |
 | [DEPLOYMENT_CONTABO_AAPANEL.md](./DEPLOYMENT_CONTABO_AAPANEL.md) | Contabo + aaPanel nginx guide |
 | [UI_UX_PROMPT_EGYPT_AR.md](./UI_UX_PROMPT_EGYPT_AR.md) | Arabic/Egypt UX prompt reference |
 | [STITCH_MOBILE_DASHBOARDS_PROMPT_AR.md](./STITCH_MOBILE_DASHBOARDS_PROMPT_AR.md) | Ready-to-paste Stitch AI prompt for the four mobile account experiences |

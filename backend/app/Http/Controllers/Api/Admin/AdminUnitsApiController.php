@@ -21,16 +21,46 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class AdminUnitsApiController extends Controller
 {
     use ResolvesAdminApiContext;
-    public function store(Request $request, int $id): JsonResponse
+
+    public function store(Request $request): JsonResponse
     {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
-        $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $payload = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+
+        $unit = new Unit();
+        $unit->name = $payload['name'];
+        $unit->class_id = (int) $payload['class_id'];
+        $unit->notes = $payload['notes'] ?? '';
+        if (Schema::connection('center')->hasColumn('units', 'center_id')) {
+            $unit->center_id = $tenant->id;
+        }
+        $unit->save();
+
+        if ($uploadedFiles !== []) {
+            foreach ($uploadedFiles as $file) {
+                $unit->addMedia($file)->toMediaCollection('units');
+            }
+        }
+
+        return response()->json(['unit' => $this->formatUnit($unit)], 201);
+    }
+
+    public function updateWithMedia(Request $request, int $id): JsonResponse
+    {
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
 
         $payload = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -43,7 +73,9 @@ $guard = $request->session()->get('api_auth_guard', 'web');
         $uploadedFiles = AdminUploadHelper::validatedFiles($request);
 
         $unit = Unit::query()->find($id);
-        if (! $unit) return response()->json(['message' => 'Unit not found'], 404);
+        if (! $unit) {
+            return response()->json(['message' => 'Unit not found'], 404);
+        }
 
         $unit->name = $payload['name'];
         $unit->class_id = (int) $payload['class_id'];
@@ -69,6 +101,11 @@ $guard = $request->session()->get('api_auth_guard', 'web');
             }
         }
 
+        return response()->json(['unit' => $this->formatUnit($unit)]);
+    }
+
+    private function formatUnit(Unit $unit): array
+    {
         $media = $unit->getMedia('units')->map(function ($m) {
             return [
                 'id' => (int) $m->id,
@@ -81,15 +118,13 @@ $guard = $request->session()->get('api_auth_guard', 'web');
             ];
         })->values();
 
-        return response()->json([
-            'unit' => [
-                'id' => $unit->id,
-                'name' => $unit->name,
-                'class_id' => $unit->class_id,
-                'notes' => $unit->notes,
-                'media' => $media,
-            ],
-        ]);
+        return [
+            'id' => $unit->id,
+            'name' => $unit->name,
+            'class_id' => $unit->class_id,
+            'notes' => $unit->notes,
+            'media' => $media,
+        ];
     }
 
     public function update(Request $request, int $id): JsonResponse

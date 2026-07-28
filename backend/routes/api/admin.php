@@ -28,7 +28,7 @@ Route::post('/admin/sections', [App\Http\Controllers\Api\Admin\AdminSectionsApiC
 Route::put('/admin/sections/{id}', [App\Http\Controllers\Api\Admin\AdminSectionsApiController::class, 'update']);
 Route::get('/admin/sections/{sectionId}/sessions', [App\Http\Controllers\Api\Admin\AdminSectionsApiController::class, 'sessions']);
 Route::post('/admin/units', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'store']);
-Route::post('/admin/units/{id}', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'store']);
+Route::post('/admin/units/{id}', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'updateWithMedia']);
 Route::put('/admin/units/{id}', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'update']);
 Route::post('/admin/lessons', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'store']);
 Route::post('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'store']);
@@ -52,7 +52,7 @@ Route::put('/admin/roles/{id}', [App\Http\Controllers\Api\Admin\AdminRolesApiCon
 Route::delete('/admin/roles/{id}', [App\Http\Controllers\Api\Admin\AdminRolesApiController::class, 'destroy']);
 Route::get('/admin/library', [App\Http\Controllers\Api\Admin\AdminLibraryApiController::class, 'index']);
 Route::post('/admin/library', [App\Http\Controllers\Api\Admin\AdminLibraryApiController::class, 'store']);
-Route::post('/admin/library/{id}', [App\Http\Controllers\Api\Admin\AdminLibraryApiController::class, 'store']);
+Route::post('/admin/library/{id}', [App\Http\Controllers\Api\Admin\AdminLibraryApiController::class, 'updateWithMedia']);
 Route::delete('/admin/library/{id}', [App\Http\Controllers\Api\Admin\AdminLibraryApiController::class, 'destroy']);
 Route::get('/admin/announcements', [App\Http\Controllers\Api\Admin\AdminAnnouncementsApiController::class, 'index']);
 Route::post('/admin/announcements', [App\Http\Controllers\Api\Admin\AdminAnnouncementsApiController::class, 'store']);

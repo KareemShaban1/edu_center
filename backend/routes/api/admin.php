@@ -31,7 +31,7 @@ Route::post('/admin/units', [App\Http\Controllers\Api\Admin\AdminUnitsApiControl
 Route::post('/admin/units/{id}', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'updateWithMedia']);
 Route::put('/admin/units/{id}', [App\Http\Controllers\Api\Admin\AdminUnitsApiController::class, 'update']);
 Route::post('/admin/lessons', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'store']);
-Route::post('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'store']);
+Route::post('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'updateWithMedia']);
 Route::put('/admin/lessons/{id}', [App\Http\Controllers\Api\Admin\AdminLessonsApiController::class, 'update']);
 Route::post('/admin/homework', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'store']);
 Route::put('/admin/homework/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'update']);

@@ -23,7 +23,7 @@ interface AttRow extends CenterScopedRow {
 
 export default function ParentAttendance() {
   const { t } = useLocale();
-  const { data } = useParentBootstrap();
+  const { data, isLoading } = useParentBootstrap();
   const rows = (data?.attendance || []) as AttRow[];
   const {
     childTabs,
@@ -73,6 +73,7 @@ export default function ParentAttendance() {
       description={t('page.attendance.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['student_name', 'date', 'center_name']}
       rowKey={a => portalRowKey(a.center_id, a.id)}
       readOnly

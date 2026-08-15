@@ -10,6 +10,9 @@ export const reservedTenantSlugs = new Set([
   'platform',
   'login',
   'register',
+  'center',
+  'guide',
+  'developer',
   'api',
   'p',
 ]);
@@ -35,6 +38,10 @@ export function getStudentRegisterPath(): string {
 
 export function getParentRegisterPath(): string {
   return '/parent/register';
+}
+
+export function getCenterRegisterPath(): string {
+  return '/center/register';
 }
 
 export function getTenantLoginPath(tenantSlug?: string | null): string {

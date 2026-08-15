@@ -322,6 +322,11 @@ class AuthLoginHandler
 
         $apiToken = ApiBearerAuth::issue($authGuard, $profileId, $centerId, $centerSlug, $profileEmail, $userType);
 
+        $acl = ['roles' => [], 'permissions' => []];
+        if ($authGuard === 'web' && $user) {
+            $acl = app(\App\Services\UserAclService::class)->forUserId((int) $user->id);
+        }
+
         return response()->json([
             'token' => $apiToken,
             'memberships' => $memberships,
@@ -338,6 +343,8 @@ class AuthLoginHandler
                 'tenant_id' => $centerId,
                 'tenant_slug' => $centerSlug,
                 'tenant_name' => $center?->name,
+                'roles' => $acl['roles'],
+                'permissions' => $acl['permissions'],
             ],
         ]);
     }

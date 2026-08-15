@@ -115,7 +115,8 @@ export default function PlatformSubscriptions() {
       title={t('nav.subscriptions')}
       description={t('dashboard.superAdmin.desc')}
       columns={columns}
-      data={isLoading ? [] : data}
+      data={data}
+      loading={isLoading}
       searchKeys={['tenant_name', 'plan', 'status']}
       renderForm={(item, onClose) => <SubscriptionForm item={item} onClose={onClose} onSave={handleSave} />}
       onDelete={handleDelete}

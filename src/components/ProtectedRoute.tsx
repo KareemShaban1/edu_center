@@ -1,8 +1,9 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
 import { getTenantLoginPath } from '@/lib/tenant-routes';
+import { canAccessAdminPath } from '@/lib/admin-permissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, allowedRoles, loginPath }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
   const resolvedLoginPath = loginPath ?? getTenantLoginPath(user?.tenant_slug);
 
   if (isLoading) {
@@ -27,6 +29,10 @@ export default function ProtectedRoute({ children, allowedRoles, loginPath }: Pr
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to={getDashboardPath(user.role)} replace />;
+  }
+
+  if (user?.role === 'admin' && location.pathname.startsWith('/admin') && !canAccessAdminPath(location.pathname, user)) {
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
+import { canAccessAdminPath } from '@/lib/admin-permissions';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -330,7 +331,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  const navBlocks = useMemo(() => (user ? roleNavBlocks[user.role] || [] : []), [user]);
+  const navBlocks = useMemo(() => {
+    const blocks = user ? roleNavBlocks[user.role] || [] : [];
+    if (!user || user.role !== 'admin') return blocks;
+
+    return blocks.flatMap(block => {
+      if (block.type === 'link') {
+        return canAccessAdminPath(block.item.path, user) ? [block] : [];
+      }
+      const items = block.group.items.filter(item => canAccessAdminPath(item.path, user));
+      if (items.length === 0) return [];
+      return [{ type: 'group' as const, group: { ...block.group, items } }];
+    });
+  }, [user]);
   const flatNav = useMemo(() => flattenNavBlocks(navBlocks), [navBlocks]);
 
   const syncOpenGroups = useCallback(() => {
@@ -502,7 +515,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="hidden text-muted-foreground text-xs sm:inline">{locale === 'en' ? 'العربية' : 'English'}</span>
             </button> */}
 
-            <AdminTopbarQuickNav />
+            {user.role === 'admin' ? <AdminTopbarQuickNav /> : null}
 
             <NotificationBell />
             <HeaderUserMenu

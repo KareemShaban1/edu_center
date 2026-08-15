@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocale } from '@/contexts/LocaleContext';
+import TableLoading, { TableLoadingRow } from '@/components/TableLoading';
 
 interface Column<T> {
   key: string;
@@ -17,6 +18,7 @@ interface DataTableProps<T> {
   className?: string;
   /** Card layout on small screens; table from md breakpoint up. */
   responsive?: boolean;
+  loading?: boolean;
 }
 
 function cellValue<T extends Record<string, unknown>>(item: T, col: Column<T>) {
@@ -31,6 +33,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   searchable,
   className,
   responsive = true,
+  loading = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const { t } = useLocale();
@@ -62,7 +65,9 @@ export default function DataTable<T extends Record<string, unknown>>({
 
       {responsive ? (
         <div className="divide-y divide-border md:hidden">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <TableLoading />
+          ) : filtered.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">{t('crud.noData')}</p>
           ) : (
             filtered.map((item, idx) => (
@@ -98,7 +103,9 @@ export default function DataTable<T extends Record<string, unknown>>({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <TableLoadingRow colSpan={columns.length} />
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
                   {t('crud.noData')}

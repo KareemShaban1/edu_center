@@ -17,7 +17,7 @@ export interface AnnouncementItemPayload {
   grade_id: number;
   class_id: number;
   section_id: number;
-  type: 'quiz' | 'exam' | 'others';
+  type: 'homework' | 'quiz' | 'exam' | 'others';
   time?: string | null;
   grade_name?: string;
   class_name?: string;
@@ -32,7 +32,7 @@ export interface AnnouncementSavePayload {
   grade_id: number;
   class_id: number;
   section_id: number;
-  type: 'quiz' | 'exam' | 'others';
+  type: 'homework' | 'quiz' | 'exam' | 'others';
   time?: string | null;
   files?: File[];
   remove_media_ids?: number[];
@@ -65,8 +65,11 @@ function toFormData(payload: AnnouncementSavePayload): FormData {
 export const adminAnnouncementsApi = {
   async list(): Promise<AnnouncementItemPayload[]> {
     if (USE_MOCK) return [];
-    const res = await apiClient.get<{ announcements: AnnouncementItemPayload[] }>('/admin/announcements', undefined, false);
-    return res.announcements || [];
+    const res = await apiClient.get<{ announcements: AnnouncementItemPayload[] | { data: AnnouncementItemPayload[] } }>('/admin/announcements', undefined, false);
+    const raw = res.announcements;
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.data)) return raw.data;
+    return [];
   },
 
   async create(payload: AnnouncementSavePayload): Promise<AnnouncementItemPayload> {

@@ -5,11 +5,13 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToCenter;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Translatable\HasTranslations;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Teacher extends  Authenticatable
+class Teacher extends Authenticatable implements HasMedia
 {
     use BelongsToCenter;
+    use InteractsWithMedia;
     use Notifiable;
  
     protected $guarded = [];
@@ -23,6 +25,11 @@ class Teacher extends  Authenticatable
 
     ////////////   Relationships   ////////////
     
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection((string) config('media.collections.teachers', 'teachers'));
+    }
+
     public function sections()
     {
         return $this->belongsToMany('App\Models\Section', 'teacher_section');

@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 export default function AdminLessons() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
@@ -94,6 +94,7 @@ export default function AdminLessons() {
         description={t('page.lessonsAdmin.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['name']}
         topContent={(
           <AdminScopeFilterBar

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Support;
 
 use App\Centers\CenterMembershipService;
+use App\Http\Requests\Auth\RegisterCenterRequest;
 use App\Models\Parents;
 use App\Models\Platform\Center;
 use App\Models\Student;
+use App\Services\CenterRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -194,6 +196,48 @@ class AuthRegisterHandler
         } while (DB::connection('mysql')->table('students')->where('code', $code)->exists());
 
         return $code;
+    }
+
+    public function registerCenter(RegisterCenterRequest $request): JsonResponse
+    {
+        $payload = $request->validated();
+        $registration = app(CenterRegistrationService::class);
+        $registration->assertAdminEmailAvailable($payload['email']);
+
+        $result = $registration->create([
+            'name' => $payload['name'],
+            'email' => $payload['email'],
+            'phone' => $payload['phone'],
+            'slug' => $payload['slug'] ?? null,
+            'plan' => 'Starter',
+            'status' => 'active',
+            'seed_default_accounts' => false,
+            'initial_users' => [
+                'admin' => [
+                    'name' => $payload['admin_name'],
+                    'email' => $payload['email'],
+                    'password' => $payload['password'],
+                ],
+            ],
+        ]);
+
+        $center = $result['center'];
+
+        return response()->json([
+            'message' => 'Center registered successfully. You can sign in now.',
+            'center' => [
+                'id' => $center->id,
+                'name' => $center->name,
+                'slug' => $center->slug,
+            ],
+            'user' => [
+                'name' => $payload['admin_name'],
+                'email' => $payload['email'],
+                'phone' => $payload['phone'],
+                'role' => 'admin',
+                'center_slug' => $center->slug,
+            ],
+        ], 201);
     }
 
     protected function resolveRegistrationCenter(?string $slug): ?Center

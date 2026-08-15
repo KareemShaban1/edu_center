@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
+import TableLoading from '@/components/TableLoading';
 import { useLocale } from '@/contexts/LocaleContext';
 import { toast } from '@/hooks/use-toast';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
@@ -23,6 +24,8 @@ interface PaymentRow {
 
 export default function AdminPaymentForm() {
   const { sectionId, date: dateParam } = useParams();
+  const [searchParams] = useSearchParams();
+  const feeIdFromQuery = Number(searchParams.get('fee_id') || 0) || null;
   const navigate = useNavigate();
   const { t } = useLocale();
   const { data: bootstrap } = useAdminBootstrap();
@@ -37,7 +40,7 @@ export default function AdminPaymentForm() {
 
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [fees, setFees] = useState<PaymentFeeOption[]>([]);
-  const [selectedFeeId, setSelectedFeeId] = useState<number | null>(null);
+  const [selectedFeeId, setSelectedFeeId] = useState<number | null>(feeIdFromQuery);
   const selectedFee = useMemo(
     () => fees.find(f => f.id === selectedFeeId) ?? null,
     [fees, selectedFeeId],
@@ -72,14 +75,17 @@ export default function AdminPaymentForm() {
     if (feesToUse.length) {
       setFees(feesToUse);
       const backendSelectedFee = (data?.selected_fee_id as number | null | undefined) ?? feesToUse[0]?.id ?? null;
+      const preferredFee = (feeIdFromQuery && feesToUse.some(f => f.id === feeIdFromQuery))
+        ? feeIdFromQuery
+        : backendSelectedFee;
       if (!selectedFeeId || !feesToUse.some(f => f.id === selectedFeeId)) {
-        setSelectedFeeId(backendSelectedFee);
+        setSelectedFeeId(preferredFee);
       }
     } else {
       setFees([]);
       setSelectedFeeId(null);
     }
-  }, [data, sectionFees, paymentDate, selectedFeeId]);
+  }, [data, sectionFees, paymentDate, selectedFeeId, feeIdFromQuery]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -165,7 +171,11 @@ export default function AdminPaymentForm() {
         )}
       </div>
 
-      {isLoading && <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading...</div>}
+      {isLoading && (
+        <div className="mb-4 rounded-xl border border-border bg-card">
+          <TableLoading compact />
+        </div>
+      )}
 
       <div className="mb-4 rounded-lg border border-border bg-card p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

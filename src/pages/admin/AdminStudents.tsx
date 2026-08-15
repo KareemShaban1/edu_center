@@ -153,7 +153,7 @@ function AssignByCodePanel({ onAssigned }: { onAssigned: () => Promise<void> }) 
 export default function AdminStudents() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
@@ -262,6 +262,7 @@ export default function AdminStudents() {
       )}
       columns={columns}
       data={filteredStudents}
+      loading={isLoading}
       searchKeys={['name', 'email', 'code', 'grade_name', 'class_name', 'section_name', 'parent_name']}
       canCreate={false}
       canEdit={false}

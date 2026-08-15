@@ -10,7 +10,7 @@ type QuizRow = TeacherBootstrapPayload['quizzes'][number];
 
 export default function TeacherQuizzes() {
   const { t } = useLocale();
-  const { data } = useTeacherBootstrap();
+  const { data, isLoading } = useTeacherBootstrap();
   const quizzes = data?.quizzes || [];
   const scopeClasses = data?.classes || [];
 
@@ -52,6 +52,7 @@ export default function TeacherQuizzes() {
       description={t('page.quizzes.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['name', 'subject', 'student_name', 'grade', 'class', 'section']}
       readOnly
       topContent={(

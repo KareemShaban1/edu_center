@@ -5,154 +5,104 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreLessonRequest;
+use App\Http\Requests\Admin\UpdateLessonBasicRequest;
+use App\Http\Requests\Admin\UpdateLessonRequest;
+use App\Http\Resources\LessonResource;
 use App\Http\Support\AdminUploadHelper;
 use App\Http\Support\ResolvesAdminApiContext;
 use App\Models\Lesson;
+use App\Services\LessonService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class AdminLessonsApiController extends Controller
+final class AdminLessonsApiController extends Controller
 {
     use ResolvesAdminApiContext;
 
-    public function store(Request $request): JsonResponse
+    public function __construct(
+        private readonly LessonService $lessonService,
+    ) {}
+
+    public function store(StoreLessonRequest $request): JsonResponse
     {
         ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
         if ($error) {
             return $error;
         }
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $uploadedFiles = AdminUploadHelper::validatedFiles(
+            $request,
+            (string) config('media.upload.files_key'),
+            (int) config('media.upload.max_kb'),
+        );
 
-        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+        $lesson = $this->lessonService->create(
+            $request->validated(),
+            $uploadedFiles,
+            $tenant,
+        );
 
-        $lesson = new Lesson();
-        $lesson->name = $payload['name'];
-        $lesson->unit_id = (int) $payload['unit_id'];
-        $lesson->notes = $payload['notes'] ?? '';
-        if (Schema::connection('center')->hasColumn('lessons', 'center_id')) {
-            $lesson->center_id = $tenant->id;
-        }
-        $lesson->save();
-
-        if ($uploadedFiles !== []) {
-            foreach ($uploadedFiles as $file) {
-                $lesson->addMedia($file)->toMediaCollection('lessons');
-            }
-        }
-
-        return response()->json(['lesson' => $this->formatLesson($lesson)], 201);
+        return response()->json([
+            'lesson' => LessonResource::make($lesson),
+        ], 201);
     }
 
-    public function updateWithMedia(Request $request, int $id): JsonResponse
+    public function updateWithMedia(UpdateLessonRequest $request, int $id): JsonResponse
     {
         ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
         if ($error) {
             return $error;
         }
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
-            'notes' => ['nullable', 'string'],
-            'remove_media_ids' => ['nullable', 'array'],
-            'remove_media_ids.*' => ['integer'],
-        ]);
-
-        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
-
         $lesson = Lesson::query()->find($id);
-        if (! $lesson) {
+        if ($lesson === null) {
             return response()->json(['message' => 'Lesson not found'], 404);
         }
 
-        $lesson->name = $payload['name'];
-        $lesson->unit_id = (int) $payload['unit_id'];
-        $lesson->notes = $payload['notes'] ?? '';
-        if (Schema::connection('center')->hasColumn('lessons', 'center_id') && ! $lesson->center_id) {
-            $lesson->center_id = $tenant->id;
-        }
-        $lesson->save();
+        $uploadedFiles = AdminUploadHelper::validatedFiles(
+            $request,
+            (string) config('media.upload.files_key'),
+            (int) config('media.upload.max_kb'),
+        );
 
-        $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
-        if ($removeIds->isNotEmpty()) {
-            Media::query()
-                ->whereIn('id', $removeIds)
-                ->where('model_type', Lesson::class)
-                ->where('model_id', $lesson->id)
-                ->get()
-                ->each(fn ($m) => $m->delete());
-        }
+        $payload = $request->validated();
 
-        if ($uploadedFiles !== []) {
-            foreach ($uploadedFiles as $file) {
-                $lesson->addMedia($file)->toMediaCollection('lessons');
-            }
-        }
+        $lesson = $this->lessonService->update(
+            $lesson,
+            $payload,
+            $uploadedFiles,
+            $payload['remove_media_ids'] ?? [],
+            $tenant,
+        );
 
-        return response()->json(['lesson' => $this->formatLesson($lesson)]);
-    }
-
-    private function formatLesson(Lesson $lesson): array
-    {
-        $media = $lesson->getMedia('lessons')->map(function ($m) {
-            return [
-                'id' => (int) $m->id,
-                'name' => $m->name ?: $m->file_name,
-                'file_name' => $m->file_name,
-                'mime_type' => $m->mime_type,
-                'size' => (int) $m->size,
-                'type' => $m->mime_type ?: 'application/octet-stream',
-                'url' => $m->getUrl(),
-            ];
-        })->values();
-
-        return [
-            'id' => $lesson->id,
-            'name' => $lesson->name,
-            'unit_id' => $lesson->unit_id,
-            'notes' => $lesson->notes,
-            'media' => $media,
-        ];
-    }
-
-    public function update(Request $request, int $id): JsonResponse
-    {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
-        $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
-
-        $exists = DB::connection('center')->table('lessons')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Lesson not found'], 404);
-
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'unit_id' => ['required', 'integer', 'exists:center.units,id'],
-            'notes' => ['nullable', 'string'],
+        return response()->json([
+            'lesson' => LessonResource::make($lesson),
         ]);
-        DB::connection('center')->table('lessons')->where('id', $id)->update([
-            'name' => $payload['name'],
-            'unit_id' => $payload['unit_id'],
-            'notes' => $payload['notes'] ?? '',
-            'updated_at' => now(),
-        ]);
-        return response()->json(['lesson' => ['id' => $id, 'name' => $payload['name'], 'unit_id' => $payload['unit_id'], 'notes' => $payload['notes'] ?? '']]);
     }
 
+    public function update(UpdateLessonBasicRequest $request, int $id): JsonResponse
+    {
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $lesson = Lesson::query()->find($id);
+        if ($lesson === null) {
+            return response()->json(['message' => 'Lesson not found'], 404);
+        }
+
+        $payload = $request->validated();
+
+        $this->lessonService->updateBasic($lesson, $payload, $tenant);
+
+        return response()->json([
+            'lesson' => [
+                'id' => $id,
+                'name' => $payload['name'],
+                'unit_id' => $payload['unit_id'],
+                'notes' => $payload['notes'] ?? '',
+            ],
+        ]);
+    }
 }

@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AdminSendNotificationRequest;
+use App\Http\Requests\SubscribePushRequest;
 use App\Http\Support\ApiBearerAuth;
-use App\Http\Support\PortalNotificationService;
 use App\Http\Support\ResolvesCenterApiContext;
-use App\Models\Parents;
-use App\Models\Student;
-use App\Services\CenterNotificationHistoryService;
 use App\Services\NotificationDispatchService;
+use App\Services\NotificationInboxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class NotificationApiController extends Controller
+final class NotificationApiController extends Controller
 {
     use ResolvesCenterApiContext;
 
@@ -32,8 +31,7 @@ class NotificationApiController extends Controller
 
     public function __construct(
         private readonly NotificationDispatchService $dispatcher,
-        private readonly PortalNotificationService $portalNotifications,
-        private readonly CenterNotificationHistoryService $centerNotificationHistory,
+        private readonly NotificationInboxService $inbox,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -41,7 +39,7 @@ class NotificationApiController extends Controller
         if ($portal = $this->resolvePortalIdentity($request)) {
             $limit = min((int) $request->query('limit', 20), 50);
 
-            return response()->json($this->portalNotifications->list(
+            return response()->json($this->inbox->listForPortal(
                 $portal['email'],
                 $portal['user_type'],
                 $limit,
@@ -53,31 +51,15 @@ class NotificationApiController extends Controller
             return $context['error'];
         }
 
-        $user = $context['authUser'];
         $limit = min((int) $request->query('limit', 20), 50);
 
-        $notifications = $user->notifications()
-            ->latest()
-            ->limit($limit)
-            ->get()
-            ->map(fn ($n) => [
-                'id' => $n->id,
-                'type' => class_basename($n->type),
-                'data' => $n->data,
-                'read_at' => optional($n->read_at)?->toIso8601String(),
-                'created_at' => $n->created_at->toIso8601String(),
-            ]);
-
-        return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => $user->unreadNotifications()->count(),
-        ]);
+        return response()->json($this->inbox->listForUser($context['authUser'], $limit));
     }
 
     public function markRead(Request $request, string $id): JsonResponse
     {
         if ($portal = $this->resolvePortalIdentity($request)) {
-            if (! $this->portalNotifications->markRead($portal['email'], $portal['user_type'], $id)) {
+            if (! $this->inbox->markReadForPortal($portal['email'], $portal['user_type'], $id)) {
                 return response()->json(['message' => 'Not found'], 404);
             }
 
@@ -89,8 +71,7 @@ class NotificationApiController extends Controller
             return $context['error'];
         }
 
-        $notification = $context['authUser']->notifications()->where('id', $id)->firstOrFail();
-        $notification->markAsRead();
+        $this->inbox->markReadForUser($context['authUser'], $id);
 
         return response()->json(['ok' => true]);
     }
@@ -98,7 +79,7 @@ class NotificationApiController extends Controller
     public function markAllRead(Request $request): JsonResponse
     {
         if ($portal = $this->resolvePortalIdentity($request)) {
-            $this->portalNotifications->markAllRead($portal['email'], $portal['user_type']);
+            $this->inbox->markAllReadForPortal($portal['email'], $portal['user_type']);
 
             return response()->json(['ok' => true]);
         }
@@ -108,7 +89,7 @@ class NotificationApiController extends Controller
             return $context['error'];
         }
 
-        $context['authUser']->unreadNotifications->markAsRead();
+        $this->inbox->markAllReadForUser($context['authUser']);
 
         return response()->json(['ok' => true]);
     }
@@ -122,18 +103,12 @@ class NotificationApiController extends Controller
         ]);
     }
 
-    public function subscribe(Request $request): JsonResponse
+    public function subscribe(SubscribePushRequest $request): JsonResponse
     {
-        $payload = $request->validate([
-            'subscription' => ['required', 'array'],
-            'subscription.endpoint' => ['required', 'string'],
-            'subscription.keys' => ['required', 'array'],
-            'subscription.keys.p256dh' => ['required', 'string'],
-            'subscription.keys.auth' => ['required', 'string'],
-        ]);
+        $payload = $request->validated();
 
         if ($portal = $this->resolvePortalIdentity($request)) {
-            $updated = $this->portalNotifications->savePushSubscription(
+            $updated = $this->inbox->savePushSubscriptionForPortal(
                 $portal['email'],
                 $portal['user_type'],
                 $payload['subscription'],
@@ -147,10 +122,7 @@ class NotificationApiController extends Controller
             return $context['error'];
         }
 
-        $user = $context['authUser'];
-        $user->update([
-            'push_subscription' => json_encode($payload['subscription']),
-        ]);
+        $this->inbox->savePushSubscriptionForUser($context['authUser'], $payload['subscription']);
 
         return response()->json(['success' => true]);
     }
@@ -169,10 +141,10 @@ class NotificationApiController extends Controller
 
         $limit = min((int) $request->query('limit', 100), 200);
 
-        return response()->json($this->centerNotificationHistory->list($limit));
+        return response()->json($this->inbox->adminHistory($limit));
     }
 
-    public function adminSend(Request $request): JsonResponse
+    public function adminSend(AdminSendNotificationRequest $request): JsonResponse
     {
         $guard = $request->session()->get('api_auth_guard', 'web');
         if ($guard !== 'web' || ! Auth::guard('web')->check()) {
@@ -184,28 +156,7 @@ class NotificationApiController extends Controller
             return $context['error'];
         }
 
-        $payload = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'body' => ['required', 'string', 'max:2000'],
-            'audience' => ['required', 'in:students,parents,both'],
-            'section_id' => ['nullable', 'integer', 'exists:center.sections,id'],
-            'student_ids' => ['nullable', 'array'],
-            'student_ids.*' => ['integer', 'exists:center.students,id'],
-            'parent_ids' => ['nullable', 'array'],
-            'parent_ids.*' => ['integer', 'exists:center.parents,id'],
-            'url' => ['nullable', 'string', 'max:500'],
-            'send_push' => ['nullable', 'boolean'],
-        ]);
-
-        if (
-            empty($payload['section_id'])
-            && empty($payload['student_ids'])
-            && empty($payload['parent_ids'])
-        ) {
-            return response()->json([
-                'message' => 'Select a section or specific recipients.',
-            ], 422);
-        }
+        $payload = $request->validated();
 
         $counts = $this->dispatcher->sendManual([
             'title' => $payload['title'],

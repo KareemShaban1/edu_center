@@ -93,7 +93,8 @@ export default function PlatformUsers() {
       title={t('nav.users')}
       description={t('page.users.desc')}
       columns={columns}
-      data={isLoading ? [] : (data as UserRow[])}
+      data={data as UserRow[]}
+      loading={isLoading}
       searchKeys={['name', 'email', 'role', 'tenant_name']}
       renderForm={(item, onClose) => (
         <UserForm item={item} onClose={onClose} onSave={async payload => saveMutation.mutateAsync(payload)} />

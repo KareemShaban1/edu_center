@@ -12,14 +12,25 @@ import { toast } from '@/hooks/use-toast';
 export default function AdminClasses() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
+  const sections = (bootstrap?.sections || []) as Array<{ id: number; class_id: number }>;
+  const classIdsWithSections = useMemo(
+    () => new Set(sections.map(section => section.class_id)),
+    [sections],
+  );
   const [data, setData] = useState<ClassRoom[]>([]);
   const [gradeFilter, setGradeFilter] = useState('');
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: Pick<ClassRoom, 'name' | 'grade_id' | 'notes'>; id?: number }) => (
       id ? adminAcademicsApi.updateClass(id, payload) : adminAcademicsApi.createClass(payload)
     ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => adminAcademicsApi.deleteClass(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
     },
@@ -71,8 +82,10 @@ export default function AdminClasses() {
       )}
       columns={columns}
       data={filteredData}
-      searchKeys={['name']}
-      onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
+      loading={isLoading}
+      searchKeys={['name', 'notes']}
+      onDelete={(item) => deleteMutation.mutateAsync(item.id)}
+      canDeleteItem={cls => !classIdsWithSections.has(cls.id)}
       renderForm={(item, onClose) => (
         <ClassForm
           item={item}

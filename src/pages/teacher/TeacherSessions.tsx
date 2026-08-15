@@ -281,7 +281,7 @@ function SessionForm({
 export default function TeacherSessions() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: boot } = useTeacherBootstrap();
+  const { data: boot, isLoading } = useTeacherBootstrap();
   const [showItem, setShowItem] = useState<TeacherSessionRow | null>(null);
 
   const { data } = useQuery({
@@ -377,6 +377,7 @@ export default function TeacherSessions() {
         description={t('page.teacherSessions.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         canCreate={false}
         searchKeys={['topic', 'section_label', 'start_at', 'provider', 'created_by']}
         topContent={(

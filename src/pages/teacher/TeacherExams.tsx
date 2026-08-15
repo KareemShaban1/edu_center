@@ -10,7 +10,7 @@ type ExamRow = TeacherBootstrapPayload['exams'][number];
 
 export default function TeacherExams() {
   const { t } = useLocale();
-  const { data } = useTeacherBootstrap();
+  const { data, isLoading } = useTeacherBootstrap();
   const exams = data?.exams || [];
   const scopeClasses = data?.classes || [];
 
@@ -52,6 +52,7 @@ export default function TeacherExams() {
       description={t('page.exams.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['name', 'subject', 'student_name', 'grade', 'class', 'section']}
       readOnly
       topContent={(

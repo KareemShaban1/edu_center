@@ -23,6 +23,7 @@ export interface AdminSessionRow {
   created_by: string;
   location?: string;
   notes?: string;
+  has_related?: boolean;
 }
 
 export interface AdminSessionSavePayload {

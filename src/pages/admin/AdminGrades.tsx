@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import FormDialog from '@/components/FormDialog';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -11,12 +11,23 @@ import { toast } from '@/hooks/use-toast';
 export default function AdminGrades() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const [data, setData] = useState<Grade[]>([]);
+  const classes = (bootstrap?.classes || []) as Array<{ id: number; grade_id: number }>;
+  const gradeIdsWithClasses = useMemo(
+    () => new Set(classes.map(cls => cls.grade_id)),
+    [classes],
+  );
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: Pick<Grade, 'name' | 'notes'>; id?: number }) => (
       id ? adminAcademicsApi.updateGrade(id, payload) : adminAcademicsApi.createGrade(payload)
     ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => adminAcademicsApi.deleteGrade(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
     },
@@ -38,8 +49,10 @@ export default function AdminGrades() {
       description={t('page.gradesAdmin.desc')}
       columns={columns}
       data={data}
+      loading={isLoading}
       searchKeys={['name', 'notes']}
-      onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
+      onDelete={(item) => deleteMutation.mutateAsync(item.id)}
+      canDeleteItem={grade => !gradeIdsWithClasses.has(grade.id)}
       renderForm={(item, onClose) => (
         <GradeForm
           item={item}

@@ -30,7 +30,7 @@ type HomeworkRow = Homework & { submissions_count?: number };
 export default function AdminHomework() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
@@ -45,7 +45,8 @@ export default function AdminHomework() {
   });
 
   useEffect(() => {
-    setData((bootstrap?.homework || []) as HomeworkRow[]);
+    const homework = [...((bootstrap?.homework || []) as HomeworkRow[])].sort((a, b) => b.id - a.id);
+    setData(homework);
   }, [bootstrap]);
 
   const {
@@ -128,6 +129,7 @@ export default function AdminHomework() {
       description={t('page.homeworkAdmin.desc')}
       columns={columns}
       data={filteredData}
+      loading={isLoading}
       searchKeys={['title']}
       topContent={(
         <AdminScopeFilterBar

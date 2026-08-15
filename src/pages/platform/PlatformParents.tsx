@@ -68,7 +68,8 @@ export default function PlatformParents() {
         title={t('nav.parents')}
         description={t('page.platform.parents.desc')}
         columns={columns}
-        data={isLoading ? [] : data}
+        data={data}
+        loading={isLoading}
         searchKeys={['name', 'email', 'phone', 'job', 'centers_label']}
         readOnly
         canCreate={false}

@@ -67,7 +67,7 @@ function SessionShowDialog({ item, onClose }: { item: SessionRow; onClose: () =>
 
 export default function StudentSessions() {
   const { t } = useLocale();
-  const { data } = useStudentBootstrap();
+  const { data, isLoading } = useStudentBootstrap();
   const [showItem, setShowItem] = useState<SessionRow | null>(null);
   const [teacherFilter, setTeacherFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
@@ -149,6 +149,7 @@ export default function StudentSessions() {
         description={t('page.studentSessions.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['topic', 'teacher', 'start_at', 'provider', 'center_name']}
         rowKey={c => portalRowKey(c.center_id, c.id)}
         readOnly

@@ -19,6 +19,7 @@ import StudentLoginPage from "@/pages/StudentLoginPage";
 import ParentLoginPage from "@/pages/ParentLoginPage";
 import StudentRegisterPage from "@/pages/StudentRegisterPage";
 import ParentRegisterPage from "@/pages/ParentRegisterPage";
+import CenterRegisterPage from "@/pages/CenterRegisterPage";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -146,6 +147,7 @@ const App = () => (
               <Route path="/parent/login" element={<ParentLoginPage />} />
               <Route path="/student/register" element={<StudentRegisterPage />} />
               <Route path="/parent/register" element={<ParentRegisterPage />} />
+              <Route path="/center/register" element={<CenterRegisterPage />} />
               <Route path="/:tenantSlug/login" element={<LoginPage />} />
               <Route path="/platform/login" element={<PlatformLoginPage />} />
 

@@ -42,7 +42,7 @@ function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => 
 export default function StudentAttendance() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data } = useStudentBootstrap();
+  const { data, isLoading } = useStudentBootstrap();
   const rows = (data?.attendance || []) as AttRow[];
   const {
     centerOptions,
@@ -106,6 +106,7 @@ export default function StudentAttendance() {
         description={t('page.attendance.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['date', 'status', 'notes', 'center_name']}
         rowKey={a => portalRowKey(a.center_id, a.id)}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}

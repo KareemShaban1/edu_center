@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput } from '@/components/FormFields';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -126,25 +127,29 @@ function RoleForm({
   const [form, setForm] = useState({
     name: item?.name || '',
     description: item?.description || '',
-    permissions: item?.permissions || [] as string[],
+    permissions: Array.isArray(item?.permissions) ? item.permissions : [],
   });
+  const [permissionQuery, setPermissionQuery] = useState('');
 
-  const togglePermission = (p: string) => {
+  const togglePermission = (permission: string) => {
     setForm(f => ({
       ...f,
-      permissions: f.permissions.includes(p) ? f.permissions.filter(x => x !== p) : [...f.permissions, p],
+      permissions: f.permissions.includes(permission)
+        ? f.permissions.filter(x => x !== permission)
+        : [...f.permissions, permission],
     }));
   };
 
-  const toggleModule = (module: string) => {
-    const modulePerms = allPermissions.filter(p => p.startsWith(module + '.'));
-    const allSelected = modulePerms.every(p => form.permissions.includes(p));
-    setForm(f => ({
-      ...f,
-      permissions: allSelected
-        ? f.permissions.filter(p => !p.startsWith(module + '.'))
-        : [...new Set([...f.permissions, ...modulePerms])],
-    }));
+  const toggleModule = (modulePerms: string[]) => {
+    setForm(f => {
+      const allSelected = modulePerms.length > 0 && modulePerms.every(p => f.permissions.includes(p));
+      return {
+        ...f,
+        permissions: allSelected
+          ? f.permissions.filter(p => !modulePerms.includes(p))
+          : [...new Set([...f.permissions, ...modulePerms])],
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -171,12 +176,19 @@ function RoleForm({
       });
   };
 
-  const grouped = allPermissions.reduce<Record<string, string[]>>((acc, p) => {
-    const { module } = splitPermission(p);
-    if (!acc[module]) acc[module] = [];
-    acc[module].push(p);
-    return acc;
-  }, {});
+  const grouped = useMemo(() => {
+    const query = permissionQuery.trim().toLowerCase();
+    return allPermissions.reduce<Record<string, string[]>>((acc, permission) => {
+      const { module, action } = splitPermission(permission);
+      const haystack = `${module} ${action} ${permission}`.replace(/[_-]+/g, ' ').toLowerCase();
+      if (query && !haystack.includes(query)) {
+        return acc;
+      }
+      if (!acc[module]) acc[module] = [];
+      acc[module].push(permission);
+      return acc;
+    }, {});
+  }, [allPermissions, permissionQuery]);
 
   return (
     <FormDialog open title={item ? `${t('crud.edit')} ${t('nav.rolesPermissions')}` : `${t('crud.addNew')} ${t('nav.rolesPermissions')}`} onClose={onClose} onSubmit={handleSubmit} loading={saving}>
@@ -191,36 +203,50 @@ function RoleForm({
         <label className="mb-2 block text-sm font-medium">
           {t('col.permissions')} <span className="text-muted-foreground">({form.permissions.length}/{allPermissions.length})</span>
         </label>
-        <div className="mb-2 flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setForm(f => ({ ...f, permissions: [...allPermissions] }))}
-          >
-            Select All
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setForm(f => ({ ...f, permissions: [] }))}
-          >
-            Clear All
-          </Button>
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <FormInput
+            id="role-permission-search"
+            value={permissionQuery}
+            onChange={e => setPermissionQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
+            placeholder={t('crud.search')}
+          />
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setForm(f => ({ ...f, permissions: [...allPermissions] }))}
+            >
+              Select All
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setForm(f => ({ ...f, permissions: [] }))}
+            >
+              Clear All
+            </Button>
+          </div>
         </div>
         <div className="space-y-3 max-h-64 overflow-y-auto rounded-lg border border-border p-3">
-          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([module, perms]) => {
+          {Object.keys(grouped).length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{t('crud.noData')}</p>
+          ) : Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([module, perms]) => {
             const allChecked = perms.every(p => form.permissions.includes(p));
             const someChecked = perms.some(p => form.permissions.includes(p));
             return (
               <div key={module}>
-                <label className="flex items-center gap-2 cursor-pointer mb-1">
+                <label className="mb-1 flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
                     checked={allChecked}
                     ref={el => { if (el) el.indeterminate = someChecked && !allChecked; }}
-                    onChange={() => toggleModule(module)}
+                    onChange={() => toggleModule(perms)}
+                    onPointerDown={e => e.stopPropagation()}
                     className="rounded border-input"
                   />
                   <span className="text-sm font-semibold capitalize">{module.replace(/[_-]+/g, ' ')}</span>
@@ -230,18 +256,22 @@ function RoleForm({
                     const { action } = splitPermission(p);
                     const checked = form.permissions.includes(p);
                     return (
-                      <button
+                      <label
                         key={p}
-                        type="button"
-                        onClick={() => togglePermission(p)}
-                        className={`inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                           checked ? 'bg-primary/10 text-primary ring-1 ring-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted/70'
                         }`}
                         title={p}
                       >
-                        {checked && <Check className="h-3 w-3" />}
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePermission(p)}
+                          onPointerDown={e => e.stopPropagation()}
+                          className="rounded border-input"
+                        />
                         {action}
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
@@ -256,9 +286,10 @@ function RoleForm({
 
 export default function AdminRolesPermissions() {
   const { t } = useLocale();
+  const { refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [showItem, setShowItem] = useState<AdminRoleItem | null>(null);
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['admin-roles'],
     queryFn: () => adminAccessApi.listRoles(),
   });
@@ -272,6 +303,7 @@ export default function AdminRolesPermissions() {
       await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+      await refreshUser();
     },
   });
   const deleteMutation = useMutation({
@@ -280,6 +312,7 @@ export default function AdminRolesPermissions() {
       await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+      await refreshUser();
     },
   });
 
@@ -325,6 +358,7 @@ export default function AdminRolesPermissions() {
         description={t('page.rolesPermissions.desc')}
         columns={columns}
         data={roles}
+        loading={isLoading}
         searchKeys={['name', 'description']}
         renderForm={(item, onClose) => (
           <RoleForm

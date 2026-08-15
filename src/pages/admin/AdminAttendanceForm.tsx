@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import TableLoading, { TableLoadingRow } from '@/components/TableLoading';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -128,7 +128,9 @@ export default function AdminAttendanceForm() {
       </div>
 
       {isLoading && (
-        <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading attendance...</div>
+        <div className="mb-4 rounded-xl border border-border bg-card">
+          <TableLoading compact />
+        </div>
       )}
 
       {sessionOptions.length > 0 && (
@@ -197,7 +199,9 @@ export default function AdminAttendanceForm() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {isLoading ? (
+                <TableLoadingRow colSpan={7} />
+              ) : rows.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
               ) : rows.map((row, idx) => (
                 <tr key={row.student_id} className="border-b border-border/50 hover:bg-muted/30">

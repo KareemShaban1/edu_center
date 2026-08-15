@@ -189,7 +189,7 @@ export default function StudentHomework() {
   const { t, locale } = useLocale();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data } = useStudentBootstrap();
+  const { data, isLoading } = useStudentBootstrap();
   const rows = (data?.homework || []) as HWRow[];
   const {
     centerOptions,
@@ -301,6 +301,7 @@ export default function StudentHomework() {
         description={t('page.homework.student.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['title', 'status', 'student_notes', 'file_name']}
         rowKey={h => portalRowKey(h.center_id, h.id)}
         canCreate={false}

@@ -26,7 +26,7 @@ interface ParentQuizRow extends CenterScopedRow {
 
 export default function ParentQuizzes() {
   const { t } = useLocale();
-  const { data } = useParentBootstrap();
+  const { data, isLoading } = useParentBootstrap();
   const quizzes = (data?.quizzes || []) as ParentQuizRow[];
   const {
     childTabs,
@@ -79,6 +79,7 @@ export default function ParentQuizzes() {
       description={t('page.quizzes.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['student_name', 'date', 'center_name']}
       rowKey={q => portalRowKey(q.center_id, q.id)}
       readOnly

@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Eye } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -6,20 +6,25 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { adminPaymentsApi } from '@/services/endpoints/admin-payments';
+import { TableLoadingRow } from '@/components/TableLoading';
 
 export default function AdminPaymentHistory() {
   const { t } = useLocale();
   const { sectionId } = useParams();
+  const [searchParams] = useSearchParams();
+  const feeId = Number(searchParams.get('fee_id') || 0) || null;
   const { data: bootstrap } = useAdminBootstrap();
   const section = ((bootstrap?.sections || []) as Array<{ id: number; name: string; grade_id: number; class_id: number }>).find(s => s.id === Number(sectionId));
   const grade = ((bootstrap?.grades || []) as Array<{ id: number; name: string }>).find(g => g.id === section?.grade_id);
   const cls = ((bootstrap?.classes || []) as Array<{ id: number; name: string }>).find(c => c.id === section?.class_id);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['payments', 'history', Number(sectionId)],
-    queryFn: () => adminPaymentsApi.getSectionHistory(Number(sectionId)),
+    queryKey: ['payments', 'history', Number(sectionId), feeId],
+    queryFn: () => adminPaymentsApi.getSectionHistory(Number(sectionId), feeId),
     enabled: Boolean(sectionId),
   });
+
+  const feeQuery = feeId ? `?fee_id=${feeId}` : '';
 
   return (
     <DashboardLayout>
@@ -36,7 +41,7 @@ export default function AdminPaymentHistory() {
           </div>
         </div>
         <Button asChild>
-          <Link to={`/admin/payments/section/${sectionId}/today`}>{t('payments.today')}</Link>
+          <Link to={`/admin/payments/section/${sectionId}/today${feeQuery}`}>{t('payments.today')}</Link>
         </Button>
       </div>
 
@@ -54,7 +59,7 @@ export default function AdminPaymentHistory() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+              <TableLoadingRow colSpan={6} />
             ) : (data?.days || []).length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
             ) : (
@@ -67,7 +72,7 @@ export default function AdminPaymentHistory() {
                   <td className="px-4 py-3">{day.total}</td>
                   <td className="px-4 py-3 text-end">
                     <Button asChild size="sm" variant="outline" className="gap-1.5">
-                      <Link to={`/admin/payments/section/${sectionId}/date/${day.date}`}>
+                      <Link to={`/admin/payments/section/${sectionId}/date/${day.date}${feeQuery}`}>
                         <Eye className="h-3.5 w-3.5" />
                         {t('crud.show')}
                       </Link>

@@ -1,8 +1,31 @@
-import React, { useMemo, useState } from 'react';
-import CrudPage, { CrudColumn } from '@/components/CrudPage';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  DollarSign,
+  Edit,
+  FoldVertical,
+  GraduationCap,
+  LayoutGrid,
+  Plus,
+  Search,
+  Trash2,
+  UnfoldVertical,
+  Wallet,
+} from 'lucide-react';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
+import DashboardLayout from '@/components/DashboardLayout';
+import TableLoading from '@/components/TableLoading';
+import DeleteDialog from '@/components/DeleteDialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Fee } from '@/types/models';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -10,7 +33,6 @@ import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useAdminScopeFilters } from '@/hooks/use-admin-scope-filters';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminFeesApi, type FeePayload } from '@/services/endpoints/admin-fees';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const FEE_MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
@@ -137,13 +159,21 @@ function FeeForm({
 export default function AdminFees() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
-  const fees = (bootstrap?.fees || []) as Fee[];
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
+  const fees = useMemo(
+    () => [...((bootstrap?.fees || []) as Fee[])].sort((a, b) => b.id - a.id),
+    [bootstrap?.fees],
+  );
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
-  const [viewItem, setViewItem] = useState<Fee | null>(null);
+  const [search, setSearch] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
+  const [editItem, setEditItem] = useState<Fee | null | 'new'>(null);
+  const [deleteItem, setDeleteItem] = useState<Fee | null>(null);
+  const [expandedGrades, setExpandedGrades] = useState<Set<number>>(new Set());
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
   const saveMutation = useMutation({
     mutationFn: ({ payload, id }: { payload: FeePayload; id?: number }) => (
       id ? adminFeesApi.update(id, payload) : adminFeesApi.create(payload)
@@ -175,9 +205,19 @@ export default function AdminFees() {
   } = useAdminScopeFilters(grades, classes, sections, fees);
 
   const filteredRows = useMemo(() => {
-    if (!monthFilter) return scopeFilteredRows;
-    return scopeFilteredRows.filter(f => f.month === monthFilter);
-  }, [scopeFilteredRows, monthFilter]);
+    let rows = monthFilter ? scopeFilteredRows.filter(f => f.month === monthFilter) : scopeFilteredRows;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter(fee => {
+        const gradeName = grades.find(g => g.id === fee.grade_id)?.name ?? '';
+        const className = classes.find(c => c.id === fee.classroom_id)?.name ?? '';
+        const sectionName = sections.find(s => s.id === fee.section_id)?.name ?? '';
+        return [fee.title, fee.type, fee.month, fee.year, gradeName, className, sectionName]
+          .some(value => String(value).toLowerCase().includes(q));
+      });
+    }
+    return [...rows].sort((a, b) => b.id - a.id);
+  }, [scopeFilteredRows, monthFilter, search, grades, classes, sections]);
 
   const appliedCount = scopeAppliedCount + (monthFilter ? 1 : 0);
   const clearFilters = () => {
@@ -185,91 +225,416 @@ export default function AdminFees() {
     setMonthFilter('');
   };
 
-  const columns: CrudColumn<Fee>[] = [
-    { key: 'id', label: t('col.id'), sortable: true },
-    { key: 'title', label: t('col.title'), sortable: true },
-    {
-      key: 'scope',
-      label: `${t('col.grade')} · ${t('col.class')} · ${t('col.section')}`,
-      render: f => {
-        const parts = [
-          grades.find(g => g.id === f.grade_id)?.name,
-          classes.find(c => c.id === f.classroom_id)?.name,
-          sections.find(s => s.id === f.section_id)?.name,
-        ].filter(Boolean);
-        return parts.length > 0 ? parts.join(' · ') : '—';
-      },
-    },
-    { key: 'amount', label: t('col.amount'), render: f => `${f.amount.toLocaleString()}` },
-    { key: 'type', label: t('col.type'), render: f => <span className="capitalize">{f.type}</span> },
-    { key: 'year', label: t('col.year'), sortable: true },
-    { key: 'month', label: t('col.month'), sortable: true },
-    { key: 'show', label: t('crud.show'), render: f => <button title={t('crud.show')} onClick={() => setViewItem(f)} className="text-primary hover:underline">{t('attendance.view')}</button> },
-  ];
+  const grouped = useMemo(() => {
+    const map = new Map<number, Map<number, Fee[]>>();
+    for (const fee of filteredRows) {
+      const gradeId = fee.grade_id ?? 0;
+      const classId = fee.classroom_id ?? 0;
+      if (!map.has(gradeId)) map.set(gradeId, new Map());
+      const classMap = map.get(gradeId)!;
+      if (!classMap.has(classId)) classMap.set(classId, []);
+      classMap.get(classId)!.push(fee);
+    }
+    return map;
+  }, [filteredRows]);
+
+  const visibleGrades = useMemo(() => {
+    const list = gradeFilter ? grades.filter(g => g.id === Number(gradeFilter)) : [...grades];
+    return list
+      .filter(g => grouped.get(g.id) && Array.from(grouped.get(g.id)!.values()).some(arr => arr.length > 0))
+      .sort((a, b) => {
+        const aMax = Math.max(0, ...(grouped.get(a.id) ? Array.from(grouped.get(a.id)!.values()).flat().map(f => f.id) : [0]));
+        const bMax = Math.max(0, ...(grouped.get(b.id) ? Array.from(grouped.get(b.id)!.values()).flat().map(f => f.id) : [0]));
+        if (bMax !== aMax) return bMax - aMax;
+        return b.id - a.id;
+      });
+  }, [grades, gradeFilter, grouped]);
+
+  const statTotal = filteredRows.length;
+  const statGrades = useMemo(() => new Set(filteredRows.map(f => f.grade_id)).size, [filteredRows]);
+  const statClasses = useMemo(
+    () => new Set(filteredRows.map(f => `${f.grade_id}-${f.classroom_id}`)).size,
+    [filteredRows],
+  );
+
+  const expandAll = useCallback(() => {
+    setExpandedGrades(new Set(grades.map(g => g.id)));
+    const keys = new Set<string>();
+    classes.forEach(cls => keys.add(`${cls.grade_id}-${cls.id}`));
+    setExpandedClasses(keys);
+  }, [grades, classes]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedGrades(new Set());
+    setExpandedClasses(new Set());
+  }, []);
+
+  useEffect(() => {
+    setExpandedGrades(new Set(grades.map(g => g.id)));
+    const keys = new Set<string>();
+    fees.forEach(fee => keys.add(`${fee.grade_id}-${fee.classroom_id}`));
+    setExpandedClasses(keys);
+  }, [grades, fees]);
+
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) return;
+    const gIds = new Set<number>();
+    const cKeys = new Set<string>();
+    filteredRows.forEach(fee => {
+      if (fee.grade_id) gIds.add(fee.grade_id);
+      cKeys.add(`${fee.grade_id}-${fee.classroom_id}`);
+    });
+    setExpandedGrades(prev => new Set([...prev, ...gIds]));
+    setExpandedClasses(prev => new Set([...prev, ...cKeys]));
+  }, [search, filteredRows]);
+
+  const toggleGrade = (id: number) => {
+    setExpandedGrades(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleClass = (key: string) => {
+    setExpandedClasses(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const visibleClassesForGrade = (gradeId: number, classMap?: Map<number, Fee[]>) => {
+    const list = classes.filter(c => c.grade_id === gradeId);
+    const filtered = classFilter ? list.filter(c => c.id === Number(classFilter)) : list;
+    return filtered.slice().sort((a, b) => {
+      const aMax = Math.max(0, ...(classMap?.get(a.id) || []).map(f => f.id));
+      const bMax = Math.max(0, ...(classMap?.get(b.id) || []).map(f => f.id));
+      if (bMax !== aMax) return bMax - aMax;
+      return b.id - a.id;
+    });
+  };
+
+  const paymentsPath = (fee: Fee) => {
+    const sectionId = fee.section_id;
+    if (!sectionId) return '/admin/payments';
+    const query = `?fee_id=${fee.id}`;
+    return fee.has_payments
+      ? `/admin/payments/section/${sectionId}/history${query}`
+      : `/admin/payments/section/${sectionId}/today${query}`;
+  };
+
   return (
-    <>
-      <CrudPage<Fee>
-        title={t('nav.fees')}
-        description={t('page.fees.desc')}
-        columns={columns}
-        data={filteredRows}
-        searchKeys={['title', 'type', 'month']}
-        topContent={(
-          <AdminScopeFilterBar
-            grades={gradeOptions}
-            classesByGrade={classesByGrade}
-            sectionsByClass={sectionsByClass}
-            gradeFilter={gradeFilter}
-            classFilter={classFilter}
-            sectionFilter={sectionFilter}
-            monthFilter={monthFilter}
-            showMonth
-            monthOptions={FEE_MONTHS}
-            onMonthChange={setMonthFilter}
-            onGradeChange={handleGradeChange}
-            onClassChange={handleClassChange}
-            onSectionChange={setSectionFilter}
-            appliedCount={appliedCount}
-            onClear={clearFilters}
-            resultCount={filteredRows.length}
-          />
-        )}
-        renderForm={(item, onClose) => (
-          <FeeForm
-            item={item}
-            onClose={onClose}
-            onSave={async (payload, id) => {
-              await saveMutation.mutateAsync({ payload, id });
-            }}
-            saving={saveMutation.isPending}
-            grades={grades}
-            classes={classes}
-            sections={sections}
-          />
-        )}
-        onDelete={item => {
-          void deleteMutation.mutateAsync(item.id as number);
-        }}
-      />
-      {viewItem && (
-        <Dialog open onOpenChange={v => !v && setViewItem(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{viewItem.title}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2 text-sm">
-              <p><strong>{t('col.amount')}:</strong> {viewItem.amount}</p>
-              <p><strong>{t('col.grade')}:</strong> {grades.find(g => g.id === viewItem.grade_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.class')}:</strong> {classes.find(c => c.id === viewItem.classroom_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.section')}:</strong> {sections.find(s => s.id === viewItem.section_id)?.name ?? '—'}</p>
-              <p><strong>{t('col.type')}:</strong> {viewItem.type}</p>
-              <p><strong>{t('col.year')}:</strong> {viewItem.year || '—'}</p>
-              <p><strong> {t('col.month')}:</strong> {viewItem.month || '—'}</p>
-              <p><strong>{t('col.description')}:</strong> {viewItem.description || '—'}</p>
+    <DashboardLayout>
+      <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="page-title">{t('nav.fees')}</h1>
+          <p className="page-description">{t('page.fees.desc')}</p>
+        </div>
+        <Button onClick={() => setEditItem('new')} className="gap-2 shrink-0">
+          <Plus className="h-4 w-4" /> {t('crud.addNew')}
+        </Button>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <Card className="border-border/80 shadow-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <DollarSign className="h-5 w-5" />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="min-w-0">
+              <p className="font-display text-2xl font-semibold tabular-nums">{statTotal}</p>
+              <p className="text-xs text-muted-foreground">{t('page.feesAdmin.statTotal')}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/80 shadow-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <GraduationCap className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display text-2xl font-semibold tabular-nums">{statGrades}</p>
+              <p className="text-xs text-muted-foreground">{t('page.sectionsAdmin.statGrades')}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/80 shadow-card">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display text-2xl font-semibold tabular-nums">{statClasses}</p>
+              <p className="text-xs text-muted-foreground">{t('page.sectionsAdmin.statClasses')}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <AdminScopeFilterBar
+        grades={gradeOptions}
+        classesByGrade={classesByGrade}
+        sectionsByClass={sectionsByClass}
+        gradeFilter={gradeFilter}
+        classFilter={classFilter}
+        sectionFilter={sectionFilter}
+        monthFilter={monthFilter}
+        showMonth
+        monthOptions={FEE_MONTHS}
+        onMonthChange={setMonthFilter}
+        onGradeChange={handleGradeChange}
+        onClassChange={handleClassChange}
+        onSectionChange={setSectionFilter}
+        appliedCount={appliedCount}
+        onClear={clearFilters}
+        resultCount={filteredRows.length}
+      />
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="relative min-w-0 flex-1 sm:max-w-md">
+          <Search className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground start-3" />
+          <Input
+            className="ps-9"
+            placeholder={t('page.feesAdmin.searchPlaceholder')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            aria-label={t('page.feesAdmin.searchPlaceholder')}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={expandAll}>
+            <UnfoldVertical className="h-3.5 w-3.5" />
+            {t('page.sectionsAdmin.expandAll')}
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={collapseAll}>
+            <FoldVertical className="h-3.5 w-3.5" />
+            {t('page.sectionsAdmin.collapseAll')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {isLoading ? (
+          <Card className="border-border/80 shadow-card">
+            <CardContent>
+              <TableLoading />
+            </CardContent>
+          </Card>
+        ) : visibleGrades.length === 0 ? (
+          <Card className="border-dashed border-border bg-muted/20">
+            <CardContent className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+              <LayoutGrid className="h-10 w-10 text-muted-foreground/40" />
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {search.trim() ? t('page.feesAdmin.emptySearch') : t('page.feesAdmin.noFeesYet')}
+              </p>
+              {!search.trim() && (
+                <Button variant="secondary" size="sm" className="mt-2 gap-1.5" onClick={() => setEditItem('new')}>
+                  <Plus className="h-4 w-4" />
+                  {t('crud.addNew')}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          visibleGrades.map(grade => {
+            const classMap = grouped.get(grade.id);
+            const gradeExpanded = expandedGrades.has(grade.id);
+            const feeCount = classMap
+              ? Array.from(classMap.values()).reduce((a, b) => a + b.length, 0)
+              : 0;
+
+            return (
+              <section
+                key={grade.id}
+                className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-card"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleGrade(grade.id)}
+                  className="flex w-full items-center gap-3 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent px-4 py-4 text-start transition-colors hover:from-primary/20"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                    <GraduationCap className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('col.grade')}</p>
+                    <h2 className="font-display text-lg font-semibold leading-tight">{grade.name}</h2>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 font-medium tabular-nums">
+                    {feeCount}
+                  </Badge>
+                  {gradeExpanded ? (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+
+                {gradeExpanded && (
+                  <div className="space-y-4 p-4">
+                    {visibleClassesForGrade(grade.id, classMap).map(cls => {
+                      const classFees = classMap?.get(cls.id) || [];
+                      const classKey = `${grade.id}-${cls.id}`;
+                      const classExpanded = expandedClasses.has(classKey);
+                      if (search.trim() && classFees.length === 0) return null;
+
+                      return (
+                        <div key={cls.id} className="rounded-xl border border-border/70 bg-muted/20">
+                          <button
+                            type="button"
+                            onClick={() => toggleClass(classKey)}
+                            className="flex w-full items-center gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/40"
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                              <BookOpen className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('col.class')}</p>
+                              <p className="text-sm font-semibold leading-tight">{cls.name}</p>
+                            </div>
+                            <span className="text-xs tabular-nums text-muted-foreground">({classFees.length})</span>
+                            {classExpanded ? (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
+                          </button>
+
+                          {classExpanded && classFees.length > 0 && (
+                            <div className="grid gap-3 p-3 pt-0 sm:grid-cols-2 xl:grid-cols-3">
+                              {classFees.map(fee => {
+                                const section = sections.find(s => s.id === fee.section_id);
+                                const canDelete = !fee.has_payments;
+                                return (
+                                  <article
+                                    key={fee.id}
+                                    className="flex flex-col rounded-xl border border-border bg-background p-3 shadow-sm transition-shadow hover:shadow-md"
+                                  >
+                                    <div className="mb-3 flex items-start gap-3">
+                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Wallet className="h-4 w-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-display text-sm font-semibold leading-tight">{fee.title}</p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                          {section?.name ?? '—'} · {fee.month} {fee.year}
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+                                            {Number(fee.amount).toLocaleString()}
+                                          </Badge>
+                                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] capitalize">
+                                            {fee.type}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="mt-auto flex flex-wrap items-center justify-between gap-1 border-t border-border/60 pt-2">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 px-2">
+                                            <Link to={paymentsPath(fee)} aria-label={t('page.feesAdmin.viewPayments')}>
+                                              <DollarSign className="h-3.5 w-3.5" />
+                                              <span className="hidden sm:inline">{t('page.feesAdmin.viewPayments')}</span>
+                                              {fee.payments_count ? (
+                                                <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] tabular-nums">
+                                                  {fee.payments_count}
+                                                </Badge>
+                                              ) : null}
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>{t('page.feesAdmin.viewPayments')}</TooltipContent>
+                                      </Tooltip>
+                                      <div className="flex items-center gap-0.5">
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                              onClick={() => setEditItem(fee)}
+                                              aria-label={t('crud.edit')}
+                                            >
+                                              <Edit className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>{t('crud.edit')}</TooltipContent>
+                                        </Tooltip>
+                                        {canDelete ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                onClick={() => setDeleteItem(fee)}
+                                                aria-label={t('crud.delete')}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t('crud.delete')}</TooltipContent>
+                                          </Tooltip>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  </article>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {classExpanded && classFees.length === 0 && (
+                            <p className="px-4 pb-3 text-xs text-muted-foreground">{t('crud.noData')}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
+      </div>
+
+      {editItem !== null && (
+        <FeeForm
+          item={editItem === 'new' ? null : editItem}
+          onClose={() => setEditItem(null)}
+          onSave={async (payload, id) => {
+            await saveMutation.mutateAsync({ payload, id });
+          }}
+          saving={saveMutation.isPending}
+          grades={grades}
+          classes={classes}
+          sections={sections}
+        />
       )}
-    </>
+
+      {deleteItem && (
+        <DeleteDialog
+          open
+          onClose={() => setDeleteItem(null)}
+          onConfirm={async () => {
+            try {
+              await deleteMutation.mutateAsync(deleteItem.id);
+              toast({ title: t('crud.deleted'), description: t('crud.deletedDesc') });
+            } catch {
+              toast({ title: t('crud.deleteFailed'), description: t('crud.deleteFailedDesc'), variant: 'destructive' });
+            } finally {
+              setDeleteItem(null);
+            }
+          }}
+        />
+      )}
+    </DashboardLayout>
   );
 }

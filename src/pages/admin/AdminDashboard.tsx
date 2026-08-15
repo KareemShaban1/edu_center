@@ -272,6 +272,7 @@ export default function AdminDashboard() {
 
         <DataTable
           searchable
+          loading={isLoading}
           columns={[
             { key: 'name', label: t('col.name') },
             { key: 'grade', label: t('col.grade') },
@@ -304,6 +305,7 @@ export default function AdminDashboard() {
           </h3>
           <DataTable
             searchable
+            loading={isLoading}
             columns={[
               { key: 'name', label: t('col.name') },
           //     { key: 'gender', label: t('col.gender') },

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
+import TableLoading from '@/components/TableLoading';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect, FormTextarea } from '@/components/FormFields';
 import { Button } from '@/components/ui/button';
@@ -231,9 +232,9 @@ export default function AdminNotifications() {
           </div>
 
           {historyLoading ? (
-            <p className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-              {locale === 'ar' ? 'جاري التحميل…' : 'Loading…'}
-            </p>
+            <div className="rounded-xl border bg-card">
+              <TableLoading />
+            </div>
           ) : (
             <DataTable columns={columns} data={history} searchable responsive />
           )}
@@ -441,10 +442,10 @@ export default function AdminNotifications() {
                   </dd>
                 </div>
               </div>
-              <div>
+              {/* <div>
                 <dt className="text-muted-foreground">{t('notifications.notificationClass')}</dt>
                 <dd className="font-mono text-xs">{selected.notification_type}</dd>
-              </div>
+              </div> */}
             </dl>
           ) : null}
         </DialogContent>

@@ -25,7 +25,7 @@ interface FeeRow extends CenterScopedRow {
 
 export default function ParentFees() {
   const { t } = useLocale();
-  const { data } = useParentBootstrap();
+  const { data, isLoading } = useParentBootstrap();
   const rows = (data?.fees || []) as FeeRow[];
   const {
     childTabs,
@@ -77,6 +77,7 @@ export default function ParentFees() {
       description={t('page.fees.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['student_name', 'item', 'center_name']}
       rowKey={f => portalRowKey(f.center_id, f.id)}
       readOnly

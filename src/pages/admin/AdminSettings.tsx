@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Info } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
 import { adminSettingsApi, type AdminSettings } from '@/services/endpoints/admin-settings';
@@ -165,7 +167,26 @@ export default function AdminSettings() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label={t('settings.daysAhead')} id="set-days-ahead">
+            <div>
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <label htmlFor="set-days-ahead" className="text-sm font-medium">
+                  {t('settings.daysAhead')}
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={t('settings.daysAheadHint')}
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {t('settings.daysAheadHint')}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <FormInput
                 id="set-days-ahead"
                 type="number"
@@ -175,7 +196,7 @@ export default function AdminSettings() {
                 onChange={e => setForm(f => ({ ...f, auto_session_days_ahead: Number(e.target.value) || 14 }))}
                 disabled={!form.auto_generate_sessions}
               />
-            </FormField>
+            </div>
             <FormField label={t('col.durationMinutes')} id="set-duration">
               <FormInput
                 id="set-duration"

@@ -21,6 +21,10 @@ export const adminAcademicsApi = {
     const res = await apiClient.put<GradeEnvelope>(`/admin/grades/${id}`, payload, false);
     return res.grade;
   },
+  async deleteGrade(id: number): Promise<void> {
+    if (USE_MOCK) return;
+    await apiClient.delete(`/admin/grades/${id}`, false);
+  },
 
   async createClass(payload: Pick<ClassRoom, 'name' | 'grade_id' | 'notes'>): Promise<ClassRoom> {
     if (USE_MOCK) return { id: Date.now(), ...payload };
@@ -32,6 +36,10 @@ export const adminAcademicsApi = {
     const res = await apiClient.put<ClassEnvelope>(`/admin/classes/${id}`, payload, false);
     return res.class;
   },
+  async deleteClass(id: number): Promise<void> {
+    if (USE_MOCK) return;
+    await apiClient.delete(`/admin/classes/${id}`, false);
+  },
 
   async createSection(payload: SectionPayload): Promise<Section> {
     if (USE_MOCK) return { id: Date.now(), ...payload };
@@ -42,6 +50,10 @@ export const adminAcademicsApi = {
     if (USE_MOCK) return { ...(mockSections[0] || { id, name: '', grade_id: 0, class_id: 0 }), ...payload, id };
     const res = await apiClient.put<SectionEnvelope>(`/admin/sections/${id}`, payload, false);
     return res.section;
+  },
+  async deleteSection(id: number): Promise<void> {
+    if (USE_MOCK) return;
+    await apiClient.delete(`/admin/sections/${id}`, false);
   },
 };
 

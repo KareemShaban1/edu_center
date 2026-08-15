@@ -76,6 +76,14 @@ function toNumber(value: unknown): number | null {
   return null;
 }
 
+function toStringList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(item => String(item)).filter(Boolean);
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).map(item => String(item)).filter(Boolean);
+  }
+  return [];
+}
+
 function normalizeRole(rawRole: unknown, rawGuard: unknown): User['role'] {
   const roleCandidate = readString(rawRole).toLowerCase();
   const guardCandidate = readString(rawGuard).toLowerCase();
@@ -106,6 +114,8 @@ function normalizeUser(raw: unknown): User {
     portal_mode: Boolean(source.portal_mode ?? source.portalMode),
     center_count: toNumber(source.center_count ?? source.centerCount) ?? undefined,
     avatar: readString(source.avatar) || undefined,
+    roles: toStringList(source.roles),
+    permissions: toStringList(source.permissions),
   };
 }
 
@@ -176,6 +186,26 @@ export const authApi = {
       };
     }
     return apiClient.post<RegisterResponse>('/register/student', payload, false);
+  },
+
+  async registerCenter(payload: {
+    name: string;
+    admin_name: string;
+    email: string;
+    phone: string;
+    password: string;
+    password_confirmation: string;
+    slug?: string;
+  }): Promise<RegisterResponse & { center: { id: number; name: string; slug: string } }> {
+    if (USE_MOCK) {
+      const slug = (payload.slug || payload.name).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'center';
+      return {
+        message: 'Center registered successfully.',
+        user: { id: Date.now(), name: payload.admin_name, email: payload.email, phone: payload.phone, role: 'admin', center_slug: slug },
+        center: { id: Date.now(), name: payload.name, slug },
+      };
+    }
+    return apiClient.post('/register/center', payload, false);
   },
 
   async login(payload: LoginPayload): Promise<LoginResult> {

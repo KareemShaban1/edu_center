@@ -70,7 +70,7 @@ function ParentDetailsModal({
 
 export default function AdminParents() {
   const { t } = useLocale();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const parents = (bootstrap?.parents || []) as Parent[];
   const students = (bootstrap?.students || []) as Student[];
   const [viewItem, setViewItem] = useState<Parent | null>(null);
@@ -102,6 +102,7 @@ export default function AdminParents() {
         description={t('page.parents.desc')}
         columns={columns}
         data={parents}
+        loading={isLoading}
         searchKeys={['name', 'email', 'phone', 'job_title']}
         canCreate={false}
         canEdit={false}

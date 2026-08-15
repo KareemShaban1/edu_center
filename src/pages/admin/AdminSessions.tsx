@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
@@ -16,6 +16,7 @@ import {
 import { adminSettingsApi } from '@/services/endpoints/admin-settings';
 import type { SessionOnlineProvider } from '@/services/endpoints/session-types';
 import SessionProviderPicker, { type SessionProviderValue } from '@/components/admin/SessionProviderPicker';
+import SessionSectionSelect from '@/components/admin/SessionSectionSelect';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -109,30 +110,38 @@ function SessionShowDialog({ item, onClose }: { item: AdminSessionRow; onClose: 
 function SessionForm({
   item,
   sections,
-  sectionLabel,
+  grades,
+  classes,
+  existingSessions,
+  defaultDuration,
+  defaultLocation,
   onClose,
   onSave,
   saving,
 }: {
   item: AdminSessionRow | null;
   sections: BootstrapSection[];
-  sectionLabel: (s: BootstrapSection) => string;
+  grades: BootstrapGrade[];
+  classes: BootstrapClass[];
+  existingSessions: AdminSessionRow[];
+  defaultDuration: number;
+  defaultLocation: string;
   onClose: () => void;
   onSave: (payload: AdminSessionSavePayload, id?: number) => Promise<void>;
   saving: boolean;
 }) {
   const { t } = useLocale();
   const [form, setForm] = useState({
-    section_id: item?.section_id || sections[0]?.id || 0,
+    section_id: item?.section_id || 0,
     topic: item?.topic || '',
     start_at: item?.start_at ? String(item.start_at).slice(0, 16) : '',
-    duration: item?.duration || 45,
+    duration: item?.duration || defaultDuration,
     provider: (item?.provider || 'jitsi') as SessionProviderValue,
     join_url: item?.join_url && item.join_url !== '#' ? item.join_url : '',
     moderator_url: item?.moderator_url || '',
     password: item?.password || '',
     external_ref: item?.external_ref || '',
-    location: item?.location || '',
+    location: item?.location || defaultLocation,
     notes: item?.notes || '',
     record_enabled: item?.record_enabled ?? false,
   });
@@ -141,6 +150,16 @@ function SessionForm({
     e.preventDefault();
     if (!form.section_id || !form.topic.trim() || !form.start_at) {
       toast({ title: 'Validation error', description: 'Section, topic, and start time are required.', variant: 'destructive' });
+      return;
+    }
+    const sessionDate = String(form.start_at).slice(0, 10);
+    const duplicate = existingSessions.some(session => (
+      session.section_id === form.section_id
+      && String(session.start_at).slice(0, 10) === sessionDate
+      && session.id !== item?.id
+    ));
+    if (duplicate) {
+      toast({ title: 'Validation error', description: t('page.adminSessions.duplicateSameDay'), variant: 'destructive' });
       return;
     }
     if (urlProviders.includes(form.provider) && !form.join_url.trim()) {
@@ -156,7 +175,7 @@ function SessionForm({
       section_id: form.section_id,
       topic: form.topic.trim(),
       start_at: form.start_at,
-      duration: Number(form.duration || 45),
+      duration: Number(form.duration || defaultDuration),
       provider: form.provider,
       record_enabled: form.record_enabled,
       join_url: urlProviders.includes(form.provider) ? form.join_url.trim() : undefined,
@@ -185,22 +204,14 @@ function SessionForm({
       loading={saving}
     >
       <FormField label={t('col.section')} id="adm-meet-section" required>
-        <FormSelect
+        <SessionSectionSelect
           id="adm-meet-section"
-          title={t('col.section')}
-          value={form.section_id || ''}
-          onChange={e => {
-            const sid = Number(e.target.value);
-            setForm(f => ({ ...f, section_id: sid }));
-          }}
-          required
-        >
-          {sections.map(s => (
-            <option key={s.id} value={s.id}>
-              {sectionLabel(s)}
-            </option>
-          ))}
-        </FormSelect>
+          sections={sections}
+          grades={grades}
+          classes={classes}
+          value={form.section_id}
+          onChange={sectionId => setForm(f => ({ ...f, section_id: sectionId }))}
+        />
       </FormField>
 
       <FormField label={t('col.title')} id="adm-meet-topic" required>
@@ -233,7 +244,11 @@ function SessionForm({
         <SessionProviderPicker
           id="adm-meet-provider"
           value={form.provider}
-          onChange={provider => setForm(f => ({ ...f, provider }))}
+          onChange={provider => setForm(f => ({
+            ...f,
+            provider,
+            location: provider === 'offline' && !f.location.trim() ? defaultLocation : f.location,
+          }))}
         />
       </FormField>
 
@@ -287,7 +302,7 @@ function SessionForm({
 export default function AdminSessions() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: boot } = useAdminBootstrap();
+  const { data: boot, isLoading } = useAdminBootstrap();
   const [showItem, setShowItem] = useState<AdminSessionRow | null>(null);
 
   const { data } = useQuery({
@@ -303,15 +318,6 @@ export default function AdminSessions() {
   const grades = (boot?.grades || []) as BootstrapGrade[];
   const classes = (boot?.classes || []) as BootstrapClass[];
   const sections = (boot?.sections || []) as BootstrapSection[];
-
-  const sectionLabel = useMemo(
-    () => (s: BootstrapSection) => {
-      const g = grades.find(x => x.id === s.grade_id)?.name;
-      const c = classes.find(x => x.id === s.class_id)?.name;
-      return [g, c, s.name].filter(Boolean).join(' — ');
-    },
-    [grades, classes],
-  );
 
   const rows = data?.sessions || [];
 
@@ -412,6 +418,7 @@ export default function AdminSessions() {
         description={t('page.adminSessions.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         canCreate={sections.length > 0}
         searchKeys={['topic', 'section_label', 'start_at', 'provider', 'created_by']}
         actions={(
@@ -480,7 +487,11 @@ export default function AdminSessions() {
             <SessionForm
               item={item}
               sections={formSections}
-              sectionLabel={sectionLabel}
+              grades={grades}
+              classes={classes}
+              existingSessions={rows}
+              defaultDuration={settings?.auto_session_duration || 60}
+              defaultLocation={(settings?.auto_session_location || settings?.address || '').trim()}
               onClose={onClose}
               onSave={async (payload, id) => {
                 await saveMutation.mutateAsync({ payload, id });
@@ -490,6 +501,7 @@ export default function AdminSessions() {
           );
         }}
         onDelete={item => deleteMutation.mutateAsync(item.id)}
+        canDeleteItem={item => !item.has_related}
       />
       {showItem && <SessionShowDialog item={showItem} onClose={() => setShowItem(null)} />}
     </>

@@ -73,7 +73,8 @@ export default function PlatformStudents() {
         title={t('nav.students')}
         description={t('page.platform.students.desc')}
         columns={columns}
-        data={isLoading ? [] : data}
+        data={data}
+        loading={isLoading}
         searchKeys={['name', 'code', 'email', 'phone', 'parent_name', 'centers_label']}
         readOnly
         canCreate={false}

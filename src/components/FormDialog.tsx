@@ -19,14 +19,15 @@ interface FormDialogProps {
   onSubmit: (e: React.FormEvent) => void;
   loading?: boolean;
   submitLabel?: string;
+  size?: 'default' | 'lg';
 }
 
-export default function FormDialog({ open, onClose, title, description, children, onSubmit, loading, submitLabel }: FormDialogProps) {
+export default function FormDialog({ open, onClose, title, description, children, onSubmit, loading, submitLabel, size = 'default' }: FormDialogProps) {
   const { t } = useLocale();
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={`max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto ${size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}>
         <DialogHeader>
           <DialogTitle className="font-display">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

@@ -5,154 +5,104 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreUnitRequest;
+use App\Http\Requests\Admin\UpdateUnitBasicRequest;
+use App\Http\Requests\Admin\UpdateUnitRequest;
+use App\Http\Resources\UnitResource;
 use App\Http\Support\AdminUploadHelper;
 use App\Http\Support\ResolvesAdminApiContext;
 use App\Models\Unit;
+use App\Services\UnitService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class AdminUnitsApiController extends Controller
+final class AdminUnitsApiController extends Controller
 {
     use ResolvesAdminApiContext;
 
-    public function store(Request $request): JsonResponse
+    public function __construct(
+        private readonly UnitService $unitService,
+    ) {}
+
+    public function store(StoreUnitRequest $request): JsonResponse
     {
         ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
         if ($error) {
             return $error;
         }
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $uploadedFiles = AdminUploadHelper::validatedFiles(
+            $request,
+            (string) config('media.upload.files_key'),
+            (int) config('media.upload.max_kb'),
+        );
 
-        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
+        $unit = $this->unitService->create(
+            $request->validated(),
+            $uploadedFiles,
+            $tenant,
+        );
 
-        $unit = new Unit();
-        $unit->name = $payload['name'];
-        $unit->class_id = (int) $payload['class_id'];
-        $unit->notes = $payload['notes'] ?? '';
-        if (Schema::connection('center')->hasColumn('units', 'center_id')) {
-            $unit->center_id = $tenant->id;
-        }
-        $unit->save();
-
-        if ($uploadedFiles !== []) {
-            foreach ($uploadedFiles as $file) {
-                $unit->addMedia($file)->toMediaCollection('units');
-            }
-        }
-
-        return response()->json(['unit' => $this->formatUnit($unit)], 201);
+        return response()->json([
+            'unit' => UnitResource::make($unit),
+        ], 201);
     }
 
-    public function updateWithMedia(Request $request, int $id): JsonResponse
+    public function updateWithMedia(UpdateUnitRequest $request, int $id): JsonResponse
     {
         ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
         if ($error) {
             return $error;
         }
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
-            'notes' => ['nullable', 'string'],
-            'remove_media_ids' => ['nullable', 'array'],
-            'remove_media_ids.*' => ['integer'],
-        ]);
-
-        $uploadedFiles = AdminUploadHelper::validatedFiles($request);
-
         $unit = Unit::query()->find($id);
-        if (! $unit) {
+        if ($unit === null) {
             return response()->json(['message' => 'Unit not found'], 404);
         }
 
-        $unit->name = $payload['name'];
-        $unit->class_id = (int) $payload['class_id'];
-        $unit->notes = $payload['notes'] ?? '';
-        if (Schema::connection('center')->hasColumn('units', 'center_id') && ! $unit->center_id) {
-            $unit->center_id = $tenant->id;
-        }
-        $unit->save();
+        $uploadedFiles = AdminUploadHelper::validatedFiles(
+            $request,
+            (string) config('media.upload.files_key'),
+            (int) config('media.upload.max_kb'),
+        );
 
-        $removeIds = collect($payload['remove_media_ids'] ?? [])->map(fn ($v) => (int) $v)->filter()->values();
-        if ($removeIds->isNotEmpty()) {
-            Media::query()
-                ->whereIn('id', $removeIds)
-                ->where('model_type', Unit::class)
-                ->where('model_id', $unit->id)
-                ->get()
-                ->each(fn ($m) => $m->delete());
-        }
+        $payload = $request->validated();
 
-        if ($uploadedFiles !== []) {
-            foreach ($uploadedFiles as $file) {
-                $unit->addMedia($file)->toMediaCollection('units');
-            }
-        }
+        $unit = $this->unitService->update(
+            $unit,
+            $payload,
+            $uploadedFiles,
+            $payload['remove_media_ids'] ?? [],
+            $tenant,
+        );
 
-        return response()->json(['unit' => $this->formatUnit($unit)]);
-    }
-
-    private function formatUnit(Unit $unit): array
-    {
-        $media = $unit->getMedia('units')->map(function ($m) {
-            return [
-                'id' => (int) $m->id,
-                'name' => $m->name ?: $m->file_name,
-                'file_name' => $m->file_name,
-                'mime_type' => $m->mime_type,
-                'size' => (int) $m->size,
-                'type' => $m->mime_type ?: 'application/octet-stream',
-                'url' => $m->getUrl(),
-            ];
-        })->values();
-
-        return [
-            'id' => $unit->id,
-            'name' => $unit->name,
-            'class_id' => $unit->class_id,
-            'notes' => $unit->notes,
-            'media' => $media,
-        ];
-    }
-
-    public function update(Request $request, int $id): JsonResponse
-    {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
-        $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
-
-        $exists = DB::connection('center')->table('units')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Unit not found'], 404);
-
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'class_id' => ['required', 'integer', 'exists:center.classes,id'],
-            'notes' => ['nullable', 'string'],
+        return response()->json([
+            'unit' => UnitResource::make($unit),
         ]);
-        DB::connection('center')->table('units')->where('id', $id)->update([
-            'name' => $payload['name'],
-            'class_id' => $payload['class_id'],
-            'notes' => $payload['notes'] ?? '',
-            'updated_at' => now(),
-        ]);
-        return response()->json(['unit' => ['id' => $id, 'name' => $payload['name'], 'class_id' => $payload['class_id'], 'notes' => $payload['notes'] ?? '']]);
     }
 
+    public function update(UpdateUnitBasicRequest $request, int $id): JsonResponse
+    {
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $unit = Unit::query()->find($id);
+        if ($unit === null) {
+            return response()->json(['message' => 'Unit not found'], 404);
+        }
+
+        $payload = $request->validated();
+
+        $this->unitService->updateBasic($unit, $payload, $tenant);
+
+        return response()->json([
+            'unit' => [
+                'id' => $id,
+                'name' => $payload['name'],
+                'class_id' => $payload['class_id'],
+                'notes' => $payload['notes'] ?? '',
+            ],
+        ]);
+    }
 }

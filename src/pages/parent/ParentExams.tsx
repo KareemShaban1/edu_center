@@ -26,7 +26,7 @@ interface ParentExamRow extends CenterScopedRow {
 
 export default function ParentExams() {
   const { t } = useLocale();
-  const { data } = useParentBootstrap();
+  const { data, isLoading } = useParentBootstrap();
   const exams = (data?.exams || []) as ParentExamRow[];
   const {
     childTabs,
@@ -79,6 +79,7 @@ export default function ParentExams() {
       description={t('page.exams.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['student_name', 'date', 'center_name']}
       rowKey={e => portalRowKey(e.center_id, e.id)}
       readOnly

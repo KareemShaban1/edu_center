@@ -360,7 +360,8 @@ export default function PlatformTenants() {
         title={t('nav.tenants')}
         description={t('page.tenants.desc')}
         columns={columns}
-        data={isLoading ? [] : data}
+        data={data}
+        loading={isLoading}
         searchKeys={['name', 'domain']}
         renderForm={(item, onClose) => <TenantForm item={item} onClose={onClose} onSave={handleSave} />}
         onDelete={handleDelete}

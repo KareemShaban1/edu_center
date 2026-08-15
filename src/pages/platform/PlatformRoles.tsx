@@ -25,7 +25,8 @@ export default function PlatformRoles() {
       title={t('nav.roles')}
       description={t('page.roles.desc')}
       columns={columns}
-      data={isLoading ? [] : roles}
+      data={roles}
+      loading={isLoading}
       searchKeys={['name', 'guard']}
       readOnly={!(data?.can_manage ?? false)}
     />

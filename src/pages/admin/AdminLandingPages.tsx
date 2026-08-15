@@ -6,6 +6,7 @@ import {
   GraduationCap, BookOpen, Calendar, Building2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
+import TableLoading from '@/components/TableLoading';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -152,7 +153,11 @@ export default function AdminLandingPages() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground">{t('landing.loading')}</p>
+          <Card>
+            <CardContent>
+              <TableLoading />
+            </CardContent>
+          </Card>
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center">

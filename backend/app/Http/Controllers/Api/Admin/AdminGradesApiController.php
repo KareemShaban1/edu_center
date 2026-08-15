@@ -5,73 +5,75 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreGradeRequest;
+use App\Http\Requests\Admin\UpdateGradeRequest;
+use App\Http\Resources\GradeResource;
 use App\Http\Support\ResolvesAdminApiContext;
+use App\Models\Classes;
+use App\Models\Grade;
+use App\Services\GradeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
-class AdminGradesApiController extends Controller
+final class AdminGradesApiController extends Controller
 {
     use ResolvesAdminApiContext;
-    public function store(Request $request): JsonResponse
+
+    public function __construct(
+        private readonly GradeService $gradeService,
+    ) {}
+
+    public function store(StoreGradeRequest $request): JsonResponse
     {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
 
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
-        $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+        $grade = $this->gradeService->create($request->validated(), $tenant);
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
-        ]);
-
-        $id = DB::connection('center')->table('grades')->insertGetId([
-            'grade_name' => $payload['name'],
-            'notes' => $payload['notes'] ?? null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['grade' => ['id' => $id, 'name' => $payload['name'], 'notes' => $payload['notes'] ?? null]], 201);
+        return response()->json([
+            'grade' => GradeResource::make($grade),
+        ], 201);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateGradeRequest $request, int $id): JsonResponse
     {
-$guard = $request->session()->get('api_auth_guard', 'web');
-        if ($guard !== 'web') return response()->json(['message' => 'Forbidden'], 403);
+        ['error' => $error, 'tenant' => $tenant] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
 
-        $tenantId = $request->session()->get('api_tenant_id');
-        $tenantSlug = $request->session()->get('api_tenant_slug') ?? $request->header('X-Tenant-Slug') ?? $request->query('tenant_slug');
-        $tenant = $this->resolveCenter($tenantId, $tenantSlug);
-        if (!$tenant) return response()->json(['message' => 'Tenant not found'], 422);
-        $this->ensureTenantInitialized($tenant);
-        if (!Auth::guard('web')->check()) return response()->json(['message' => 'Unauthenticated'], 401);
+        $grade = Grade::query()->find($id);
+        if ($grade === null) {
+            return response()->json(['message' => 'Grade not found'], 404);
+        }
 
-        $exists = DB::connection('center')->table('grades')->where('id', $id)->exists();
-        if (!$exists) return response()->json(['message' => 'Grade not found'], 404);
+        $grade = $this->gradeService->update($grade, $request->validated(), $tenant);
 
-        $payload = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
+        return response()->json([
+            'grade' => GradeResource::make($grade),
         ]);
-
-        DB::connection('center')->table('grades')->where('id', $id)->update([
-            'grade_name' => $payload['name'],
-            'notes' => $payload['notes'] ?? null,
-            'updated_at' => now(),
-        ]);
-
-        return response()->json(['grade' => ['id' => $id, 'name' => $payload['name'], 'notes' => $payload['notes'] ?? null]]);
     }
 
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        ['error' => $error] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $grade = Grade::query()->find($id);
+        if ($grade === null) {
+            return response()->json(['message' => 'Grade not found'], 404);
+        }
+
+        if (Classes::query()->where('grade_id', $id)->exists()) {
+            return response()->json(['message' => 'Cannot delete a grade that has classes'], 409);
+        }
+
+        $this->gradeService->delete($grade);
+
+        return response()->json(['message' => 'Grade deleted']);
+    }
 }

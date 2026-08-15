@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
 import Pagination from '@/components/Pagination';
 import DeleteDialog from '@/components/DeleteDialog';
+import TableLoading, { TableLoadingRow } from '@/components/TableLoading';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -39,8 +40,11 @@ interface CrudPageProps<T extends { id: number | string }> {
   rowKey?: (item: T) => string | number;
   /** When set, edit is only offered for rows that return true. */
   canEditItem?: (item: T) => boolean;
+  /** When set, delete is only offered for rows that return true. */
+  canDeleteItem?: (item: T) => boolean;
   /** Card layout on small screens; table from md breakpoint up. */
   responsive?: boolean;
+  loading?: boolean;
 }
 
 function renderCell<T>(item: T, col: CrudColumn<T>) {
@@ -76,7 +80,9 @@ export default function CrudPage<T extends { id: number | string }>({
   readOnly = false,
   rowKey,
   canEditItem,
+  canDeleteItem,
   responsive = true,
+  loading = false,
 }: CrudPageProps<T>) {
   const { t } = useLocale();
   const fonts = useAppFontClasses();
@@ -154,7 +160,7 @@ export default function CrudPage<T extends { id: number | string }>({
           <Edit className="h-4 w-4" />
         </button>
       )}
-      {canDelete && onDelete && (
+      {canDelete && onDelete && (!canDeleteItem || canDeleteItem(item)) && (
         <button
           onClick={() => setDeleteItem(item)}
           className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -211,7 +217,9 @@ export default function CrudPage<T extends { id: number | string }>({
 
           {responsive ? (
             <div className="divide-y divide-border md:hidden">
-              {paged.length === 0 ? (
+              {loading ? (
+                <TableLoading />
+              ) : paged.length === 0 ? (
                 <p className="px-4 py-10 text-center text-sm text-muted-foreground">{t('crud.noData')}</p>
               ) : (
                 paged.map(item => (
@@ -269,7 +277,9 @@ export default function CrudPage<T extends { id: number | string }>({
                 </tr>
               </thead>
               <tbody>
-                {paged.length === 0 ? (
+                {loading ? (
+                  <TableLoadingRow colSpan={columns.length + (showActions ? 1 : 0)} />
+                ) : paged.length === 0 ? (
                   <tr>
                     <td colSpan={columns.length + (showActions ? 1 : 0)} className="px-4 py-12 text-center text-muted-foreground">
                       {t('crud.noData')}
@@ -296,13 +306,15 @@ export default function CrudPage<T extends { id: number | string }>({
             </table>
           </div>
 
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={filtered.length}
-            perPage={perPage}
-            onPageChange={setPage}
-          />
+          {loading ? null : (
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              perPage={perPage}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       </div>
 

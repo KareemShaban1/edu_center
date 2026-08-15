@@ -9,7 +9,7 @@ type HWRow = TeacherBootstrapPayload['homework'][number];
 
 export default function TeacherHomework() {
   const { t } = useLocale();
-  const { data } = useTeacherBootstrap();
+  const { data, isLoading } = useTeacherBootstrap();
   const homework = data?.homework || [];
   const scopeClasses = data?.classes || [];
 
@@ -47,6 +47,7 @@ export default function TeacherHomework() {
       description={t('page.homework.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['title', 'subject', 'grade', 'class', 'section']}
       readOnly
       topContent={(

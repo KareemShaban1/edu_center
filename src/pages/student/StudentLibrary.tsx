@@ -44,7 +44,7 @@ function LibraryShowDialog({ item, onClose }: { item: LibRow; onClose: () => voi
 export default function StudentLibrary() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data } = useStudentBootstrap();
+  const { data, isLoading } = useStudentBootstrap();
   const rows = (data?.library || []) as LibRow[];
   const {
     centerOptions,
@@ -117,6 +117,7 @@ export default function StudentLibrary() {
         description={t('page.library.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['title', 'type', 'notes', 'center_name']}
         rowKey={l => portalRowKey(l.center_id, l.id)}
         onDelete={item => { void deleteMutation.mutateAsync(item.id); }}

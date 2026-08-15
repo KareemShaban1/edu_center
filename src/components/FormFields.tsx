@@ -46,13 +46,17 @@ export function FormSelect({ id, children, ...props }: React.SelectHTMLAttribute
   );
 }
 
-export function FormTextarea({ id, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { id: string }) {
+export const FormTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { id: string }
+>(function FormTextarea({ id, className, ...props }, ref) {
   return (
     <textarea
       id={id}
       rows={3}
+      ref={ref}
       {...props}
-      className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+      className={`w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 ${className ?? ''}`}
     />
   );
-}
+});

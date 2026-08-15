@@ -23,7 +23,8 @@ export default function PlatformLogs() {
       title={t('nav.activityLogs')}
       description={t('page.logs.desc')}
       columns={columns}
-      data={isLoading ? [] : data}
+      data={data}
+      loading={isLoading}
       searchKeys={['description']}
       readOnly
     />

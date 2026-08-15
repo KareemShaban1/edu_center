@@ -48,7 +48,7 @@ function GradeShowDialog({ item, onClose }: { item: GradeRow; onClose: () => voi
 export default function StudentGrades() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data } = useStudentBootstrap();
+  const { data, isLoading } = useStudentBootstrap();
   const rows = (data?.grades || []) as GradeRow[];
   const {
     centerOptions,
@@ -128,6 +128,7 @@ export default function StudentGrades() {
         description={t('page.grades.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['subject', 'source', 'date', 'center_name']}
         rowKey={g => portalRowKey(g.center_id, `${g.source}-${g.id}`)}
         onDelete={item => { void deleteMutation.mutateAsync({ source: item.source, id: item.id }); }}

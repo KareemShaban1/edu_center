@@ -154,4 +154,63 @@ class CenterSettingsService
             'timezone' => (string) ($this->get(self::KEY_TIMEZONE, config('app.timezone', 'UTC')) ?? 'UTC'),
         ];
     }
+
+    /** @return array<string, mixed> */
+    public function toApiSettings(): array
+    {
+        $all = $this->all();
+        $automation = $this->sessionAutomation();
+
+        return [
+            'center_name' => $all['center_name'] ?? '',
+            'center_email' => $all['center_email'] ?? '',
+            'phone' => $all['phone'] ?? '',
+            'address' => $all['address'] ?? '',
+            'current_session' => $all['current_session'] ?? '',
+            'timezone' => $automation['timezone'],
+            'auto_generate_sessions' => $automation['enabled'],
+            'auto_session_days_ahead' => $automation['days_ahead'],
+            'auto_session_duration' => $automation['duration'],
+            'auto_session_type' => $automation['session_type'],
+            'auto_session_provider' => $automation['provider'],
+            'auto_session_location' => $automation['location'],
+        ];
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    public function applyFromApiPayload(array $payload): void
+    {
+        $pairs = [];
+        foreach ([
+            'center_name',
+            'center_email',
+            'phone',
+            'address',
+            'current_session',
+            'timezone',
+            'auto_session_location',
+        ] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $pairs[$key === 'timezone' ? self::KEY_TIMEZONE : $key] = (string) ($payload[$key] ?? '');
+            }
+        }
+
+        if (array_key_exists('auto_generate_sessions', $payload)) {
+            $pairs[self::KEY_AUTO_GENERATE_SESSIONS] = ! empty($payload['auto_generate_sessions']) ? '1' : '0';
+        }
+        if (array_key_exists('auto_session_days_ahead', $payload)) {
+            $pairs[self::KEY_AUTO_SESSION_DAYS_AHEAD] = (string) (int) $payload['auto_session_days_ahead'];
+        }
+        if (array_key_exists('auto_session_duration', $payload)) {
+            $pairs[self::KEY_AUTO_SESSION_DURATION] = (string) (int) $payload['auto_session_duration'];
+        }
+        if (array_key_exists('auto_session_type', $payload)) {
+            $pairs[self::KEY_AUTO_SESSION_TYPE] = (string) $payload['auto_session_type'];
+        }
+        if (array_key_exists('auto_session_provider', $payload)) {
+            $pairs[self::KEY_AUTO_SESSION_PROVIDER] = (string) $payload['auto_session_provider'];
+        }
+
+        $this->putMany($pairs);
+    }
 }

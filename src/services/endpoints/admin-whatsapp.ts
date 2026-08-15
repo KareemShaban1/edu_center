@@ -3,6 +3,7 @@ import { apiClient, USE_MOCK } from '../api-client';
 export interface WhatsAppTemplate {
   id: number;
   name: string;
+  type?: string | null;
   content: string;
   variables: string[];
   created_at?: string | null;
@@ -78,18 +79,21 @@ const mockTemplates: WhatsAppTemplate[] = [
     id: 1,
     name: 'Attendance alert',
     content: 'Dear {{parent_name}}, your child {{student_name}} was {{status}} on {{date}} ({{section_name}}). Notes: {{notes}}',
+    type: 'attendance',
     variables: ['parent_name', 'student_name', 'status', 'date', 'section_name', 'notes'],
   },
   {
     id: 2,
     name: 'Exam result',
     content: 'Dear {{parent_name}}, {{student_name}} scored {{degree}} in {{assessment_type}} on {{date}} ({{section_name}}). Status: {{status}} Note: {{notes}}',
+    type: 'exam',
     variables: ['parent_name', 'student_name', 'degree', 'assessment_type', 'date', 'section_name', 'status', 'notes'],
   },
   {
     id: 3,
     name: 'Quiz result',
     content: 'Dear {{parent_name}}, {{student_name}} scored {{degree}} in {{assessment_type}} on {{date}} ({{section_name}}).',
+    type: 'quiz',
     variables: ['parent_name', 'student_name', 'degree', 'assessment_type', 'date', 'section_name'],
   },
 ];
@@ -114,7 +118,7 @@ export const adminWhatsAppApi = {
     return res.templates;
   },
 
-  async createTemplate(payload: Pick<WhatsAppTemplate, 'name' | 'content'> & { variables?: string[] }): Promise<WhatsAppTemplate> {
+  async createTemplate(payload: Pick<WhatsAppTemplate, 'name' | 'content'> & { type?: string; variables?: string[] }): Promise<WhatsAppTemplate> {
     if (USE_MOCK) {
       const template: WhatsAppTemplate = {
         id: mockTemplates.length + 1,
@@ -131,7 +135,7 @@ export const adminWhatsAppApi = {
 
   async updateTemplate(
     id: number,
-    payload: Pick<WhatsAppTemplate, 'name' | 'content'> & { variables?: string[] },
+    payload: Pick<WhatsAppTemplate, 'name' | 'content'> & { type?: string; variables?: string[] },
   ): Promise<WhatsAppTemplate> {
     if (USE_MOCK) {
       const index = mockTemplates.findIndex(t => t.id === id);

@@ -10,7 +10,7 @@ type LibRow = TeacherBootstrapPayload['library'][number];
 
 export default function TeacherLibrary() {
   const { t } = useLocale();
-  const { data: bootstrap } = useTeacherBootstrap();
+  const { data: bootstrap, isLoading } = useTeacherBootstrap();
   const data = bootstrap?.library || [];
   const scopeClasses = bootstrap?.classes || [];
 
@@ -62,6 +62,7 @@ export default function TeacherLibrary() {
       description={t('page.library.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['title', 'type', 'grade', 'class', 'section']}
       readOnly
       topContent={(

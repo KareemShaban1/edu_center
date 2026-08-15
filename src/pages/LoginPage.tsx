@@ -8,7 +8,7 @@ import { GraduationCap, Shield, BookOpen, Building2, UserCircle, Headphones } fr
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
 import { getDashboardPath } from '@/lib/routes';
-import { getTenantLoginPath, getParentLoginPath, getStudentLoginPath, normalizeTenantSlug } from '@/lib/tenant-routes';
+import { getTenantLoginPath, getParentLoginPath, getStudentLoginPath, getCenterRegisterPath, normalizeTenantSlug } from '@/lib/tenant-routes';
 import { authApi } from '@/services/endpoints/auth';
 import { apiClient } from '@/services/api-client';
 import { getTenantDefaultsForGuard, isPlatformGuard } from '@/config/login-defaults';
@@ -305,6 +305,15 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-4 text-start">
+              <Link
+                to={getCenterRegisterPath()}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+                style={{ color: C.crimson }}
+              >
+                {t('auth.registerCenter')}
+              </Link>
+            </p>
+            <p className="mt-2 text-start">
               <Link
                 to="/"
                 className="text-sm text-black font-medium underline-offset-4 hover:underline"

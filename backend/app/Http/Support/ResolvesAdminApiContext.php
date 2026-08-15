@@ -35,7 +35,8 @@ trait ResolvesAdminApiContext
 
         $this->ensureTenantInitialized($tenant);
 
-        if (! Auth::guard('web')->check()) {
+        $authUserId = Auth::guard('web')->id() ?? $request->session()->get('api_auth_user_id');
+        if (! $authUserId) {
             return ['error' => response()->json(['message' => 'Unauthenticated'], 401), 'tenant' => null, 'tenantDb' => DB::connection('center')];
         }
 

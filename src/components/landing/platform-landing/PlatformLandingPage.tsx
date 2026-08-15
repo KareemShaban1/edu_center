@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { GraduationCap, ArrowLeft, Check, Languages } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
-import { getTenantLoginPath, getRoleLoginPath } from '@/lib/tenant-routes';
+import { getTenantLoginPath, getRoleLoginPath, getCenterRegisterPath } from '@/lib/tenant-routes';
 import { dashboardPreviews } from '@/components/landing/LandingDashboardPreviews';
 import { navLinks, heroBadges, features, roles, whyUs, footerTrust } from './constants';
 import { PlatformLandingHeroIllustration } from './PlatformLandingHeroIllustration';
@@ -215,7 +215,7 @@ export function PlatformLandingPage() {
             <motion.div custom={3} variants={textReveal} initial="hidden" animate="visible" className="mt-10">
               <motion.button
                 type="button"
-                onClick={() => navigate(getTenantLoginPath())}
+                onClick={() => navigate(getCenterRegisterPath())}
                 animate={ctaButtonPulse}
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.96 }}
@@ -503,7 +503,7 @@ export function PlatformLandingPage() {
               <motion.div custom={2} variants={ctaItem}>
                 <motion.button
                   type="button"
-                  onClick={() => navigate(getTenantLoginPath())}
+                  onClick={() => navigate(getCenterRegisterPath())}
                   whileHover={{ scale: 1.08, boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}
                   whileTap={{ scale: 0.95 }}
                   className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 font-bold shadow-lg"

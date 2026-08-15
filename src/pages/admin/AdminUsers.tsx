@@ -6,6 +6,7 @@ import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import StatusBadge from '@/components/StatusBadge';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -148,11 +149,12 @@ function UserForm({
 
 export default function AdminUsers() {
   const { t } = useLocale();
+  const { refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [showItem, setShowItem] = useState<AdminUserItem | null>(null);
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => adminAccessApi.listUsers(),
   });
@@ -168,6 +170,7 @@ export default function AdminUsers() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+      await refreshUser();
     },
   });
   const deleteMutation = useMutation({
@@ -219,6 +222,7 @@ export default function AdminUsers() {
         description={t('page.adminUsers.desc')}
         columns={columns}
         data={filteredUsers}
+        loading={isLoading}
         searchKeys={['name', 'email', 'phone', 'role']}
         topContent={(
           <AdminUserFilterBar

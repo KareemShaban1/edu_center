@@ -13,7 +13,7 @@ class WhatsappTemplate extends Model
 
     protected $table = 'whatsapp_templates';
 
-    protected $fillable = ['name', 'content', 'variables'];
+    protected $fillable = ['name', 'type', 'content', 'variables'];
     protected $casts = [
         'variables' => 'array',
     ];

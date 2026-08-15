@@ -141,4 +141,22 @@ trait ResolvesStudentApiContext
 
         return ['error' => null, 'tenantDb' => $tenantDb, 'studentId' => (int) $studentId, 'student' => $student];
     }
+
+    /**
+     * @return array{error: JsonResponse|null, email: string|null, userType: string|null}
+     */
+    protected function resolveStudentPortalContext(Request $request): array
+    {
+        if ($request->session()->get('api_auth_guard') !== 'student') {
+            return ['error' => response()->json(['message' => 'Forbidden'], 403), 'email' => null, 'userType' => null];
+        }
+
+        $email = $request->session()->get('api_profile_email');
+        $userType = $request->session()->get('api_profile_user_type', Student::class);
+        if (! $email) {
+            return ['error' => response()->json(['message' => 'Unauthenticated'], 401), 'email' => null, 'userType' => null];
+        }
+
+        return ['error' => null, 'email' => (string) $email, 'userType' => (string) $userType];
+    }
 }

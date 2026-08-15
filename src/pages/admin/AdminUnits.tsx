@@ -16,10 +16,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 export default function AdminUnits() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
+  const lessons = (bootstrap?.lessons || []) as Array<{ id: number; unit_id: number }>;
+  const unitIdsWithLessons = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const lesson of lessons) {
+      counts.set(lesson.unit_id, (counts.get(lesson.unit_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [lessons]);
   const [data, setData] = useState<Unit[]>([]);
   const [viewItem, setViewItem] = useState<Unit | null>(null);
   const saveMutation = useMutation({
@@ -32,7 +40,8 @@ export default function AdminUnits() {
   });
 
   useEffect(() => {
-    setData((bootstrap?.units || []) as Unit[]);
+    const units = [...((bootstrap?.units || []) as Unit[])].sort((a, b) => b.id - a.id);
+    setData(units);
   }, [bootstrap]);
 
   const {
@@ -85,6 +94,7 @@ export default function AdminUnits() {
         description={t('page.unitsAdmin.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['name']}
         topContent={(
           <AdminScopeFilterBar
@@ -103,6 +113,7 @@ export default function AdminUnits() {
           />
         )}
         onDelete={(item) => setData(prev => prev.filter(i => i.id !== item.id))}
+        canDeleteItem={unit => (unitIdsWithLessons.get(unit.id) ?? 0) === 0}
         renderForm={(item, onClose) => (
           <UnitForm
             item={item}

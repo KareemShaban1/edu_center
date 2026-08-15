@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/DashboardLayout';
+import TableLoading from '@/components/TableLoading';
 import { useLocale } from '@/contexts/LocaleContext';
 import { toast } from '@/hooks/use-toast';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
@@ -124,7 +125,11 @@ export default function AdminExamForm() {
         )}
       </div>
 
-      {isLoading && <div className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Loading...</div>}
+      {isLoading && (
+        <div className="mb-4 rounded-xl border border-border bg-card">
+          <TableLoading compact />
+        </div>
+      )}
       {sessionOptions.length > 0 && (
         <div className="mb-4 max-w-md">
           <SessionLinkField id="exam-session" value={sessionId} options={sessionOptions} onChange={setSessionId} />

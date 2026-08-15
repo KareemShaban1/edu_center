@@ -13,6 +13,7 @@ export interface User {
   portal_mode?: boolean;
   center_count?: number;
   memberships?: TenantMembershipOption[];
+  roles?: string[];
   permissions?: string[];
   avatar?: string;
   locale: string;
@@ -81,6 +82,7 @@ export interface Section {
   grade_id: number;
   teacher_id?: number;
   week_days?: SectionWeekDay[];
+  has_related?: boolean;
   classroom?: ClassRoom;
   grade?: Grade;
   teacher?: Teacher;
@@ -149,6 +151,7 @@ export interface Teacher {
   section_ids?: number[];
   sections?: TeacherSectionAssignment[];
   attachments?: string[];
+  media?: MediaFile[];
 }
 
 export interface Role {
@@ -179,6 +182,8 @@ export interface Fee {
   type: string;
   year: string;
   month?: string;
+  has_payments?: boolean;
+  payments_count?: number;
 }
 
 export interface Payment {

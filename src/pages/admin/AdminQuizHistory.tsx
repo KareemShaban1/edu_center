@@ -7,6 +7,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useQuery } from '@tanstack/react-query';
 import { adminAssessmentsApi } from '@/services/endpoints/admin-assessments';
+import TableLoading from '@/components/TableLoading';
 
 export default function AdminQuizHistory() {
   const { sectionId } = useParams();
@@ -50,13 +51,12 @@ export default function AdminQuizHistory() {
 
       <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
         <div className="divide-y divide-border">
-          {isLoading && (
-            <p className="p-6 text-center text-muted-foreground">Loading...</p>
-          )}
-          {quizDays.length === 0 && (
+          {isLoading ? (
+            <TableLoading />
+          ) : quizDays.length === 0 ? (
             <p className="p-6 text-center text-muted-foreground">{t('crud.noData')}</p>
-          )}
-          {quizDays.map(day => (
+          ) : null}
+          {!isLoading && quizDays.map(day => (
             <div key={day.date} className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
               <div className="flex items-center gap-3">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />

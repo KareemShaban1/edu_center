@@ -230,7 +230,7 @@ function TeacherAttendanceHierarchy({
 
 export default function TeacherAttendance() {
   const { t } = useLocale();
-  const { data } = useTeacherBootstrap();
+  const { data, isLoading } = useTeacherBootstrap();
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
@@ -305,6 +305,7 @@ export default function TeacherAttendance() {
       description={t('page.attendance.desc')}
       columns={columns}
       data={filteredRows}
+      loading={isLoading}
       searchKeys={['date', 'grade', 'class', 'section']}
       readOnly
       topContent={(

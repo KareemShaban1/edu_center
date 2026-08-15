@@ -35,7 +35,8 @@ trait ResolvesTeacherApiContext
 
         $this->ensureTenantInitialized($tenant);
 
-        if (! Auth::guard('teacher')->check()) {
+        $teacherId = Auth::guard('teacher')->id() ?? $request->session()->get('api_auth_user_id');
+        if (! $teacherId) {
             return ['error' => response()->json(['message' => 'Unauthenticated'], 401), 'tenant' => null, 'tenantDb' => DB::connection('center'), 'teacherId' => null];
         }
 
@@ -43,7 +44,7 @@ trait ResolvesTeacherApiContext
             'error' => null,
             'tenant' => $tenant,
             'tenantDb' => DB::connection('center'),
-            'teacherId' => (int) Auth::guard('teacher')->id(),
+            'teacherId' => (int) $teacherId,
         ];
     }
 }

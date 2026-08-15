@@ -16,7 +16,7 @@ class Classes extends Model
     protected $table = 'classes';
     protected $connection = 'center';
     public $timestamps = true;
-    protected $fillable=['class_name','grade_id'];
+    protected $fillable=['class_name','grade_id','notes'];
 
 
 
@@ -27,7 +27,7 @@ class Classes extends Model
         return $this->belongsTo('App\Models\Grade', 'grade_id');
     }
 
-    public function notes()
+    public function noteRecords()
     {
         return $this->hasMany('App\Models\Note', 'noteable_id');
     }

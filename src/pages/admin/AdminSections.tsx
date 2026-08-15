@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import DashboardLayout from '@/components/DashboardLayout';
+import TableLoading from '@/components/TableLoading';
 import FormDialog from '@/components/FormDialog';
 import DeleteDialog from '@/components/DeleteDialog';
 import {
@@ -40,7 +41,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
-import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import type { Section, Student } from '@/types/models';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
@@ -58,7 +58,7 @@ import {
 export default function AdminSections() {
   const { t } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const teachers = (bootstrap?.teachers || []) as Array<{ id: number; name: string }>;
@@ -79,12 +79,24 @@ export default function AdminSections() {
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
     },
   });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => adminAcademicsApi.deleteSection(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
+    },
+  });
 
   const filteredSections = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter(s => s.name.toLowerCase().includes(q));
-  }, [data, search]);
+    const sorted = [...data].sort((a, b) => b.id - a.id);
+    if (!q) return sorted;
+    return sorted.filter(s => {
+      const gradeName = grades.find(g => g.id === s.grade_id)?.name ?? '';
+      const className = classes.find(c => c.id === s.class_id)?.name ?? '';
+      const teacherName = teachers.find(teacherRow => teacherRow.id === s.teacher_id)?.name ?? '';
+      return [s.name, gradeName, className, teacherName].some(value => value.toLowerCase().includes(q));
+    });
+  }, [data, search, grades, classes, teachers]);
 
   const grouped = useMemo(() => {
     const map = new Map<number, Map<number, Section[]>>();
@@ -99,11 +111,18 @@ export default function AdminSections() {
 
   const gradesToShow = useMemo(() => {
     const q = search.trim();
-    if (!q) return grades;
-    return grades.filter(g => {
-      const classMap = grouped.get(g.id);
-      if (!classMap) return false;
-      return Array.from(classMap.values()).some(arr => arr.length > 0);
+    const list = q
+      ? grades.filter(g => {
+          const classMap = grouped.get(g.id);
+          if (!classMap) return false;
+          return Array.from(classMap.values()).some(arr => arr.length > 0);
+        })
+      : [...grades];
+    return list.sort((a, b) => {
+      const aMax = Math.max(0, ...(grouped.get(a.id) ? Array.from(grouped.get(a.id)!.values()).flat().map(s => s.id) : [0]));
+      const bMax = Math.max(0, ...(grouped.get(b.id) ? Array.from(grouped.get(b.id)!.values()).flat().map(s => s.id) : [0]));
+      if (bMax !== aMax) return bMax - aMax;
+      return b.id - a.id;
     });
   }, [grades, grouped, search]);
 
@@ -182,12 +201,19 @@ export default function AdminSections() {
     });
   };
 
-  const handleDelete = () => {
-    if (deleteItem) {
-      setData(prev => prev.filter(i => i.id !== deleteItem.id));
-      toast({ title: t('crud.deleted'), description: t('crud.deletedDesc') });
+  const handleDelete = async () => {
+    if (!deleteItem) {
+      setDeleteItem(null);
+      return;
     }
+    const item = deleteItem;
     setDeleteItem(null);
+    try {
+      await deleteMutation.mutateAsync(item.id);
+      toast({ title: t('crud.deleted'), description: t('crud.deletedDesc') });
+    } catch {
+      toast({ title: t('crud.deleteFailed'), description: t('crud.deleteFailedDesc'), variant: 'destructive' });
+    }
   };
 
   const handleSave = async (section: Section) => {
@@ -283,8 +309,14 @@ export default function AdminSections() {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {gradesToShow.length === 0 ? (
+      <div className="space-y-5">
+        {isLoading ? (
+          <Card className="border-border/80 shadow-card">
+            <CardContent>
+              <TableLoading />
+            </CardContent>
+          </Card>
+        ) : gradesToShow.length === 0 ? (
           <Card className="border-dashed border-border bg-muted/20">
             <CardContent className="flex flex-col items-center justify-center gap-2 py-14 text-center">
               <LayoutGrid className="h-10 w-10 text-muted-foreground/40" />
@@ -310,94 +342,104 @@ export default function AdminSections() {
             const sectionCount = classMap
               ? Array.from(classMap.values()).reduce((a, b) => a + b.length, 0)
               : 0;
+            const classRows = classes
+              .filter(c => c.grade_id === grade.id)
+              .slice()
+              .sort((a, b) => {
+                const aMax = Math.max(0, ...(classMap?.get(a.id) || []).map(s => s.id));
+                const bMax = Math.max(0, ...(classMap?.get(b.id) || []).map(s => s.id));
+                if (bMax !== aMax) return bMax - aMax;
+                return b.id - a.id;
+              });
 
             return (
-              <div
+              <section
                 key={grade.id}
-                className="overflow-hidden rounded-xl border border-border bg-card shadow-card transition-shadow hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-card"
               >
                 <button
                   type="button"
                   onClick={() => toggleGrade(grade.id)}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors hover:bg-muted/40"
+                  className="flex w-full items-center gap-3 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent px-4 py-4 text-start transition-colors hover:from-primary/20"
                 >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                    <GraduationCap className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('col.grade')}</p>
+                    <h2 className="font-display text-lg font-semibold leading-tight">{grade.name}</h2>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 font-medium tabular-nums">
+                    {sectionCount}
+                  </Badge>
                   {gradeExpanded ? (
                     <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                   ) : (
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
-                  <span className="min-w-0 flex-1 font-display font-semibold">{grade.name}</span>
-                  <Badge variant="secondary" className="shrink-0 font-medium tabular-nums">
-                    {sectionCount}
-                  </Badge>
                 </button>
 
-                {gradeExpanded && classMap && (
-                  <div className="border-t border-border">
-                    {classes
-                      .filter(c => c.grade_id === grade.id)
-                      .map(cls => {
-                        const sections = classMap.get(cls.id) || [];
-                        const classKey = `${grade.id}-${cls.id}`;
-                        const classExpanded = expandedClasses.has(classKey);
-                        const visible = !search.trim() || sections.length > 0;
-                        if (!visible) return null;
+                {gradeExpanded && (
+                  <div className="space-y-4 p-4">
+                    {classRows.map(cls => {
+                      const sections = classMap?.get(cls.id) || [];
+                      const classKey = `${grade.id}-${cls.id}`;
+                      const classExpanded = expandedClasses.has(classKey);
+                      const visible = !search.trim() || sections.length > 0;
+                      if (!visible) return null;
 
-                        return (
-                          <div key={cls.id} className="border-b border-border/60 last:border-0">
-                            <button
-                              type="button"
-                              onClick={() => toggleClass(classKey)}
-                              className="flex w-full items-center gap-3 px-4 py-2.5 text-start transition-colors hover:bg-muted/25 ltr:ps-10 rtl:pe-10"
-                            >
-                              {classExpanded ? (
-                                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              ) : (
-                                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              )}
-                              <BookOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              <span className="min-w-0 flex-1 text-sm font-medium">{cls.name}</span>
-                              <span className="text-xs tabular-nums text-muted-foreground">({sections.length})</span>
-                            </button>
+                      return (
+                        <div key={cls.id} className="rounded-xl border border-border/70 bg-muted/20">
+                          <button
+                            type="button"
+                            onClick={() => toggleClass(classKey)}
+                            className="flex w-full items-center gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/40"
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                              <BookOpen className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('col.class')}</p>
+                              <p className="text-sm font-semibold leading-tight">{cls.name}</p>
+                            </div>
+                            <span className="text-xs tabular-nums text-muted-foreground">({sections.length})</span>
+                            {classExpanded ? (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
+                          </button>
 
-                            {classExpanded && sections.length > 0 && (
-                              <ul className="list-none space-y-2 px-4 pb-3 ltr:ps-14 rtl:pe-14" role="list">
-                                {sections.map(section => {
-                                  const teacher = teachers.find(teacherRow => teacherRow.id === section.teacher_id);
-                                  const sectionStudentCount = studentCountBySectionId.get(section.id) ?? 0;
-                                  const scheduleLabel = formatWeekDays(section.week_days, t);
-                                  return (
-                                    <li
-                                      key={section.id}
-                                      className={cn(
-                                        'flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/15 p-3 sm:flex-row sm:items-center sm:justify-between',
-                                      )}
-                                    >
-                                      <div className="flex min-w-0 items-start gap-3 sm:items-center">
-                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background shadow-sm sm:mt-0">
-                                          <Users className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <div className="min-w-0 space-y-1">
-                                          <p className="text-sm font-medium leading-tight">{section.name}</p>
-                                          {teacher ? (
-                                            <Badge variant="outline" className="font-normal text-xs">
-                                              {teacher.name}
-                                            </Badge>
-                                          ) : (
-                                            <span className="text-xs text-muted-foreground">
-                                              {t('page.sectionsAdmin.noTeacher')}
-                                            </span>
-                                          )}
-                                          {scheduleLabel ? (
-                                            <p className="text-xs text-muted-foreground">{scheduleLabel}</p>
-                                          ) : (
-                                            <span className="text-xs text-muted-foreground italic">
-                                              {t('page.sectionsAdmin.noWeekDays')}
-                                            </span>
-                                          )}
-                                        </div>
+                          {classExpanded && sections.length > 0 && (
+                            <div className="grid gap-3 p-3 pt-0 sm:grid-cols-2 xl:grid-cols-3">
+                              {sections.map(section => {
+                                const teacher = teachers.find(teacherRow => teacherRow.id === section.teacher_id);
+                                const sectionStudentCount = studentCountBySectionId.get(section.id) ?? 0;
+                                const scheduleLabel = formatWeekDays(section.week_days, t);
+                                const canDelete = !section.has_related;
+                                return (
+                                  <article
+                                    key={section.id}
+                                    className="flex flex-col rounded-xl border border-border bg-background p-3 shadow-sm transition-shadow hover:shadow-md"
+                                  >
+                                    <div className="mb-3 flex items-start gap-3">
+                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Users className="h-4 w-4" />
                                       </div>
-                                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:ps-2">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-display text-sm font-semibold leading-tight">{section.name}</p>
+                                        {teacher ? (
+                                          <p className="mt-1 truncate text-xs text-muted-foreground">{teacher.name}</p>
+                                        ) : (
+                                          <p className="mt-1 text-xs text-muted-foreground">{t('page.sectionsAdmin.noTeacher')}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p className="mb-3 min-h-[2.5rem] text-xs leading-relaxed text-muted-foreground">
+                                      {scheduleLabel || t('page.sectionsAdmin.noWeekDays')}
+                                    </p>
+                                    <div className="mt-auto flex flex-wrap items-center justify-between gap-1 border-t border-border/60 pt-2">
+                                      <div className="flex flex-wrap items-center gap-1">
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
@@ -429,9 +471,6 @@ export default function AdminSections() {
                                               aria-label={t('page.sectionsAdmin.showStudents')}
                                             >
                                               <UserRound className="h-3.5 w-3.5 shrink-0" />
-                                              <span className="hidden max-w-[9rem] truncate sm:inline sm:max-w-none">
-                                                {t('page.sectionsAdmin.showStudents')}
-                                              </span>
                                               {sectionStudentCount > 0 ? (
                                                 <Badge variant="secondary" className="h-5 min-w-5 px-1 text-[10px] tabular-nums">
                                                   {sectionStudentCount}
@@ -441,11 +480,11 @@ export default function AdminSections() {
                                           </TooltipTrigger>
                                           <TooltipContent>
                                             {t('page.sectionsAdmin.showStudents')}
-                                            {sectionStudentCount > 0
-                                              ? ` (${sectionStudentCount})`
-                                              : ''}
+                                            {sectionStudentCount > 0 ? ` (${sectionStudentCount})` : ''}
                                           </TooltipContent>
                                         </Tooltip>
+                                      </div>
+                                      <div className="flex items-center gap-0.5">
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             <Button
@@ -461,39 +500,42 @@ export default function AdminSections() {
                                           </TooltipTrigger>
                                           <TooltipContent>{t('crud.edit')}</TooltipContent>
                                         </Tooltip>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                              onClick={() => setDeleteItem(section)}
-                                              aria-label={t('crud.delete')}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>{t('crud.delete')}</TooltipContent>
-                                        </Tooltip>
+                                        {canDelete ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                onClick={() => setDeleteItem(section)}
+                                                aria-label={t('crud.delete')}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t('crud.delete')}</TooltipContent>
+                                          </Tooltip>
+                                        ) : null}
                                       </div>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            )}
+                                    </div>
+                                  </article>
+                                );
+                              })}
+                            </div>
+                          )}
 
-                            {classExpanded && sections.length === 0 && (
-                              <p className="px-4 pb-3 text-xs text-muted-foreground ltr:ps-14 rtl:pe-14">
-                                {t('crud.noData')}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                          {classExpanded && sections.length === 0 && (
+                            <p className="px-4 pb-3 text-xs text-muted-foreground">
+                              {t('crud.noData')}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </div>
+              </section>
             );
           })
         )}

@@ -228,7 +228,7 @@ export default function AdminLibrary() {
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
   const [viewItem, setViewItem] = useState<LibraryItemPayload | null>(null);
-  const { data: library = [] } = useQuery({
+  const { data: library = [], isLoading } = useQuery({
     queryKey: ['admin-library'],
     queryFn: () => adminLibraryApi.list(),
   });
@@ -312,6 +312,7 @@ export default function AdminLibrary() {
         description={t('page.library.desc')}
         columns={columns}
         data={filteredRows}
+        loading={isLoading}
         searchKeys={['title', 'type', 'grade_name', 'class_name', 'section_name']}
         topContent={(
           <AdminScopeFilterBar

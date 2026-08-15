@@ -360,7 +360,7 @@ export default function DeveloperTranslationsPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-          <DataTable columns={columns} data={paginatedRows} responsive />
+          <DataTable columns={columns} data={paginatedRows} responsive loading={isLoading} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

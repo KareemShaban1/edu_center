@@ -195,7 +195,7 @@ function routeFileForPath(string $path): string
         || str_starts_with($path, '/public/')) {
         return 'public';
     }
-    if (in_array($path, ['/login', '/logout', '/user', '/register/parent', '/register/student', '/auth/memberships', '/auth/switch-tenant', '/auth/switch-center'], true)) {
+    if (in_array($path, ['/login', '/logout', '/user', '/register/parent', '/register/student', '/register/center', '/auth/memberships', '/auth/switch-tenant', '/auth/switch-center'], true)) {
         return 'auth';
     }
     if (str_starts_with($path, '/admin/')) {
@@ -241,6 +241,7 @@ function controllerForPath(string $path, string $verb): ?array
         '/user' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'user'],
         '/register/parent' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'registerParent'],
         '/register/student' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'registerStudent'],
+        '/register/center' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'registerCenter'],
         '/auth/memberships' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'memberships'],
         '/auth/switch-tenant' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'switchCenter'],
         '/auth/switch-center' => ['App\\Http\\Controllers\\Api\\Auth\\AuthApiController', 'switchCenter'],

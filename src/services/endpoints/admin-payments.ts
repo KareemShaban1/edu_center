@@ -61,9 +61,10 @@ export const adminPaymentsApi = {
     await apiClient.post(`/admin/payments/section/${sectionId}/date/${date}`, { rows }, false);
   },
 
-  async getSectionHistory(sectionId: number): Promise<{ days: PaymentHistoryDay[] }> {
+  async getSectionHistory(sectionId: number, feeId?: number | null): Promise<{ days: PaymentHistoryDay[] }> {
     if (USE_MOCK) return { days: [] };
-    return apiClient.get<{ days: PaymentHistoryDay[] }>(`/admin/payments/section/${sectionId}/history`, undefined, false);
+    const params = feeId ? { fee_id: feeId } : undefined;
+    return apiClient.get<{ days: PaymentHistoryDay[] }>(`/admin/payments/section/${sectionId}/history`, params, false);
   },
 };
 

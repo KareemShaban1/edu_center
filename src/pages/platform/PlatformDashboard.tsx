@@ -91,6 +91,7 @@ export default function PlatformDashboard() {
           <h3 className="mb-3 font-display font-semibold">{data?.sections.find(s => s.key === 'recent_tenants')?.title || t('section.recentTenants')}</h3>
           <DataTable
             searchable
+            loading={isLoading}
             columns={[
               { key: 'name', label: t('col.name') },
               { key: 'domain', label: t('col.domain') },

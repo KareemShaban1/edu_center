@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { inferWhatsAppTemplateType } from '@/lib/whatsapp-template-variables';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { MessageCircle, Send, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -122,9 +123,11 @@ export default function WhatsAppSectionNotify({
       quiz: ['quiz', 'اختبار', 'كويز'],
     };
     const keys = keywords[context];
-    const matched = templates.filter(template =>
-      keys.some(key => template.name.toLowerCase().includes(key.toLowerCase())),
-    );
+    const matched = templates.filter(template => {
+      const type = inferWhatsAppTemplateType(template.name, template.type);
+      if (type === context) return true;
+      return keys.some(key => template.name.toLowerCase().includes(key.toLowerCase()));
+    });
     return matched.length > 0 ? matched : templates;
   }, [templates, context]);
 

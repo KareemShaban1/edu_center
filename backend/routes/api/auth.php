@@ -6,6 +6,7 @@ Route::get('/auth/guards', [App\Http\Controllers\Api\Auth\AuthApiController::cla
 Route::post('/login', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'login']);
 Route::post('/register/parent', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'registerParent']);
 Route::post('/register/student', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'registerStudent']);
+Route::post('/register/center', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'registerCenter']);
 Route::get('/auth/memberships', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'memberships']);
 Route::post('/auth/switch-tenant', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'switchCenter']);
 Route::post('/auth/switch-center', [App\Http\Controllers\Api\Auth\AuthApiController::class, 'switchCenter']);

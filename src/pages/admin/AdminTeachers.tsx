@@ -1,14 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import FormDialog from '@/components/FormDialog';
 import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import StatusBadge from '@/components/StatusBadge';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
-import type { Teacher, TeacherSectionAssignment } from '@/types/models';
+import MediaPreviewList, { formatMediaSize } from '@/components/MediaPreviewList';
+import type { MediaFile, Teacher, TeacherSectionAssignment } from '@/types/models';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
-import { Eye, Paperclip } from 'lucide-react';
+import { Eye, Upload, X } from 'lucide-react';
+import { SUBJECT_LABELS, TEACHER_SUBJECT_TEMPLATES, type TeacherSubjectKey } from '@/lib/landing/constants';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminTeachersApi, type TeacherSavePayload } from '@/services/endpoints/admin-teachers';
@@ -26,6 +28,32 @@ type TeacherRow = Teacher & { section_labels?: string };
 
 function formatSectionLabel(section: TeacherSectionAssignment): string {
   return [section.grade_name, section.class_name, section.name].filter(Boolean).join(' — ');
+}
+
+function subjectOptionValue(key: TeacherSubjectKey): string {
+  return SUBJECT_LABELS[key].en;
+}
+
+function normalizeSubjectValue(value: string | undefined): string {
+  if (!value) return '';
+  for (const key of TEACHER_SUBJECT_TEMPLATES) {
+    const labels = SUBJECT_LABELS[key];
+    if (value === key || value === labels.en || value === labels.ar) {
+      return labels.en;
+    }
+  }
+  return value;
+}
+
+function displaySubject(value: string | undefined, locale: 'en' | 'ar'): string {
+  if (!value) return '—';
+  for (const key of TEACHER_SUBJECT_TEMPLATES) {
+    const labels = SUBJECT_LABELS[key];
+    if (value === key || value === labels.en || value === labels.ar) {
+      return labels[locale];
+    }
+  }
+  return value;
 }
 
 function matchTeacherScope(
@@ -68,7 +96,7 @@ function TeacherShowDialog({
   grades: Array<{ id: number; name: string }>;
   onClose: () => void;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const sections = teacher.sections ?? [];
   const assignedClasses = (teacher.class_ids ?? [])
     .map(classId => {
@@ -96,7 +124,7 @@ function TeacherShowDialog({
             <p className="sm:col-span-2"><span className="font-medium text-muted-foreground">{t('col.email')}:</span> {teacher.email || '—'}</p>
             <p><span className="font-medium text-muted-foreground">{t('col.phone')}:</span> {teacher.phone || '—'}</p>
             <p><span className="font-medium text-muted-foreground">{t('col.gender')}:</span> {teacher.gender ? t(`gender.${teacher.gender}`) : '—'}</p>
-            <p className="sm:col-span-2"><span className="font-medium text-muted-foreground">{t('col.subject')}:</span> {teacher.specialization || '—'}</p>
+            <p className="sm:col-span-2"><span className="font-medium text-muted-foreground">{t('col.subject')}:</span> {displaySubject(teacher.specialization, locale)}</p>
             {teacher.address ? (
               <p className="sm:col-span-2"><span className="font-medium text-muted-foreground">{t('col.address')}:</span> {teacher.address}</p>
             ) : null}
@@ -131,6 +159,15 @@ function TeacherShowDialog({
               <p className="text-muted-foreground">{t('misc.noDataAvailable')}</p>
             )}
           </div>
+
+          <div className="border-t pt-3">
+            <p className="mb-2 font-medium">{t('col.attachments')}</p>
+            {(teacher.media || []).length > 0 ? (
+              <MediaPreviewList media={teacher.media || []} />
+            ) : (
+              <p className="text-muted-foreground">{t('misc.noDataAvailable')}</p>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -152,18 +189,43 @@ function TeacherForm({
   classes: Array<{ id: number; name: string; grade_id: number }>;
   grades: Array<{ id: number; name: string }>;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: item?.name || '',
     email: item?.email || '',
     password: '',
-    specialization: item?.specialization || '',
+    specialization: normalizeSubjectValue(item?.specialization),
     phone: item?.phone || '',
     gender: item?.gender || 'male',
     status: item?.status || 'active' as const,
     class_ids: item?.class_ids || [] as number[],
   });
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [removeMediaIds, setRemoveMediaIds] = useState<number[]>([]);
+
+  const knownSubjectValues = TEACHER_SUBJECT_TEMPLATES.map(subjectOptionValue);
+  const extraSubject = form.specialization && !knownSubjectValues.includes(form.specialization)
+    ? form.specialization
+    : null;
+
+  const existingMedia = useMemo(
+    () => (item?.media || []).filter(m => !removeMediaIds.includes(Number(m.id))),
+    [item?.media, removeMediaIds],
+  );
+
+  const pendingMedia = useMemo<MediaFile[]>(
+    () => files.map((file, index) => ({
+      id: `pending-${index}-${file.name}`,
+      name: file.name,
+      file_name: file.name,
+      size: file.size,
+      type: file.type,
+      mime_type: file.type,
+      url: URL.createObjectURL(file),
+    })),
+    [files],
+  );
 
   const handleClassToggle = (classId: number) => {
     setForm(f => ({
@@ -174,10 +236,20 @@ function TeacherForm({
     }));
   };
 
+  const toggleRemoveMedia = (id: number) => {
+    setRemoveMediaIds(prev => (prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]));
+  };
+
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    setFiles(prev => [...prev, ...picked]);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
-      toast({ title: 'Validation error', description: 'Please fill name, email, and phone.', variant: 'destructive' });
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.specialization.trim()) {
+      toast({ title: 'Validation error', description: 'Please fill name, email, phone, and subject.', variant: 'destructive' });
       return;
     }
     if (!item && !form.password.trim()) {
@@ -191,11 +263,13 @@ function TeacherForm({
           name: form.name.trim(),
           email: form.email.trim(),
           password: form.password || undefined,
-          specialization: form.specialization || undefined,
+          specialization: form.specialization.trim(),
           phone: form.phone.trim(),
           gender: form.gender,
           status: form.status,
           class_ids: form.class_ids,
+          files,
+          remove_media_ids: removeMediaIds,
         },
         item?.id,
       );
@@ -223,8 +297,8 @@ function TeacherForm({
         <FormField label={t('col.email')} id="teacher-email" required>
           <FormInput id="teacher-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required maxLength={255} />
         </FormField>
-        <FormField label={t('col.password')} id="teacher-password">
-          <FormInput id="teacher-password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={item ? '••••••••' : ''} maxLength={100} />
+        <FormField label={t('col.password')} id="teacher-password" required={!item}>
+          <FormInput id="teacher-password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={item ? '••••••••' : ''} maxLength={100} required={!item} />
         </FormField>
       </div>
 
@@ -235,14 +309,28 @@ function TeacherForm({
             <option value="female">{t('gender.female')}</option>
           </FormSelect>
         </FormField>
-        <FormField label={t('col.subject')} id="teacher-spec">
-          <FormInput id="teacher-spec" value={form.specialization} onChange={e => setForm(f => ({ ...f, specialization: e.target.value }))} maxLength={100} />
+        <FormField label={t('col.subject')} id="teacher-spec" required>
+          <FormSelect
+            title={t('col.subject')}
+            id="teacher-spec"
+            value={form.specialization}
+            required
+            onChange={e => setForm(f => ({ ...f, specialization: e.target.value }))}
+          >
+            <option value="">{t('form.selectSubject')}</option>
+            {TEACHER_SUBJECT_TEMPLATES.map(key => (
+              <option key={key} value={subjectOptionValue(key)}>
+                {SUBJECT_LABELS[key][locale]}
+              </option>
+            ))}
+            {extraSubject ? <option value={extraSubject}>{extraSubject}</option> : null}
+          </FormSelect>
         </FormField>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label={t('col.phone')} id="teacher-phone">
-          <FormInput id="teacher-phone" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} maxLength={20} />
+        <FormField label={t('col.phone')} id="teacher-phone" required>
+          <FormInput id="teacher-phone" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} required maxLength={20} />
         </FormField>
         <FormField label={t('col.status')} id="teacher-status">
           <FormSelect
@@ -278,49 +366,84 @@ function TeacherForm({
         </div>
       </FormField>
 
-      <FormField label={t('col.attachments')} id="teacher-attachments">
-        <div className="flex items-center gap-3">
-          <label
-            htmlFor="teacher-attachments"
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input bg-background px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-          >
-            <Paperclip className="h-4 w-4" />
-            {t('form.addAttachments')}
-          </label>
-          <input
-            id="teacher-attachments"
-            type="file"
-            multiple
-            accept="image/*,.pdf,.doc,.docx"
-            className="hidden"
-            onChange={e => setAttachments(Array.from(e.target.files || []))}
-          />
-          {attachments.length > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {attachments.length} {t('form.filesSelected')}
-            </span>
+      {item && (item.media?.length || 0) > 0 && (
+        <div>
+          <label className="mb-2 block text-sm font-medium">{t('col.attachments')}</label>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            {(item.media || []).map(m => {
+              const mediaId = Number(m.id);
+              const marked = removeMediaIds.includes(mediaId);
+              return (
+                <div key={String(m.id)} className={`flex items-center justify-between rounded-md px-2 py-1.5 ${marked ? 'bg-destructive/10' : 'bg-muted/30'}`}>
+                  <span className="truncate text-sm">{m.file_name || m.name}</span>
+                  <button
+                    type="button"
+                    title={marked ? 'Undo remove' : t('crud.delete')}
+                    onClick={() => toggleRemoveMedia(mediaId)}
+                    className={`rounded p-1 ${marked ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label className="text-sm font-medium">{t('form.addAttachments')}</label>
+        <input
+          ref={fileRef}
+          id="teacher-attachments"
+          title={t('col.attachments')}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFiles}
+          accept="image/*,.pdf,.doc,.docx"
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted/50"
+        >
+          <Upload className="h-4 w-4" /> {t('form.addAttachments')}
+        </button>
+      </div>
+
+      {(existingMedia.length > 0 || pendingMedia.length > 0) && (
+        <div>
+          <label className="mb-2 block text-sm font-medium">{t('crud.view')}</label>
+          <MediaPreviewList media={[...existingMedia, ...pendingMedia]} />
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((file, index) => (
+                <li key={`${file.name}-${index}`} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="truncate">{file.name} · {formatMediaSize(file.size)}</span>
+                  <button
+                    type="button"
+                    title={t('crud.delete')}
+                    aria-label={t('crud.delete')}
+                    onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-        {attachments.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {attachments.map((file, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
-                <Paperclip className="h-3 w-3" />
-                {file.name}
-                <button type="button" className="ml-1 text-muted-foreground hover:text-destructive" onClick={() => setAttachments(a => a.filter((_, idx) => idx !== i))}>×</button>
-              </span>
-            ))}
-          </div>
-        )}
-      </FormField>
+      )}
     </FormDialog>
   );
 }
 
 export default function AdminTeachers() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useAdminBootstrap();
+  const { data: bootstrap, isLoading } = useAdminBootstrap();
   const grades = (bootstrap?.grades || []) as Array<{ id: number; name: string }>;
   const classes = (bootstrap?.classes || []) as Array<{ id: number; name: string; grade_id: number }>;
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number; grade_id?: number }>;
@@ -387,7 +510,7 @@ export default function AdminTeachers() {
     { key: 'phone', label: t('col.phone'), hideOnMobile: true },
     { key: 'gender', label: t('col.gender'), render: tc => <span className="capitalize">{t(`gender.${tc.gender}`)}</span> },
     { key: 'status', label: t('col.status'), render: tc => <StatusBadge status={tc.status || 'active'} label={t(`status.${tc.status}`)} /> },
-    { key: 'specialization', label: t('col.subject'), sortable: true },
+    { key: 'specialization', label: t('col.subject'), sortable: true, render: tc => displaySubject(tc.specialization, locale) },
   ];
 
   return (
@@ -397,6 +520,7 @@ export default function AdminTeachers() {
       description={t('page.teachers.desc')}
       columns={columns}
       data={filteredTeachers}
+      loading={isLoading}
       searchKeys={['name', 'email', 'phone', 'specialization', 'section_labels']}
       topContent={(
         <AdminScopeFilterBar

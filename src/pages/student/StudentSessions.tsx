@@ -11,14 +11,17 @@ import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import { useStudentCenterTabs } from '@/hooks/use-student-center-tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { SessionType } from '@/services/endpoints/session-types';
 import type { CenterScopedRow } from '@/types/models';
 
 interface SessionRow extends CenterScopedRow {
   id: number;
   topic: string;
   teacher: string;
+  teacher_id?: number | null;
   start_at: string;
   duration: number;
+  session_type?: SessionType;
   provider: string;
   room_slug?: string;
   join_url?: string;
@@ -29,6 +32,10 @@ interface SessionRow extends CenterScopedRow {
   external_ref?: string;
   location?: string;
   notes?: string;
+}
+
+function isOfflineSession(item: SessionRow): boolean {
+  return item.session_type === 'offline' || item.provider === 'offline';
 }
 
 function SessionShowDialog({ item, onClose }: { item: SessionRow; onClose: () => void }) {
@@ -43,7 +50,7 @@ function SessionShowDialog({ item, onClose }: { item: SessionRow; onClose: () =>
           <p><strong>{t('col.startDate')}:</strong> {item.start_at}</p>
           <p><strong>{t('col.durationMinutes')}:</strong> {item.duration}</p>
           <p><strong>{t('col.provider')}:</strong> {item.provider}</p>
-          {item.provider === 'offline' ? (
+          {isOfflineSession(item) ? (
             <>
               <p><strong>Location:</strong> {item.location || '—'}</p>
               <p><strong>Notes:</strong> {item.notes || '—'}</p>
@@ -117,7 +124,7 @@ export default function StudentSessions() {
         key: '_join',
         label: t('sessions.join'),
         render: c => {
-          if (c.provider === 'offline') {
+          if (isOfflineSession(c)) {
             return <span className="text-xs text-muted-foreground">{c.location || 'Offline'}</span>;
           }
           if (c.provider === 'livekit') {

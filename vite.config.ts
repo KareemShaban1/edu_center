@@ -115,7 +115,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}", "**/pdf.worker.min.js"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/, /^\/storage/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

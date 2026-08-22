@@ -49,64 +49,12 @@ final class StudentBootstrapService
 
     private function sessions(Connection $tenantDb, int $gradeId, int $classId, int $sectionId): Collection
     {
-        if (! Schema::connection('center')->hasTable('sessions')) {
-            return collect();
-        }
-
-        $livekitUrl = (string) config('sessions.livekit.url');
-
-        return $tenantDb->table('sessions')
-            ->where('grade_id', $gradeId)
-            ->where('class_id', $classId)
-            ->where('section_id', $sectionId)
-            ->orderByDesc('start_at')
-            ->get(['id', 'topic', 'created_by', 'start_at', 'duration', 'provider', 'room_slug', 'join_url', 'moderator_url', 'password', 'record_enabled', 'external_ref', 'location', 'notes'])
-            ->map(function ($row) use ($livekitUrl) {
-                $provider = $row->provider ?? 'jitsi';
-
-                return [
-                    'id' => (int) $row->id,
-                    'topic' => $row->topic,
-                    'teacher' => $row->created_by ?: 'Teacher',
-                    'start_at' => (string) $row->start_at,
-                    'duration' => (int) ($row->duration ?? 0),
-                    'provider' => $provider,
-                    'room_slug' => $row->room_slug ?? '',
-                    'password' => $row->password ?? '',
-                    'moderator_url' => $row->moderator_url ?? '',
-                    'join_url' => $row->join_url ?? '',
-                    'record_enabled' => (bool) ($row->record_enabled ?? false),
-                    'external_ref' => $row->external_ref ?? '',
-                    'location' => $row->location ?? '',
-                    'notes' => $row->notes ?? '',
-                    'livekit_url' => $provider === 'livekit' ? $livekitUrl : '',
-                ];
-            })
-            ->values();
+        return $this->portalService->studentSessionRows($tenantDb, $gradeId, $classId, $sectionId);
     }
 
     private function attendance(Connection $tenantDb, int $studentId): Collection
     {
-        if (! Schema::connection('center')->hasTable('attendances')) {
-            return collect();
-        }
-
-        return $tenantDb->table('attendances')
-            ->where('student_id', $studentId)
-            ->orderByDesc('attendance_date')
-            ->limit(300)
-            ->get(['id', 'attendance_date', 'attendance_status', 'notes'])
-            ->map(function ($row) {
-                $status = ((int) $row->attendance_status) === 1 ? 'present' : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
-
-                return [
-                    'id' => (int) $row->id,
-                    'date' => (string) $row->attendance_date,
-                    'status' => $status,
-                    'notes' => $row->notes ?? '',
-                ];
-            })
-            ->values();
+        return $this->portalService->studentAttendanceRows($tenantDb, $studentId);
     }
 
     private function grades(Connection $tenantDb, int $studentId): Collection

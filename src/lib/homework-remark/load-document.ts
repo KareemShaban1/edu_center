@@ -1,10 +1,10 @@
 import * as pdfjs from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { resolveAssetUrl } from '@/lib/asset-url';
 import type { RemarkDocument } from './document-types';
 import type { RemarkPage } from './types';
 
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+/** Stable public path (see scripts/copy-pdf-worker.mjs) — avoids hashed .mjs assets and nginx MIME issues. */
+pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.js`;
 
 const PDFJS_VERSION = '6.1.200';
 const PDF_RENDER_SCALE = 1.75;

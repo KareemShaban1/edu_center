@@ -9,9 +9,13 @@ export interface StudentSelfBootstrapPayload {
 
     teacher: string;
 
+    teacher_id?: number | null;
+
     start_at: string;
 
     duration: number;
+
+    session_type: 'offline' | 'online' | 'exam' | 'others';
 
     provider: 'jitsi' | 'livekit' | 'external' | 'offline';
 
@@ -39,6 +43,10 @@ export interface StudentSelfBootstrapPayload {
     date: string;
     status: 'present' | 'absent' | 'late';
     notes?: string;
+    teacher?: string;
+    teacher_id?: number | null;
+    session_id?: number | null;
+    session_topic?: string;
   }>;
 
   grades: Array<CenterScopedRow & {

@@ -12,6 +12,7 @@ use App\Models\StudentHomework;
 use App\Models\Platform\Center;
 use App\Models\Platform\CenterMembership;
 use App\Models\Parents;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -454,6 +455,156 @@ class MultiCenterPortalService
         return DB::connection((string) config('database.default', 'mysql'));
     }
 
+    /**
+     * @return array{0: int|null, 1: string}
+     */
+    public function resolveSectionTeacher(Connection $tenantDb, int $sectionId): array
+    {
+        if ($sectionId <= 0 || ! Schema::connection('center')->hasTable('teachers')) {
+            return [null, ''];
+        }
+
+        $teacherId = null;
+        if (Schema::connection('center')->hasTable('sections') && Schema::connection('center')->hasColumn('sections', 'teacher_id')) {
+            $value = $tenantDb->table('sections')->where('id', $sectionId)->value('teacher_id');
+            $teacherId = $value !== null ? (int) $value : null;
+        }
+
+        if ($teacherId === null && Schema::connection('center')->hasTable('teacher_section')) {
+            $value = $tenantDb->table('teacher_section')
+                ->where('section_id', $sectionId)
+                ->orderBy('teacher_id')
+                ->value('teacher_id');
+            $teacherId = $value !== null ? (int) $value : null;
+        }
+
+        if ($teacherId === null) {
+            return [null, ''];
+        }
+
+        $name = $tenantDb->table('teachers')->where('id', $teacherId)->value('name');
+
+        return [$teacherId, trim((string) ($name ?? ''))];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function studentSessionRows(Connection $tenantDb, int $gradeId, int $classId, int $sectionId): Collection
+    {
+        if (! Schema::connection('center')->hasTable('sessions')) {
+            return collect();
+        }
+
+        $livekitUrl = (string) config('sessions.livekit.url');
+        [$teacherId, $teacherName] = $this->resolveSectionTeacher($tenantDb, $sectionId);
+
+        return $tenantDb->table('sessions')
+            ->where('grade_id', $gradeId)
+            ->where('class_id', $classId)
+            ->where('section_id', $sectionId)
+            ->orderByDesc('start_at')
+            ->get(['id', 'topic', 'created_by', 'start_at', 'duration', 'session_type', 'provider', 'room_slug', 'join_url', 'moderator_url', 'password', 'record_enabled', 'external_ref', 'location', 'notes'])
+            ->map(function ($row) use ($livekitUrl, $teacherId, $teacherName) {
+                $sessionType = (string) ($row->session_type ?? 'online');
+                $provider = (string) ($row->provider ?? ($sessionType === 'offline' ? 'offline' : 'jitsi'));
+                $teacher = $teacherName !== ''
+                    ? $teacherName
+                    : trim((string) ($row->created_by ?? ''));
+
+                return [
+                    'id' => (int) $row->id,
+                    'topic' => $row->topic,
+                    'teacher_id' => $teacherId,
+                    'teacher' => $teacher,
+                    'start_at' => (string) $row->start_at,
+                    'duration' => (int) ($row->duration ?? 0),
+                    'session_type' => $sessionType,
+                    'provider' => $provider,
+                    'room_slug' => $row->room_slug ?? '',
+                    'password' => $row->password ?? '',
+                    'moderator_url' => $row->moderator_url ?? '',
+                    'join_url' => $row->join_url ?? '',
+                    'record_enabled' => (bool) ($row->record_enabled ?? false),
+                    'external_ref' => $row->external_ref ?? '',
+                    'location' => $row->location ?? '',
+                    'notes' => $row->notes ?? '',
+                    'livekit_url' => $provider === 'livekit' ? $livekitUrl : '',
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Student attendance rows with optional teacher/session context.
+     *
+     * @return Collection<int, array{id: int, date: string, status: string, notes: string, teacher: string, teacher_id: int|null, session_id: int|null, session_topic: string}>
+     */
+    public function studentAttendanceRows(Connection $tenantDb, int $studentId): Collection
+    {
+        if (! Schema::connection('center')->hasTable('attendances')) {
+            return collect();
+        }
+
+        $hasSessionId = Schema::connection('center')->hasColumn('attendances', 'session_id');
+        $hasTeacherId = Schema::connection('center')->hasColumn('attendances', 'teacher_id');
+        $hasSessions = Schema::connection('center')->hasTable('sessions');
+        $hasTeachers = Schema::connection('center')->hasTable('teachers');
+
+        $query = $tenantDb->table('attendances')
+            ->where('attendances.student_id', $studentId)
+            ->orderByDesc('attendances.attendance_date')
+            ->limit(300);
+
+        $select = [
+            'attendances.id',
+            'attendances.attendance_date',
+            'attendances.attendance_status',
+            'attendances.notes',
+        ];
+
+        if ($hasSessionId) {
+            $select[] = 'attendances.session_id';
+            if ($hasSessions) {
+                $query->leftJoin('sessions as s', 's.id', '=', 'attendances.session_id');
+                $select[] = 's.created_by as session_teacher';
+                $select[] = 's.topic as session_topic';
+            }
+        }
+
+        if ($hasTeacherId) {
+            $select[] = 'attendances.teacher_id';
+            if ($hasTeachers) {
+                $query->leftJoin('teachers as t', 't.id', '=', 'attendances.teacher_id');
+                $select[] = 't.name as teacher_name';
+            }
+        }
+
+        return $query
+            ->get($select)
+            ->map(function ($row) {
+                $status = ((int) $row->attendance_status) === 1
+                    ? 'present'
+                    : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
+
+                $teacherFromTable = trim((string) ($row->teacher_name ?? ''));
+                $teacherFromSession = trim((string) ($row->session_teacher ?? ''));
+                $teacher = $teacherFromTable !== '' ? $teacherFromTable : $teacherFromSession;
+
+                return [
+                    'id' => (int) $row->id,
+                    'date' => (string) $row->attendance_date,
+                    'status' => $status,
+                    'notes' => $row->notes ?? '',
+                    'teacher' => $teacher,
+                    'teacher_id' => isset($row->teacher_id) && $row->teacher_id !== null ? (int) $row->teacher_id : null,
+                    'session_id' => isset($row->session_id) && $row->session_id !== null ? (int) $row->session_id : null,
+                    'session_topic' => (string) ($row->session_topic ?? ''),
+                ];
+            })
+            ->values();
+    }
+
     /** @return array<string, mixed> */
     public function buildStudentCenterSummary(Center $center, int $studentId, ?int $membershipId = null, ?array $block = null): array
     {
@@ -558,52 +709,9 @@ class MultiCenterPortalService
                 'section_id' => $sectionId,
             ];
 
-            $sessions = collect();
-            if (Schema::connection('center')->hasTable('sessions')) {
-                $livekitUrl = (string) config('sessions.livekit.url');
-                $sessions = $db->table('sessions')
-                    ->where('grade_id', $gradeId)
-                    ->where('class_id', $classId)
-                    ->where('section_id', $sectionId)
-                    ->orderByDesc('start_at')
-                    ->get()
-                    ->map(function ($row) use ($livekitUrl) {
-                        $provider = $row->provider ?? 'jitsi';
+            $sessions = $this->studentSessionRows($db, $gradeId, $classId, $sectionId);
 
-                        return [
-                            'id' => (int) $row->id,
-                            'topic' => $row->topic,
-                            'teacher' => $row->created_by ?: 'Teacher',
-                            'start_at' => (string) $row->start_at,
-                            'duration' => (int) ($row->duration ?? 0),
-                            'provider' => $provider,
-                            'room_slug' => $row->room_slug ?? '',
-                            'join_url' => $row->join_url ?? '',
-                            'livekit_url' => $provider === 'livekit' ? $livekitUrl : '',
-                        ];
-                    })
-                    ->values();
-            }
-
-            $attendance = collect();
-            if (Schema::connection('center')->hasTable('attendances')) {
-                $attendance = $db->table('attendances')
-                    ->where('student_id', $studentId)
-                    ->orderByDesc('attendance_date')
-                    ->limit(300)
-                    ->get()
-                    ->map(function ($row) {
-                        $status = ((int) $row->attendance_status) === 1 ? 'present' : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
-
-                        return [
-                            'id' => (int) $row->id,
-                            'date' => (string) $row->attendance_date,
-                            'status' => $status,
-                            'notes' => $row->notes ?? '',
-                        ];
-                    })
-                    ->values();
-            }
+            $attendance = $this->studentAttendanceRows($db, $studentId);
 
             $grades = collect();
             if (Schema::connection('center')->hasTable('exam_degrees')) {

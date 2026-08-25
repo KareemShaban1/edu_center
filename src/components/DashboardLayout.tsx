@@ -39,6 +39,7 @@ import {
   Award,
   ListTodo,
   NotebookPen,
+  ScanLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
@@ -292,6 +293,7 @@ const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.notes', path: '/student/notes', icon: NotebookPen } },
   { type: 'link', item: { labelKey: 'nav.mySessions', path: '/student/sessions', icon: BookOpen } },
   { type: 'link', item: { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck } },
+  { type: 'link', item: { labelKey: 'nav.attendanceCheckIn', path: '/student/attendance/check-in', icon: ScanLine } },
   { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
   { type: 'link', item: { labelKey: 'nav.library', path: '/student/library', icon: Library } },

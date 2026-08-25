@@ -89,6 +89,7 @@ import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentSessions from "@/pages/student/StudentSessions";
 import StudentLiveKitSession from "@/pages/student/StudentLiveKitSession";
 import StudentAttendance from "@/pages/student/StudentAttendance";
+import StudentAttendanceCheckIn from "@/pages/student/StudentAttendanceCheckIn";
 import StudentGrades from "@/pages/student/StudentGrades";
 import StudentHomework from "@/pages/student/StudentHomework";
 import StudentLibrary from "@/pages/student/StudentLibrary";
@@ -226,6 +227,7 @@ const App = () => (
               <Route path="/student/sessions/:sessionId/livekit" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLiveKitSession /></ProtectedRoute>} />
               <Route path="/student/courses" element={<Navigate to="/student/sessions" replace />} />
               <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendance /></ProtectedRoute>} />
+              <Route path="/student/attendance/check-in" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendanceCheckIn /></ProtectedRoute>} />
               <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentGrades /></ProtectedRoute>} />
               <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />
               <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLibrary /></ProtectedRoute>} />

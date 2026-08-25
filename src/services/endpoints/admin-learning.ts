@@ -70,12 +70,12 @@ export const adminLearningApi = {
     return res.lesson;
   },
 
-  async createHomework(payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date'>): Promise<Homework> {
+  async createHomework(payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date' | 'final_degree'>): Promise<Homework> {
     if (USE_MOCK) return { id: Date.now(), ...payload } as Homework;
     const res = await apiClient.post<HomeworkEnvelope>('/admin/homework', payload, false);
     return res.homework;
   },
-  async updateHomework(id: number, payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date'>): Promise<Homework> {
+  async updateHomework(id: number, payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date' | 'final_degree'>): Promise<Homework> {
     if (USE_MOCK) return { id, ...payload } as Homework;
     const res = await apiClient.put<HomeworkEnvelope>(`/admin/homework/${id}`, payload, false);
     return res.homework;

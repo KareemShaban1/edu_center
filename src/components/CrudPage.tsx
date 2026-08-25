@@ -13,6 +13,8 @@ import { useAppFontClasses } from '@/hooks/use-app-font';
 export interface CrudColumn<T> {
   key: string;
   label: string;
+  /** Per-row label override (mobile cards). Falls back to `label`. */
+  labelFor?: (item: T) => string;
   render?: (item: T) => React.ReactNode;
   sortable?: boolean;
   /** Shown as the card title on small screens. */
@@ -230,16 +232,19 @@ export default function CrudPage<T extends { id: number | string }>({
                     </div>
                     {detailCols.length > 0 ? (
                       <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs sm:grid-cols-2">
-                        {detailCols.map(col => (
+                        {detailCols.map(col => {
+                          const rowLabel = col.labelFor?.(item) ?? col.label;
+                          return (
                           <div key={col.key} className="min-w-0">
-                            {col.label ? (
-                              <p className="text-muted-foreground">{col.label}</p>
+                            {rowLabel ? (
+                              <p className="text-muted-foreground">{rowLabel}</p>
                             ) : null}
-                            <div className={cn('break-words font-medium text-foreground', col.label && 'mt-0.5')}>
+                            <div className={cn('break-words font-medium text-foreground', rowLabel && 'mt-0.5')}>
                               {renderCell(item, col)}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>

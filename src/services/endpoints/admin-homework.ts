@@ -12,6 +12,7 @@ export interface AdminHomeworkSummary {
   section_name: string;
   start_date: string;
   due_date: string;
+  final_degree?: string;
 }
 
 export interface AdminHomeworkSubmissionRow {

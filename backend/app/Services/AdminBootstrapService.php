@@ -369,8 +369,19 @@ final class AdminBootstrapService
 
     private function homeworks(Connection $tenantDb): Collection
     {
+        $hasFinalDegree = Schema::connection('center')->hasColumn('homeworks', 'final_degree');
         $homeworks = $tenantDb->table('homeworks')
-            ->select('id', 'title', 'content', 'grade_id', 'class_id', 'section_id', 'submit_date as start_date', 'due_date')
+            ->select(
+                'id',
+                'title',
+                'content',
+                'grade_id',
+                'class_id',
+                'section_id',
+                'submit_date as start_date',
+                'due_date',
+                $hasFinalDegree ? 'final_degree' : DB::raw('NULL as final_degree'),
+            )
             ->orderByDesc('id')
             ->get();
 
@@ -392,6 +403,7 @@ final class AdminBootstrapService
                 'section_id' => $row->section_id,
                 'start_date' => $row->start_date,
                 'due_date' => $row->due_date,
+                'final_degree' => (string) ($row->final_degree ?? ''),
                 'submissions_count' => (int) ($submissionCounts[$row->id] ?? 0),
             ];
         });

@@ -7,3 +7,5 @@ Route::get('/teacher/sessions/{id}/livekit-token', [App\Http\Controllers\Api\Tea
 Route::get('/teacher/sessions', [App\Http\Controllers\Api\Teacher\TeacherSessionsApiController::class, 'index']);
 Route::put('/teacher/sessions/{id}', [App\Http\Controllers\Api\Teacher\TeacherSessionsApiController::class, 'update']);
 Route::delete('/teacher/sessions/{id}', [App\Http\Controllers\Api\Teacher\TeacherSessionsApiController::class, 'destroy']);
+Route::get('/teacher/sessions/{id}/attendance-qr', [App\Http\Controllers\Api\Teacher\TeacherSessionsApiController::class, 'attendanceQr']);
+Route::put('/teacher/sessions/{id}/attendance-venue', [App\Http\Controllers\Api\Teacher\TeacherSessionsApiController::class, 'attendanceVenue']);

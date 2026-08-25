@@ -27,12 +27,18 @@ class Session extends Model
         'record_enabled',
         'external_ref',
         'location',
+        'latitude',
+        'longitude',
+        'geofence_radius_m',
         'notes',
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'record_enabled' => 'boolean',
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'geofence_radius_m' => 'integer',
     ];
 
     public function grade()

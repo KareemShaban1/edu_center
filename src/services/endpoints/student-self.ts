@@ -47,6 +47,9 @@ export interface StudentSelfBootstrapPayload {
     teacher_id?: number | null;
     session_id?: number | null;
     session_topic?: string;
+    subject_name?: string;
+    session_time?: string | null;
+    check_in_time?: string | null;
   }>;
 
   grades: Array<CenterScopedRow & {

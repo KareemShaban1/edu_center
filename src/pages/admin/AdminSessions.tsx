@@ -20,7 +20,8 @@ import SessionSectionSelect from '@/components/admin/SessionSectionSelect';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarPlus, Settings } from 'lucide-react';
+import { CalendarPlus, QrCode, Settings } from 'lucide-react';
+import SessionAttendanceQrDialog from '@/components/SessionAttendanceQrDialog';
 import { weekDayFromStartAt, weekDayLabel } from '@/lib/section-week-days';
 
 const urlProviders: SessionOnlineProvider[] = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
@@ -304,6 +305,7 @@ export default function AdminSessions() {
   const queryClient = useQueryClient();
   const { data: boot, isLoading } = useAdminBootstrap();
   const [showItem, setShowItem] = useState<AdminSessionRow | null>(null);
+  const [qrItem, setQrItem] = useState<AdminSessionRow | null>(null);
 
   const { data } = useQuery({
     queryKey: ['admin-sessions'],
@@ -382,13 +384,33 @@ export default function AdminSessions() {
     },
     { key: 'start_at', label: t('col.startDate'), sortable: true },
     { key: 'duration', label: t('col.durationMinutes'), render: r => `${r.duration} min` },
-    { key: 'provider', label: t('col.provider'), sortable: true },
+    {
+      key: 'provider',
+      label: t('col.provider'),
+      sortable: true,
+      render: r => (r.provider === 'offline' ? t('session.type.offline') : (r.provider || '—')),
+    },
     {
       key: '_join',
-      label: t('sessions.join'),
+      label: `${t('sessions.join')} / ${t('col.location')}`,
+      labelFor: r => (r.provider === 'offline' ? t('col.location') : t('sessions.join')),
       render: r => {
         if (r.provider === 'offline') {
-          return <span className="text-xs text-muted-foreground">{r.location || 'Offline'}</span>;
+          return <span className="text-xs text-muted-foreground">{r.location || '—'}</span>;
+        }
+        if (r.provider === 'livekit') {
+          if (r.join_url && r.join_url !== '#') {
+            return (
+              <a className="text-primary underline text-xs" href={r.join_url} target="_blank" rel="noreferrer">
+                {t('sessions.join')}
+              </a>
+            );
+          }
+          return (
+            <span className="text-xs text-muted-foreground">
+              {r.record_enabled ? 'Recording on' : 'LiveKit'}
+            </span>
+          );
         }
         if (r.join_url && r.join_url !== '#') {
           return (
@@ -502,8 +524,27 @@ export default function AdminSessions() {
         }}
         onDelete={item => deleteMutation.mutateAsync(item.id)}
         canDeleteItem={item => !item.has_related}
+        renderExtraActions={item => (
+          <button
+            type="button"
+            onClick={() => setQrItem(item)}
+            className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={t('attendanceQr.title')}
+            title={t('attendanceQr.title')}
+          >
+            <QrCode className="h-4 w-4" />
+          </button>
+        )}
       />
       {showItem && <SessionShowDialog item={showItem} onClose={() => setShowItem(null)} />}
+      {qrItem && (
+        <SessionAttendanceQrDialog
+          sessionId={qrItem.id}
+          topic={qrItem.topic}
+          role="admin"
+          onClose={() => setQrItem(null)}
+        />
+      )}
     </>
   );
 }

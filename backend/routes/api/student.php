@@ -8,6 +8,7 @@ Route::post('/student/sessions', [App\Http\Controllers\Api\Student\StudentSessio
 Route::put('/student/sessions/{id}', [App\Http\Controllers\Api\Student\StudentSessionsApiController::class, 'update']);
 Route::delete('/student/sessions/{id}', [App\Http\Controllers\Api\Student\StudentSessionsApiController::class, 'destroy']);
 Route::get('/student/sessions/{id}/livekit-token', [App\Http\Controllers\Api\Student\StudentSessionsApiController::class, 'livekitToken']);
+Route::post('/student/attendance/check-in', [App\Http\Controllers\Api\Student\StudentAttendanceApiController::class, 'checkIn']);
 Route::post('/student/attendance', [App\Http\Controllers\Api\Student\StudentAttendanceApiController::class, 'store']);
 Route::put('/student/attendance/{id}', [App\Http\Controllers\Api\Student\StudentAttendanceApiController::class, 'update']);
 Route::delete('/student/attendance/{id}', [App\Http\Controllers\Api\Student\StudentAttendanceApiController::class, 'destroy']);

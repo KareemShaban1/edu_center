@@ -17,6 +17,8 @@ import type { SessionOnlineProvider } from '@/services/endpoints/session-types';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { QrCode } from 'lucide-react';
+import SessionAttendanceQrDialog from '@/components/SessionAttendanceQrDialog';
 
 const urlProviders: SessionOnlineProvider[] = ['external', 'zoom', 'microsoft_teams', 'google_meet'];
 
@@ -283,6 +285,7 @@ export default function TeacherSessions() {
   const queryClient = useQueryClient();
   const { data: boot, isLoading } = useTeacherBootstrap();
   const [showItem, setShowItem] = useState<TeacherSessionRow | null>(null);
+  const [qrItem, setQrItem] = useState<TeacherSessionRow | null>(null);
 
   const { data } = useQuery({
     queryKey: ['teacher-sessions'],
@@ -426,8 +429,27 @@ export default function TeacherSessions() {
           );
         }}
         onDelete={item => deleteMutation.mutateAsync(item.id)}
+        renderExtraActions={item => (
+          <button
+            type="button"
+            onClick={() => setQrItem(item)}
+            className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={t('attendanceQr.title')}
+            title={t('attendanceQr.title')}
+          >
+            <QrCode className="h-4 w-4" />
+          </button>
+        )}
       />
       {showItem && <SessionShowDialog item={showItem} onClose={() => setShowItem(null)} />}
+      {qrItem && (
+        <SessionAttendanceQrDialog
+          sessionId={qrItem.id}
+          topic={qrItem.topic}
+          role="teacher"
+          onClose={() => setQrItem(null)}
+        />
+      )}
     </>
   );
 }

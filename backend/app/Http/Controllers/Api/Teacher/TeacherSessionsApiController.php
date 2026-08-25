@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Teacher\UpdateSessionAttendanceVenueRequest;
 use App\Http\Requests\Teacher\UpdateTeacherSessionRequest;
 use App\Http\Support\ResolvesTeacherApiContext;
+use App\Services\AttendanceQrService;
 use App\Services\TeacherSectionService;
 use App\Services\TeacherSessionService;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +21,7 @@ final class TeacherSessionsApiController extends Controller
     public function __construct(
         private readonly TeacherSessionService $teacherSessionService,
         private readonly TeacherSectionService $teacherSectionService,
+        private readonly AttendanceQrService $attendanceQrService,
     ) {}
 
     public function livekitToken(Request $request, int $id): JsonResponse
@@ -71,5 +74,31 @@ final class TeacherSessionsApiController extends Controller
         $this->teacherSessionService->deleteSession($tenantDb, $id, $sectionIds);
 
         return response()->json(['ok' => true]);
+    }
+
+    public function attendanceQr(Request $request, int $id): JsonResponse
+    {
+        ['error' => $error, 'tenantDb' => $tenantDb, 'teacherId' => $teacherId] = $this->resolveTeacherContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $sectionIds = $this->teacherSectionService->sectionIds($tenantDb, $teacherId)->all();
+        $token = $this->attendanceQrService->issueToken($tenantDb, $id, $sectionIds);
+
+        return response()->json($token);
+    }
+
+    public function attendanceVenue(UpdateSessionAttendanceVenueRequest $request, int $id): JsonResponse
+    {
+        ['error' => $error, 'tenantDb' => $tenantDb, 'teacherId' => $teacherId] = $this->resolveTeacherContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $sectionIds = $this->teacherSectionService->sectionIds($tenantDb, $teacherId)->all();
+        $venue = $this->attendanceQrService->updateVenue($tenantDb, $id, $request->validated(), $sectionIds);
+
+        return response()->json(['venue' => $venue]);
     }
 }

@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { CalendarIcon } from 'lucide-react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
 import AdminScopeFilterBar from '@/components/admin/AdminScopeFilterBar';
-import { FormSelect } from '@/components/FormFields';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ export default function AdminHomework() {
   const sections = (bootstrap?.sections || []) as Array<{ id: number; name: string; class_id: number }>;
   const [data, setData] = useState<HomeworkRow[]>([]);
   const saveMutation = useMutation({
-    mutationFn: ({ payload, id }: { payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date'>; id?: number }) => (
+    mutationFn: ({ payload, id }: { payload: Pick<Homework, 'title' | 'content' | 'grade_id' | 'classroom_id' | 'section_id' | 'start_date' | 'due_date' | 'final_degree'>; id?: number }) => (
       id ? adminLearningApi.updateHomework(id, payload) : adminLearningApi.createHomework(payload)
     ),
     onSuccess: async () => {
@@ -105,6 +104,12 @@ export default function AdminHomework() {
     { key: 'start_date', label: t('col.startDate'), sortable: true },
     { key: 'due_date', label: t('col.dueDate'), sortable: true },
     {
+      key: 'final_degree',
+      label: t('col.finalDegree'),
+      sortable: true,
+      render: h => h.final_degree || '—',
+    },
+    {
       key: 'submissions_count',
       label: t('homework.submissions'),
       render: h => String(h.submissions_count ?? 0),
@@ -169,6 +174,7 @@ export default function AdminHomework() {
                   section_id: hw.section_id,
                   start_date: hw.start_date,
                   due_date: hw.due_date,
+                  final_degree: hw.final_degree ?? '',
                 },
                 id: item?.id,
               });
@@ -210,6 +216,7 @@ function HomeworkForm({
   const [sectionId, setSectionId] = useState<number | undefined>(item?.section_id);
   const [startDate, setStartDate] = useState<Date | undefined>(item?.start_date ? new Date(item.start_date) : undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(item?.due_date ? new Date(item.due_date) : undefined);
+  const [finalDegree, setFinalDegree] = useState(item?.final_degree ?? '');
 
   const filteredClasses = useMemo(() =>
     gradeId ? classes.filter(c => c.grade_id === gradeId) : [],
@@ -232,7 +239,7 @@ function HomeworkForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !gradeId || !classroomId || !sectionId || !startDate || !dueDate) return;
+    if (!title || !gradeId || !classroomId || !sectionId || !startDate || !dueDate || !finalDegree.trim()) return;
     onSave({
       id: item?.id ?? 0,
       title,
@@ -242,6 +249,7 @@ function HomeworkForm({
       section_id: sectionId,
       start_date: format(startDate, 'yyyy-MM-dd'),
       due_date: format(dueDate, 'yyyy-MM-dd'),
+      final_degree: finalDegree.trim(),
     });
   };
 
@@ -270,6 +278,18 @@ function HomeworkForm({
               title={t('col.content')}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               rows={3} value={content} onChange={e => setContent(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">{t('col.finalDegree')} <span className="text-destructive">*</span></label>
+            <input
+              title={t('col.finalDegree')}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={finalDegree}
+              onChange={e => setFinalDegree(e.target.value)}
+              placeholder="e.g. 20"
+              required
             />
           </div>
 

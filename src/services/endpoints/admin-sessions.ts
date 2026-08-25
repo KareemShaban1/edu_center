@@ -24,6 +24,9 @@ export interface AdminSessionRow {
   location?: string;
   notes?: string;
   has_related?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_m?: number | null;
 }
 
 export interface AdminSessionSavePayload {
@@ -40,6 +43,9 @@ export interface AdminSessionSavePayload {
   location?: string;
   notes?: string;
   record_enabled?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_m?: number | null;
 }
 
 export interface SessionLinkedRecord {

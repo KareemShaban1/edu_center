@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, CalendarCheck, CheckCircle2, Clock3, UserRound, XCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarCheck, CheckCircle2, Clock3, ScanLine, XCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import CenterLabel, { portalRowKey } from '@/components/CenterLabel';
 import StudentPageFilterBar, { dateOnly } from '@/components/student/StudentPageFilterBar';
 import StudentFilterField from '@/components/student/StudentFilterField';
 import { FormInput, FormSelect } from '@/components/FormFields';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -25,6 +25,9 @@ interface AttRow extends CenterScopedRow {
   teacher_id?: number | null;
   session_id?: number | null;
   session_topic?: string;
+  subject_name?: string;
+  session_time?: string | null;
+  check_in_time?: string | null;
 }
 
 const UNKNOWN_TEACHER = '__unknown__';
@@ -37,17 +40,10 @@ type StatusCounts = {
   rate: number | null;
 };
 
-type TeacherGroup = {
-  key: string;
-  name: string;
+type MonthGroup = {
+  month: string;
+  label: string;
   rows: AttRow[];
-  counts: StatusCounts;
-};
-
-type CenterGroup = {
-  id: string;
-  name: string;
-  teachers: TeacherGroup[];
   counts: StatusCounts;
 };
 
@@ -72,132 +68,66 @@ function teacherLabel(key: string, t: (k: string) => string): string {
   return key;
 }
 
-function buildHierarchy(rows: AttRow[], centers: StudentCenterSummary[] | undefined): CenterGroup[] {
-  const centerMeta = new Map<string, string>();
-  for (const c of centers || []) {
-    centerMeta.set(String(c.center_id), c.center_name);
-  }
-  for (const row of rows) {
-    if (row.center_id == null) continue;
-    const id = String(row.center_id);
-    if (!centerMeta.has(id)) centerMeta.set(id, row.center_name || id);
-  }
-
-  const soleCenterId =
-    (centers?.length === 1 && String(centers[0].center_id))
-    || (centerMeta.size === 1 ? Array.from(centerMeta.keys())[0] : null);
-
-  const byCenter = new Map<string, AttRow[]>();
-  for (const row of rows) {
-    let id = row.center_id != null ? String(row.center_id) : '';
-    if (!id && soleCenterId) id = soleCenterId;
-    if (!id) id = '_none';
-    if (!centerMeta.has(id)) {
-      centerMeta.set(id, row.center_name || (id === '_none' ? '' : id));
-    }
-    const list = byCenter.get(id) || [];
-    list.push(row);
-    byCenter.set(id, list);
-  }
-
-  const orderedIds: string[] = [];
-  if (centers && centers.length > 0) {
-    for (const c of centers) {
-      const id = String(c.center_id);
-      if (byCenter.has(id) && !orderedIds.includes(id)) orderedIds.push(id);
-    }
-  }
-  for (const id of byCenter.keys()) {
-    if (!orderedIds.includes(id)) orderedIds.push(id);
-  }
-
-  return orderedIds
-    .map(id => {
-      const centerRows = byCenter.get(id) || [];
-      const byTeacher = new Map<string, AttRow[]>();
-      for (const row of centerRows) {
-        const key = teacherKey(row);
-        const list = byTeacher.get(key) || [];
-        list.push(row);
-        byTeacher.set(key, list);
-      }
-
-      const teachers: TeacherGroup[] = Array.from(byTeacher.entries())
-        .map(([key, teacherRows]) => {
-          const sorted = [...teacherRows].sort((a, b) => b.date.localeCompare(a.date));
-          return {
-            key,
-            name: key.startsWith('id:') || key === UNKNOWN_TEACHER ? '' : key,
-            rows: sorted,
-            counts: countStatuses(sorted),
-          };
-        })
-        .sort((a, b) => {
-          if (a.key === UNKNOWN_TEACHER) return 1;
-          if (b.key === UNKNOWN_TEACHER) return -1;
-          return (a.name || a.key).localeCompare(b.name || b.key);
-        });
-
-      return {
-        id,
-        name: centerMeta.get(id) || id,
-        teachers,
-        counts: countStatuses(centerRows),
-      };
-    })
-    .filter(c => c.teachers.length > 0);
-}
-
-function statusAccent(status: AttRow['status']): string {
-  if (status === 'present') return 'border-success bg-success/10 text-success';
-  if (status === 'late') return 'border-warning bg-warning/10 text-warning';
-  return 'border-destructive bg-destructive/10 text-destructive';
-}
-
-function statusRail(status: AttRow['status']): string {
-  if (status === 'present') return 'bg-success';
-  if (status === 'late') return 'bg-warning';
-  return 'bg-destructive';
-}
-
-function formatDayLabel(date: string, locale: string): { weekday: string; day: string; month: string } {
-  const d = new Date(`${date.slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) {
-    return { weekday: '', day: date.slice(8, 10) || '—', month: date.slice(0, 7) };
-  }
-  return {
-    weekday: d.toLocaleDateString(locale, { weekday: 'short' }),
-    day: d.toLocaleDateString(locale, { day: 'numeric' }),
-    month: d.toLocaleDateString(locale, { month: 'short' }),
-  };
-}
-
-function MiniCounts({ counts }: { counts: StatusCounts }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] tabular-nums text-muted-foreground sm:text-xs">
-      <span className="text-success">{counts.present}</span>
-      <span aria-hidden>·</span>
-      <span className="text-warning">{counts.late}</span>
-      <span aria-hidden>·</span>
-      <span className="text-destructive">{counts.absent}</span>
-      {counts.rate != null ? (
-        <>
-          <span aria-hidden>·</span>
-          <span className="font-medium text-foreground">{counts.rate}%</span>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
 function resolveRowCenterId(row: AttRow, soleCenterId: string | null): string {
   if (row.center_id != null) return String(row.center_id);
   if (soleCenterId) return soleCenterId;
   return '_none';
 }
 
+function monthKey(date: string): string {
+  return dateOnly(date).slice(0, 7);
+}
+
+function formatMonthLabel(month: string, locale: string): string {
+  const d = new Date(`${month}-01T12:00:00`);
+  if (Number.isNaN(d.getTime())) return month;
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'long' });
+}
+
+function formatShortDate(date: string, locale: string): string {
+  const d = new Date(`${date.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatClock(value: string | null | undefined, locale: string): string {
+  if (!value) return '—';
+  const normalized = value.includes('T') ? value : `${value.slice(0, 10)}T${value.slice(11) || '00:00:00'}`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildMonthGroups(rows: AttRow[], locale: string): MonthGroup[] {
+  const byMonth = new Map<string, AttRow[]>();
+  for (const row of rows) {
+    const key = monthKey(row.date);
+    const list = byMonth.get(key) || [];
+    list.push(row);
+    byMonth.set(key, list);
+  }
+
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([month, monthRows]) => ({
+      month,
+      label: formatMonthLabel(month, locale),
+      rows: [...monthRows].sort((a, b) => {
+        const dateCmp = dateOnly(b.date).localeCompare(dateOnly(a.date));
+        if (dateCmp !== 0) return dateCmp;
+        const sessionA = a.session_time || '';
+        const sessionB = b.session_time || '';
+        if (sessionA && sessionB) return sessionA.localeCompare(sessionB);
+        return String(a.id).localeCompare(String(b.id));
+      }),
+      counts: countStatuses(monthRows),
+    }));
+}
+
 function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => void }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const dateLocale = locale === 'ar' ? 'ar' : 'en';
+
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] overflow-y-auto sm:max-w-lg">
@@ -208,14 +138,23 @@ function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => 
         </DialogHeader>
         <div className="space-y-3 text-sm">
           <p>
-            <strong>{t('col.date')}:</strong> {item.date}
+            <strong>{t('col.date')}:</strong> {formatShortDate(item.date, dateLocale)}
           </p>
           <p className="flex flex-wrap items-center gap-2">
             <strong>{t('col.status')}:</strong>
             <StatusBadge status={item.status} label={t(`attendance.${item.status}`) || item.status} />
           </p>
           <p>
+            <strong>{t('col.subject')}:</strong> {item.subject_name?.trim() || '—'}
+          </p>
+          <p>
             <strong>{t('col.teacher')}:</strong> {item.teacher?.trim() || t('student.attendance.unknownTeacher')}
+          </p>
+          <p>
+            <strong>{t('student.attendance.sessionTime')}:</strong> {formatClock(item.session_time, dateLocale)}
+          </p>
+          <p>
+            <strong>{t('student.attendance.checkInTime')}:</strong> {formatClock(item.check_in_time, dateLocale)}
           </p>
           {item.session_topic ? (
             <p>
@@ -241,47 +180,68 @@ function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => 
   );
 }
 
-function AttendanceRow({
+function AttendanceCard({
   item,
   dateLocale,
-  displayClass,
   onOpen,
 }: {
   item: AttRow;
   dateLocale: string;
-  displayClass: string;
   onOpen: () => void;
 }) {
   const { t } = useLocale();
-  const day = formatDayLabel(item.date, dateLocale);
+  const fonts = useAppFontClasses();
+  const teacher = item.teacher?.trim() || t('student.attendance.unknownTeacher');
+  const subject = item.subject_name?.trim() || '—';
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-background text-start transition hover:border-primary/30 hover:bg-muted/20"
+      className="flex h-full w-full flex-col rounded-xl border border-border bg-card p-3 text-start shadow-card transition hover:border-primary/30 hover:bg-muted/20 sm:p-4"
     >
-      <span className={cn('h-1 w-full shrink-0', statusRail(item.status))} aria-hidden />
-      <span
-        className={cn(
-          'flex flex-col items-center justify-center gap-0.5 border-b border-border/60 px-2 py-2.5',
-          statusAccent(item.status),
-        )}
-      >
-        <span className="text-[10px] font-medium uppercase opacity-80">{day.weekday}</span>
-        <span className={cn('text-xl font-bold leading-none tabular-nums', displayClass)}>{day.day}</span>
-        <span className="text-[10px] opacity-80">{day.month}</span>
-      </span>
-      <span className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
-        <StatusBadge status={item.status} label={t(`attendance.${item.status}`) || item.status} />
-        {item.session_topic ? (
-          <span className="line-clamp-2 text-xs text-muted-foreground">{item.session_topic}</span>
-        ) : item.notes ? (
-          <span className="line-clamp-2 text-xs text-muted-foreground">{item.notes}</span>
-        ) : (
-          <span className="text-xs text-muted-foreground">{item.date}</span>
-        )}
-      </span>
+      <p className={cn('line-clamp-2 text-sm font-semibold text-foreground', fonts.display)}>
+        {item.center_name || t('col.center')}
+      </p>
+
+      <div className="mt-2 flex items-start justify-between gap-3 text-xs sm:text-sm">
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{subject}</span>
+        <span className="min-w-0 flex-1 truncate text-end text-muted-foreground">{teacher}</span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 border-t border-border/60 pt-3">
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
+              {t('student.attendance.sessionTime')}
+            </p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums">{formatClock(item.session_time, dateLocale)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
+              {t('student.attendance.checkInTime')}
+            </p>
+            <p className="mt-0.5 text-sm font-medium tabular-nums">{formatClock(item.check_in_time, dateLocale)}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
+              {t('col.date')}
+            </p>
+            <p className="mt-0.5 text-sm font-medium">{formatShortDate(item.date, dateLocale)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground sm:text-xs">
+              {t('col.status')}
+            </p>
+            <div className="mt-1">
+              <StatusBadge status={item.status} label={t(`attendance.${item.status}`) || item.status} />
+            </div>
+          </div>
+        </div>
+      </div>
     </button>
   );
 }
@@ -292,11 +252,12 @@ export default function StudentAttendance() {
   const { data, isLoading } = useStudentBootstrap();
   const [centerFilter, setCenterFilter] = useState('');
   const [teacherFilter, setTeacherFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showItem, setShowItem] = useState<AttRow | null>(null);
 
   const allRows = useMemo(() => (data?.attendance || []) as AttRow[], [data?.attendance]);
+  const dateLocale = locale === 'ar' ? 'ar' : 'en';
 
   const soleCenterId = useMemo(() => {
     if (data?.centers?.length === 1) return String(data.centers[0].center_id);
@@ -359,55 +320,48 @@ export default function StudentAttendance() {
       const centerId = resolveRowCenterId(row, soleCenterId);
       if (centerFilter && centerId !== centerFilter) return false;
       if (teacherFilter && teacherKey(row) !== teacherFilter) return false;
-      if (dateFilter && dateOnly(row.date) !== dateFilter) return false;
+      if (monthFilter && monthKey(row.date) !== monthFilter) return false;
       if (statusFilter && row.status !== statusFilter) return false;
       return true;
     });
-  }, [allRows, centerFilter, teacherFilter, dateFilter, statusFilter, soleCenterId]);
+  }, [allRows, centerFilter, teacherFilter, monthFilter, statusFilter, soleCenterId]);
 
-  const hierarchy = useMemo(
-    () => buildHierarchy(filteredRows, data?.centers),
-    [filteredRows, data?.centers],
+  const monthGroups = useMemo(
+    () => buildMonthGroups(filteredRows, dateLocale),
+    [filteredRows, dateLocale],
   );
 
   const summary = useMemo(() => countStatuses(filteredRows), [filteredRows]);
-
-  const defaultCenterOpen = useMemo(() => hierarchy.map(c => c.id), [hierarchy]);
-
-  const defaultTeacherOpen = useMemo(() => {
-    const keys: string[] = [];
-    for (const center of hierarchy) {
-      for (const teacher of center.teachers) {
-        keys.push(`${center.id}::${teacher.key}`);
-      }
-    }
-    if (keys.length <= 6) return keys;
-    return hierarchy.map(c => `${c.id}::${c.teachers[0]?.key}`).filter(Boolean);
-  }, [hierarchy]);
-
-  const appliedFilters = [centerFilter, teacherFilter, dateFilter, statusFilter].filter(Boolean).length;
+  const appliedFilters = [centerFilter, teacherFilter, monthFilter, statusFilter].filter(Boolean).length;
 
   const clearFilters = () => {
     setCenterFilter('');
     setTeacherFilter('');
-    setDateFilter('');
+    setMonthFilter('');
     setStatusFilter('');
   };
-
-  const filterSignature = `${centerFilter}|${teacherFilter}|${dateFilter}|${statusFilter}`;
-  const dateLocale = locale === 'ar' ? 'ar' : 'en';
 
   return (
     <DashboardLayout>
       <div className="space-y-5">
         <div className="page-header">
-          <h1 className={cn('flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl', fonts.display)}>
-            <CalendarCheck className="h-6 w-6 text-primary" aria-hidden />
-            {t('nav.attendance')}
-          </h1>
-          <p className="page-description mt-1 text-sm text-muted-foreground sm:text-base">
-            {t('student.attendance.desc')}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className={cn('flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl', fonts.display)}>
+                <CalendarCheck className="h-6 w-6 text-primary" aria-hidden />
+                {t('nav.attendance')}
+              </h1>
+              <p className="page-description mt-1 text-sm text-muted-foreground sm:text-base">
+                {t('student.attendance.desc')}
+              </p>
+            </div>
+            <Button asChild className="gap-2">
+              <Link to="/student/attendance/check-in">
+                <ScanLine className="h-4 w-4" />
+                {t('nav.attendanceCheckIn')}
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -483,12 +437,12 @@ export default function StudentAttendance() {
                   ))}
                 </FormSelect>
               </StudentFilterField>
-              <StudentFilterField id={`${idPrefix}-date`} label={t('col.date')}>
+              <StudentFilterField id={`${idPrefix}-month`} label={t('col.month')}>
                 <FormInput
-                  id={`${idPrefix}-date`}
-                  type="date"
-                  value={dateFilter}
-                  onChange={e => setDateFilter(e.target.value)}
+                  id={`${idPrefix}-month`}
+                  type="month"
+                  value={monthFilter}
+                  onChange={e => setMonthFilter(e.target.value)}
                 />
               </StudentFilterField>
               <StudentFilterField id={`${idPrefix}-status`} label={t('col.status')}>
@@ -509,108 +463,45 @@ export default function StudentAttendance() {
         />
 
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} className="h-28 animate-pulse rounded-xl border border-border bg-muted/30" />
+          <div className="space-y-4">
+            {[0, 1].map(i => (
+              <div key={i} className="space-y-3">
+                <div className="h-6 w-48 animate-pulse rounded bg-muted/40" />
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2].map(j => (
+                    <div key={j} className="h-40 animate-pulse rounded-xl border border-border bg-muted/30" />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        ) : hierarchy.length === 0 ? (
+        ) : monthGroups.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card px-4 py-12 text-center text-muted-foreground">
             {t('student.attendance.empty')}
           </div>
         ) : (
-          <Accordion
-            key={filterSignature}
-            type="multiple"
-            defaultValue={defaultCenterOpen}
-            className="grid grid-cols-2 items-start gap-3 lg:grid-cols-3 xl:grid-cols-4"
-          >
-            {hierarchy.map(center => (
-              <AccordionItem
-                key={center.id}
-                value={center.id}
-                className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-card data-[state=open]:col-span-full"
-              >
-                <AccordionTrigger className="px-2.5 py-2.5 hover:no-underline hover:bg-muted/20 sm:px-3 sm:py-3 [&[data-state=open]]:border-b [&[data-state=open]]:border-border/60">
-                  <div className="flex min-w-0 flex-1 flex-col items-start gap-2 text-start sm:flex-row sm:items-center sm:gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-10 sm:w-10">
-                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={cn('line-clamp-2 text-sm font-semibold sm:text-base', fonts.display)}>
-                        {center.name || t('col.center')}
-                      </p>
-                      <div className="mt-0.5 space-y-0.5">
-                        <span className="block text-[10px] text-muted-foreground sm:text-xs">
-                          {center.teachers.length} {t('student.attendance.teachers')}
-                          {' · '}
-                          {center.counts.total} {t('crud.results')}
-                        </span>
-                        <MiniCounts counts={center.counts} />
-                      </div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-
-                <AccordionContent className="px-2 pb-3 pt-2 sm:px-3">
-                  {center.teachers.length === 0 ? (
-                    <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                      {t('student.attendance.empty')}
-                    </p>
-                  ) : (
-                    <Accordion
-                      type="multiple"
-                      defaultValue={defaultTeacherOpen.filter(k => k.startsWith(`${center.id}::`))}
-                      className="grid grid-cols-2 items-start gap-2 lg:grid-cols-3"
-                    >
-                      {center.teachers.map(teacher => {
-                        const value = `${center.id}::${teacher.key}`;
-                        return (
-                          <AccordionItem
-                            key={value}
-                            value={value}
-                            className="min-w-0 overflow-hidden rounded-lg border border-border/80 bg-muted/10 data-[state=open]:col-span-full"
-                          >
-                            <AccordionTrigger className="px-2.5 py-2 hover:no-underline hover:bg-muted/30 sm:px-3 sm:py-2.5 [&[data-state=open]]:border-b [&[data-state=open]]:border-border/50">
-                              <div className="flex min-w-0 flex-1 items-start gap-2 text-start">
-                                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground">
-                                  <UserRound className="h-3.5 w-3.5" aria-hidden />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="line-clamp-2 text-xs font-medium sm:text-sm">
-                                    {teacherLabel(teacher.key, t)}
-                                  </p>
-                                  <div className="mt-0.5 space-y-0.5">
-                                    <span className="block text-[10px] text-muted-foreground">
-                                      {teacher.counts.total} {t('crud.results')}
-                                    </span>
-                                    <MiniCounts counts={teacher.counts} />
-                                  </div>
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-2 pb-2 pt-2">
-                              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
-                                {teacher.rows.map(item => (
-                                  <AttendanceRow
-                                    key={portalRowKey(item.center_id, item.id)}
-                                    item={item}
-                                    dateLocale={dateLocale}
-                                    displayClass={fonts.display}
-                                    onOpen={() => setShowItem(item)}
-                                  />
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        );
-                      })}
-                    </Accordion>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
+          <div className="space-y-6">
+            {monthGroups.map(group => (
+              <section key={group.month} className="space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border/60 pb-2">
+                  <h2 className={cn('text-base font-semibold sm:text-lg', fonts.display)}>{group.label}</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {group.counts.total} {t('crud.results')}
+                  </span>
+                </div>
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.rows.map(item => (
+                    <AttendanceCard
+                      key={portalRowKey(item.center_id, item.id)}
+                      item={item}
+                      dateLocale={dateLocale}
+                      onOpen={() => setShowItem(item)}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
-          </Accordion>
+          </div>
         )}
       </div>
 

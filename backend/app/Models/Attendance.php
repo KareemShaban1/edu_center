@@ -15,11 +15,22 @@ class Attendance extends Model
         'teacher_id',
         'attendance_date',
         'attendance_status',
-        'notes'
+        'notes',
+        'checked_in_at',
+        'check_in_latitude',
+        'check_in_longitude',
+        'check_in_accuracy_m',
+        'check_in_distance_m',
+        'check_in_method',
     ];
 
     protected $casts = [
         'attendace_status' => 'boolean',
+        'checked_in_at' => 'datetime',
+        'check_in_latitude' => 'float',
+        'check_in_longitude' => 'float',
+        'check_in_accuracy_m' => 'float',
+        'check_in_distance_m' => 'float',
     ];
 
 

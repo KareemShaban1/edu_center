@@ -151,6 +151,7 @@ export default function AdminHomeworkReview() {
               <p className="text-sm text-muted-foreground">
                 {homework.grade_name} · {homework.class_name} · {homework.section_name}
                 {' · '}{t('col.dueDate')}: {homework.due_date}
+                {homework.final_degree ? ` · ${t('col.finalDegree')}: ${homework.final_degree}` : ''}
               </p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">

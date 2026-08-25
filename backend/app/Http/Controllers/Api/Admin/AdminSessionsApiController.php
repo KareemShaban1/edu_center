@@ -7,13 +7,16 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\GenerateSessionsRequest;
 use App\Http\Requests\Admin\StoreSessionRequest;
+use App\Http\Requests\Admin\UpdateSessionAttendanceVenueRequest;
 use App\Http\Requests\Admin\UpdateSessionRequest;
 use App\Http\Resources\AdminSessionResource;
 use App\Http\Support\ResolvesAdminApiContext;
+use App\Services\AttendanceQrService;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 final class AdminSessionsApiController extends Controller
 {
@@ -21,6 +24,7 @@ final class AdminSessionsApiController extends Controller
 
     public function __construct(
         private readonly SessionService $sessionService,
+        private readonly AttendanceQrService $attendanceQrService,
     ) {}
 
     public function generate(GenerateSessionsRequest $request): JsonResponse
@@ -99,5 +103,33 @@ final class AdminSessionsApiController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    public function attendanceQr(Request $request, int $id): JsonResponse
+    {
+        ['error' => $error] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $token = $this->attendanceQrService->issueToken(DB::connection('center'), $id);
+
+        return response()->json($token);
+    }
+
+    public function attendanceVenue(UpdateSessionAttendanceVenueRequest $request, int $id): JsonResponse
+    {
+        ['error' => $error] = $this->resolveAdminWebContext($request);
+        if ($error) {
+            return $error;
+        }
+
+        $venue = $this->attendanceQrService->updateVenue(
+            DB::connection('center'),
+            $id,
+            $request->validated(),
+        );
+
+        return response()->json(['venue' => $venue]);
     }
 }

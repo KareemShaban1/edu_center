@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 final class HomeworkService
 {
@@ -15,17 +16,7 @@ final class HomeworkService
      */
     public function create(array $payload): array
     {
-        $id = DB::connection('center')->table('homeworks')->insertGetId([
-            'title' => $payload['title'],
-            'content' => $payload['content'] ?? '',
-            'grade_id' => $payload['grade_id'],
-            'class_id' => $payload['classroom_id'],
-            'section_id' => $payload['section_id'],
-            'submit_date' => $payload['start_date'],
-            'due_date' => $payload['due_date'],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $id = DB::connection('center')->table('homeworks')->insertGetId($this->rowFromPayload($payload, true));
 
         return $this->formatPayloadResponse($id, $payload);
     }
@@ -43,7 +34,18 @@ final class HomeworkService
             );
         }
 
-        DB::connection('center')->table('homeworks')->where('id', $id)->update([
+        DB::connection('center')->table('homeworks')->where('id', $id)->update($this->rowFromPayload($payload, false));
+
+        return $this->formatPayloadResponse($id, $payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function rowFromPayload(array $payload, bool $creating): array
+    {
+        $row = [
             'title' => $payload['title'],
             'content' => $payload['content'] ?? '',
             'grade_id' => $payload['grade_id'],
@@ -52,9 +54,19 @@ final class HomeworkService
             'submit_date' => $payload['start_date'],
             'due_date' => $payload['due_date'],
             'updated_at' => now(),
-        ]);
+        ];
 
-        return $this->formatPayloadResponse($id, $payload);
+        if ($creating) {
+            $row['created_at'] = now();
+        }
+
+        if (Schema::connection('center')->hasColumn('homeworks', 'final_degree')) {
+            $row['final_degree'] = isset($payload['final_degree']) && $payload['final_degree'] !== ''
+                ? (string) $payload['final_degree']
+                : null;
+        }
+
+        return $row;
     }
 
     /**
@@ -72,6 +84,7 @@ final class HomeworkService
             'section_id' => $payload['section_id'],
             'start_date' => $payload['start_date'],
             'due_date' => $payload['due_date'],
+            'final_degree' => isset($payload['final_degree']) ? (string) $payload['final_degree'] : '',
         ];
     }
 }

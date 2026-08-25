@@ -175,24 +175,30 @@ final class HomeworkSubmissionService
 
     private function findHomeworkWithLabels(Connection $tenantDb, int $homeworkId): ?object
     {
+        $select = [
+            'homeworks.id',
+            'homeworks.title',
+            'homeworks.content',
+            'homeworks.grade_id',
+            'homeworks.class_id',
+            'homeworks.section_id',
+            'homeworks.submit_date as start_date',
+            'homeworks.due_date',
+            'grades.grade_name',
+            'classes.class_name',
+            'sections.section_name',
+        ];
+
+        if (Schema::connection('center')->hasColumn('homeworks', 'final_degree')) {
+            $select[] = 'homeworks.final_degree';
+        }
+
         return $tenantDb->table('homeworks')
             ->leftJoin('grades', 'homeworks.grade_id', '=', 'grades.id')
             ->leftJoin('classes', 'homeworks.class_id', '=', 'classes.id')
             ->leftJoin('sections', 'homeworks.section_id', '=', 'sections.id')
             ->where('homeworks.id', $homeworkId)
-            ->first([
-                'homeworks.id',
-                'homeworks.title',
-                'homeworks.content',
-                'homeworks.grade_id',
-                'homeworks.class_id',
-                'homeworks.section_id',
-                'homeworks.submit_date as start_date',
-                'homeworks.due_date',
-                'grades.grade_name',
-                'classes.class_name',
-                'sections.section_name',
-            ]);
+            ->first($select);
     }
 
     /**
@@ -212,6 +218,7 @@ final class HomeworkSubmissionService
             'section_name' => (string) ($homework->section_name ?? ''),
             'start_date' => (string) $homework->start_date,
             'due_date' => (string) $homework->due_date,
+            'final_degree' => (string) ($homework->final_degree ?? ''),
         ];
     }
 }

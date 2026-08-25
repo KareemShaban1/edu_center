@@ -538,7 +538,7 @@ class MultiCenterPortalService
     /**
      * Student attendance rows with optional teacher/session context.
      *
-     * @return Collection<int, array{id: int, date: string, status: string, notes: string, teacher: string, teacher_id: int|null, session_id: int|null, session_topic: string}>
+     * @return Collection<int, array{id: int, date: string, status: string, notes: string, teacher: string, teacher_id: int|null, session_id: int|null, session_topic: string, subject_name: string, session_time: string|null, check_in_time: string|null}>
      */
     public function studentAttendanceRows(Connection $tenantDb, int $studentId): Collection
     {
@@ -550,6 +550,10 @@ class MultiCenterPortalService
         $hasTeacherId = Schema::connection('center')->hasColumn('attendances', 'teacher_id');
         $hasSessions = Schema::connection('center')->hasTable('sessions');
         $hasTeachers = Schema::connection('center')->hasTable('teachers');
+        $hasSectionsTable = Schema::connection('center')->hasTable('sections');
+        $sectionHasTeacherId = $hasSectionsTable && Schema::connection('center')->hasColumn('sections', 'teacher_id');
+        $hasCreatedAt = Schema::connection('center')->hasColumn('attendances', 'created_at');
+        $hasCheckedInAt = Schema::connection('center')->hasColumn('attendances', 'checked_in_at');
 
         $query = $tenantDb->table('attendances')
             ->where('attendances.student_id', $studentId)
@@ -563,12 +567,22 @@ class MultiCenterPortalService
             'attendances.notes',
         ];
 
+        if ($hasCreatedAt) {
+            $select[] = 'attendances.created_at';
+        }
+        if ($hasCheckedInAt) {
+            $select[] = 'attendances.checked_in_at';
+            $select[] = 'attendances.check_in_method';
+            $select[] = 'attendances.check_in_distance_m';
+        }
+
         if ($hasSessionId) {
             $select[] = 'attendances.session_id';
             if ($hasSessions) {
                 $query->leftJoin('sessions as s', 's.id', '=', 'attendances.session_id');
                 $select[] = 's.created_by as session_teacher';
                 $select[] = 's.topic as session_topic';
+                $select[] = 's.start_at as session_start_at';
             }
         }
 
@@ -577,6 +591,16 @@ class MultiCenterPortalService
             if ($hasTeachers) {
                 $query->leftJoin('teachers as t', 't.id', '=', 'attendances.teacher_id');
                 $select[] = 't.name as teacher_name';
+                $select[] = 't.subject as teacher_subject';
+            }
+        }
+
+        if ($hasSectionsTable) {
+            $query->leftJoin('sections as sec', 'sec.id', '=', 'attendances.section_id');
+            if ($sectionHasTeacherId && $hasTeachers) {
+                $query->leftJoin('teachers as st', 'st.id', '=', 'sec.teacher_id');
+                $select[] = 'st.name as section_teacher_name';
+                $select[] = 'st.subject as section_teacher_subject';
             }
         }
 
@@ -588,8 +612,30 @@ class MultiCenterPortalService
                     : (((int) $row->attendance_status) === 2 ? 'late' : 'absent');
 
                 $teacherFromTable = trim((string) ($row->teacher_name ?? ''));
+                $teacherFromSection = trim((string) ($row->section_teacher_name ?? ''));
                 $teacherFromSession = trim((string) ($row->session_teacher ?? ''));
-                $teacher = $teacherFromTable !== '' ? $teacherFromTable : $teacherFromSession;
+                $teacher = $teacherFromTable !== ''
+                    ? $teacherFromTable
+                    : ($teacherFromSection !== '' ? $teacherFromSection : $teacherFromSession);
+
+                $subjectFromTeacher = trim((string) ($row->teacher_subject ?? ''));
+                $subjectFromSection = trim((string) ($row->section_teacher_subject ?? ''));
+                $subjectFromSession = trim((string) ($row->session_topic ?? ''));
+                $subjectName = $subjectFromTeacher !== ''
+                    ? $subjectFromTeacher
+                    : ($subjectFromSection !== '' ? $subjectFromSection : $subjectFromSession);
+
+                $sessionStartAt = isset($row->session_start_at) && $row->session_start_at
+                    ? (string) $row->session_start_at
+                    : null;
+                $checkInAt = null;
+                if ($status !== 'absent') {
+                    if (! empty($row->checked_in_at)) {
+                        $checkInAt = (string) $row->checked_in_at;
+                    } elseif (! empty($row->created_at)) {
+                        $checkInAt = (string) $row->created_at;
+                    }
+                }
 
                 return [
                     'id' => (int) $row->id,
@@ -600,6 +646,13 @@ class MultiCenterPortalService
                     'teacher_id' => isset($row->teacher_id) && $row->teacher_id !== null ? (int) $row->teacher_id : null,
                     'session_id' => isset($row->session_id) && $row->session_id !== null ? (int) $row->session_id : null,
                     'session_topic' => (string) ($row->session_topic ?? ''),
+                    'subject_name' => $subjectName,
+                    'session_time' => $sessionStartAt,
+                    'check_in_time' => $checkInAt,
+                    'check_in_method' => isset($row->check_in_method) ? ($row->check_in_method ?: null) : null,
+                    'check_in_distance_m' => isset($row->check_in_distance_m) && $row->check_in_distance_m !== null
+                        ? (float) $row->check_in_distance_m
+                        : null,
                 ];
             })
             ->values();

@@ -56,6 +56,7 @@ final class SessionService
 
         $tenantDb = DB::connection('center');
         $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasGeoCol = Schema::connection('center')->hasColumn('sessions', 'latitude');
 
         $rows = $tenantDb->table('sessions')
             ->leftJoin('sections', 'sessions.section_id', '=', 'sections.id')
@@ -84,6 +85,9 @@ final class SessionService
         if ($hasLocationCol) {
             $rows->addSelect('sessions.location', 'sessions.notes');
         }
+        if ($hasGeoCol) {
+            $rows->addSelect('sessions.latitude', 'sessions.longitude', 'sessions.geofence_radius_m');
+        }
 
         $sessions = $rows->orderByDesc('sessions.start_at')->get();
         $relatedIds = $this->sessionIdsWithRelatedRecords(
@@ -91,7 +95,7 @@ final class SessionService
             $sessions->pluck('id')->map(fn ($id) => (int) $id)->all(),
         );
 
-        $mapped = $sessions->map(function ($row) use ($hasLocationCol, $relatedIds) {
+        $mapped = $sessions->map(function ($row) use ($hasLocationCol, $hasGeoCol, $relatedIds) {
             $session = [
                 'id' => (int) $row->id,
                 'grade_id' => (int) $row->grade_id,
@@ -116,6 +120,11 @@ final class SessionService
                 $session['location'] = $row->location ?? '';
                 $session['notes'] = $row->notes ?? '';
             }
+            if ($hasGeoCol) {
+                $session['latitude'] = $row->latitude !== null ? (float) $row->latitude : null;
+                $session['longitude'] = $row->longitude !== null ? (float) $row->longitude : null;
+                $session['geofence_radius_m'] = $row->geofence_radius_m !== null ? (int) $row->geofence_radius_m : null;
+            }
 
             return $session;
         })->values()->all();
@@ -135,6 +144,7 @@ final class SessionService
 
         $tenantDb = DB::connection('center');
         $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasGeoCol = Schema::connection('center')->hasColumn('sessions', 'latitude');
 
         $section = $tenantDb->table('sections')->where('id', (int) $payload['section_id'])->first();
         if (! $section) {
@@ -168,6 +178,13 @@ final class SessionService
         if ($hasLocationCol) {
             $base['location'] = $payload['location'] ?? null;
             $base['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasGeoCol) {
+            $base['latitude'] = isset($payload['latitude']) ? round((float) $payload['latitude'], 7) : null;
+            $base['longitude'] = isset($payload['longitude']) ? round((float) $payload['longitude'], 7) : null;
+            $base['geofence_radius_m'] = isset($payload['geofence_radius_m'])
+                ? (int) $payload['geofence_radius_m']
+                : null;
         }
 
         if ($sessionType === 'offline') {
@@ -232,6 +249,7 @@ final class SessionService
 
         $tenantDb = DB::connection('center');
         $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasGeoCol = Schema::connection('center')->hasColumn('sessions', 'latitude');
 
         $existing = $tenantDb->table('sessions')->where('id', $id)->first();
         if (! $existing) {
@@ -273,6 +291,19 @@ final class SessionService
         if ($hasLocationCol) {
             $update['location'] = $payload['location'] ?? null;
             $update['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasGeoCol) {
+            if (array_key_exists('latitude', $payload)) {
+                $update['latitude'] = $payload['latitude'] !== null ? round((float) $payload['latitude'], 7) : null;
+            }
+            if (array_key_exists('longitude', $payload)) {
+                $update['longitude'] = $payload['longitude'] !== null ? round((float) $payload['longitude'], 7) : null;
+            }
+            if (array_key_exists('geofence_radius_m', $payload)) {
+                $update['geofence_radius_m'] = $payload['geofence_radius_m'] !== null
+                    ? (int) $payload['geofence_radius_m']
+                    : null;
+            }
         }
 
         if ($sessionType === 'offline') {

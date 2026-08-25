@@ -244,6 +244,7 @@ export interface Homework {
   start_date: string;
   due_date: string;
   file?: string;
+  final_degree?: string;
   grade?: Grade;
   classroom?: ClassRoom;
   section?: Section;

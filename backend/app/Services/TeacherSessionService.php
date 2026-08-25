@@ -66,6 +66,7 @@ final class TeacherSessionService
         }
 
         $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasGeoCol = Schema::connection('center')->hasColumn('sessions', 'latitude');
 
         $rows = $tenantDb->table('sessions')
             ->leftJoin('sections', 'sessions.section_id', '=', 'sections.id')
@@ -95,8 +96,11 @@ final class TeacherSessionService
         if ($hasLocationCol) {
             $rows->addSelect('sessions.location', 'sessions.notes');
         }
+        if ($hasGeoCol) {
+            $rows->addSelect('sessions.latitude', 'sessions.longitude', 'sessions.geofence_radius_m');
+        }
 
-        $sessions = $rows->orderByDesc('sessions.start_at')->get()->map(function ($row) use ($hasLocationCol) {
+        $sessions = $rows->orderByDesc('sessions.start_at')->get()->map(function ($row) use ($hasLocationCol, $hasGeoCol) {
             $m = [
                 'id' => (int) $row->id,
                 'grade_id' => (int) $row->grade_id,
@@ -120,6 +124,11 @@ final class TeacherSessionService
                 $m['location'] = $row->location ?? '';
                 $m['notes'] = $row->notes ?? '';
             }
+            if ($hasGeoCol) {
+                $m['latitude'] = $row->latitude !== null ? (float) $row->latitude : null;
+                $m['longitude'] = $row->longitude !== null ? (float) $row->longitude : null;
+                $m['geofence_radius_m'] = $row->geofence_radius_m !== null ? (int) $row->geofence_radius_m : null;
+            }
 
             return $m;
         })->values();
@@ -139,6 +148,7 @@ final class TeacherSessionService
         }
 
         $hasLocationCol = Schema::connection('center')->hasColumn('sessions', 'location');
+        $hasGeoCol = Schema::connection('center')->hasColumn('sessions', 'latitude');
 
         $existing = $tenantDb->table('sessions')->where('id', $sessionId)->first();
         if (! $existing || ! $sectionIds->contains((int) ($existing->section_id ?? 0))) {
@@ -192,6 +202,19 @@ final class TeacherSessionService
         if ($hasLocationCol) {
             $update['location'] = $payload['location'] ?? null;
             $update['notes'] = $payload['notes'] ?? null;
+        }
+        if ($hasGeoCol) {
+            if (array_key_exists('latitude', $payload)) {
+                $update['latitude'] = $payload['latitude'] !== null ? round((float) $payload['latitude'], 7) : null;
+            }
+            if (array_key_exists('longitude', $payload)) {
+                $update['longitude'] = $payload['longitude'] !== null ? round((float) $payload['longitude'], 7) : null;
+            }
+            if (array_key_exists('geofence_radius_m', $payload)) {
+                $update['geofence_radius_m'] = $payload['geofence_radius_m'] !== null
+                    ? (int) $payload['geofence_radius_m']
+                    : null;
+            }
         }
 
         if ($sessionType === 'offline') {

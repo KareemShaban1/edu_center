@@ -15,6 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int $section_id
  * @property-read string|null $start_date
  * @property-read string|null $due_date
+ * @property-read string|null $final_degree
  * @property-read string|null $grade_name
  * @property-read string|null $class_name
  * @property-read string|null $section_name
@@ -35,6 +36,7 @@ final class HomeworkResource extends JsonResource
             'section_id' => (int) $this->section_id,
             'start_date' => (string) ($this->start_date ?? ''),
             'due_date' => (string) ($this->due_date ?? ''),
+            'final_degree' => (string) ($this->final_degree ?? ''),
         ];
 
         if (isset($this->grade_name)) {

@@ -8,6 +8,8 @@ Route::post('/admin/sessions/generate', [App\Http\Controllers\Api\Admin\AdminSes
 Route::post('/admin/sessions', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'store']);
 Route::put('/admin/sessions/{id}', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'update']);
 Route::delete('/admin/sessions/{id}', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'destroy']);
+Route::get('/admin/sessions/{id}/attendance-qr', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'attendanceQr']);
+Route::put('/admin/sessions/{id}/attendance-venue', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'attendanceVenue']);
 Route::get('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'show']);
 Route::put('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'update']);
 Route::get('/admin/students/search-by-code', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'searchByCode']);

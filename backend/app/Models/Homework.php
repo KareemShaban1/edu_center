@@ -18,6 +18,7 @@ class Homework extends Model
         'section_id',
         'submit_date',
         'due_date',
+        'final_degree',
     ];
 
 

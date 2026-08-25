@@ -26,6 +26,7 @@ final class UpdateHomeworkRequest extends FormRequest
             'section_id' => ['required', 'integer', 'exists:center.sections,id'],
             'start_date' => ['required', 'date'],
             'due_date' => ['required', 'date'],
+            'final_degree' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

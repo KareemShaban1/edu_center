@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, ExternalLink, MapPin, QrCode, Save } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import TableLoading, { TableLoadingRow } from '@/components/TableLoading';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,15 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { toast } from '@/hooks/use-toast';
 import { useAdminBootstrap } from '@/hooks/use-admin-bootstrap';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { adminAttendanceApi, type AttendanceStatus } from '@/services/endpoints/admin-attendance';
+import {
+  adminAttendanceApi,
+  type AttendanceQrCheckIn,
+  type AttendanceStatus,
+} from '@/services/endpoints/admin-attendance';
 import SessionLinkField from '@/components/SessionLinkField';
 import WhatsAppSectionNotify, { WhatsAppRowButton } from '@/components/admin/WhatsAppSectionNotify';
 import CertificationSectionIssue, { CertificationRowButton } from '@/components/admin/CertificationSectionIssue';
+import { cn } from '@/lib/utils';
 
 interface StudentAttendanceRow {
   student_id: number;
@@ -19,12 +24,86 @@ interface StudentAttendanceRow {
   status: AttendanceStatus;
   notes: string;
   can_whatsapp?: boolean;
+  qr_check_in?: AttendanceQrCheckIn;
 }
 
+function formatScanTime(value: string | null | undefined, locale: string): string {
+  if (!value) return '—';
+  const d = new Date(value.includes('T') ? value : `${value.slice(0, 10)}T${value.slice(11) || '00:00:00'}`);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(locale === 'ar' ? 'ar' : 'en', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function mapsUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps?q=${lat},${lng}`;
+}
+
+function QrCheckInCell({ qr, locale, t }: { qr?: AttendanceQrCheckIn; locale: string; t: (k: string) => string }) {
+  if (!qr?.scanned) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+        <QrCode className="h-3 w-3" />
+        {t('attendanceQr.notScanned')}
+      </span>
+    );
+  }
+
+  const hasCoords = qr.latitude != null && qr.longitude != null;
+
+  return (
+    <div className="min-w-[180px] space-y-1 text-xs">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+        <QrCode className="h-3 w-3" />
+        {t('attendanceQr.scanned')}
+      </span>
+      <p className="tabular-nums text-muted-foreground">
+        <span className="font-medium text-foreground">{t('student.attendance.checkInTime')}:</span>{' '}
+        {formatScanTime(qr.checked_in_at, locale)}
+      </p>
+      {hasCoords ? (
+        <p className="flex flex-wrap items-center gap-1 text-muted-foreground">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="tabular-nums">
+            {qr.latitude!.toFixed(5)}, {qr.longitude!.toFixed(5)}
+          </span>
+          <a
+            href={mapsUrl(qr.latitude!, qr.longitude!)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 text-primary underline"
+            onClick={e => e.stopPropagation()}
+          >
+            {t('attendanceQr.viewMap')}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+      ) : (
+        <p className="text-muted-foreground">{t('attendanceQr.noLocation')}</p>
+      )}
+      {qr.distance_m != null ? (
+        <p className="text-muted-foreground">
+          {t('attendanceQr.distance')}: {Math.round(qr.distance_m)}m
+        </p>
+      ) : null}
+      {qr.accuracy_m != null ? (
+        <p className="text-muted-foreground">
+          {t('attendanceQr.accuracy')}: ±{Math.round(qr.accuracy_m)}m
+        </p>
+      ) : null}
+    </div>
+  );
+}
 export default function AdminAttendanceForm() {
   const { sectionId, date: dateParam } = useParams();
   const navigate = useNavigate();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { data: bootstrap } = useAdminBootstrap();
 
   const section = ((bootstrap?.sections || []) as Array<{ id: number; name: string; grade_id: number; class_id: number }>)
@@ -59,6 +138,7 @@ export default function AdminAttendanceForm() {
         status: r.status,
         notes: r.notes || '',
         can_whatsapp: r.can_whatsapp ?? false,
+        qr_check_in: r.qr_check_in,
       })));
       setSessionId(data.session_id ? Number(data.session_id) : 0);
       setSessionOptions(data.session_options || []);
@@ -100,6 +180,7 @@ export default function AdminAttendanceForm() {
   const presentCount = rows.filter(r => r.status === 'present').length;
   const absentCount = rows.filter(r => r.status === 'absent').length;
   const lateCount = rows.filter(r => r.status === 'late').length;
+  const qrScannedCount = rows.filter(r => r.qr_check_in?.scanned).length;
   const sectionLabel = [grade?.name, cls?.name, section.name].filter(Boolean).join(' — ');
 
   return (
@@ -161,7 +242,7 @@ export default function AdminAttendanceForm() {
         rows={rows}
       />
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-primary">{presentCount}</p>
           <p className="text-xs text-muted-foreground">{t('attendance.present')}</p>
@@ -173,6 +254,10 @@ export default function AdminAttendanceForm() {
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <p className="text-2xl font-bold text-warning">{lateCount}</p>
           <p className="text-xs text-muted-foreground">{t('attendance.late')}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <p className="text-2xl font-bold text-emerald-600">{qrScannedCount}</p>
+          <p className="text-xs text-muted-foreground">{t('attendanceQr.scannedCount')}</p>
         </div>
       </div>
 
@@ -195,17 +280,23 @@ export default function AdminAttendanceForm() {
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('attendance.present')}</th>
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('attendance.absent')}</th>
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground">{t('attendance.late')}</th>
+                <th className="px-3 py-2 text-start font-medium text-muted-foreground min-w-[200px]">
+                  <span className="inline-flex items-center gap-1">
+                    <QrCode className="h-3.5 w-3.5" />
+                    {t('attendanceQr.checkInDetails')}
+                  </span>
+                </th>
                 <th className="px-3 py-2 text-start font-medium text-muted-foreground">{t('attendance.notesPlaceholder')}</th>
                 <th className="px-3 py-2 text-center font-medium text-muted-foreground w-20">{t('crud.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <TableLoadingRow colSpan={7} />
+                <TableLoadingRow colSpan={8} />
               ) : rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">{t('crud.noData')}</td></tr>
               ) : rows.map((row, idx) => (
-                <tr key={row.student_id} className="border-b border-border/50 hover:bg-muted/30">
+                <tr key={row.student_id} className={cn('border-b border-border/50 hover:bg-muted/30', row.qr_check_in?.scanned && 'bg-emerald-500/[0.03]')}>
                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium whitespace-nowrap">{row.student_name}</td>
                   <td className="px-3 py-2 text-center">
@@ -216,6 +307,9 @@ export default function AdminAttendanceForm() {
                   </td>
                   <td className="px-3 py-2 text-center">
                     <input title={t('attendance.late')} type="radio" name={`status-${row.student_id}`} checked={row.status === 'late'} onChange={() => updateRow(row.student_id, 'status', 'late')} className="h-4 w-4 accent-warning cursor-pointer" />
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    <QrCheckInCell qr={row.qr_check_in} locale={locale} t={t} />
                   </td>
                   <td className="px-3 py-2">
                     <input

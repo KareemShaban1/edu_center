@@ -3,12 +3,23 @@ import type { SessionOption } from './session-types';
 
 export type AttendanceStatus = 'present' | 'absent' | 'late';
 
+export interface AttendanceQrCheckIn {
+  scanned: boolean;
+  method?: string | null;
+  checked_in_at?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_m?: number | null;
+  distance_m?: number | null;
+}
+
 export interface AttendanceRowPayload {
   student_id: number;
   student_name: string;
   status: AttendanceStatus;
   notes: string;
   can_whatsapp?: boolean;
+  qr_check_in?: AttendanceQrCheckIn;
 }
 
 export interface AttendanceDayPayload {

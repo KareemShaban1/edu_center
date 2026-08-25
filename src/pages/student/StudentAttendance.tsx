@@ -13,6 +13,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useAppFontClasses } from '@/hooks/use-app-font';
 import { useStudentBootstrap } from '@/hooks/use-student-bootstrap';
 import { cn } from '@/lib/utils';
+import { attendanceStatusLabel } from '@/lib/translate-attendance-error';
 import type { StudentCenterSummary } from '@/services/endpoints/student-self';
 import type { CenterScopedRow } from '@/types/models';
 
@@ -28,6 +29,8 @@ interface AttRow extends CenterScopedRow {
   subject_name?: string;
   session_time?: string | null;
   check_in_time?: string | null;
+  check_in_method?: string | null;
+  check_in_distance_m?: number | null;
 }
 
 const UNKNOWN_TEACHER = '__unknown__';
@@ -142,8 +145,21 @@ function AttendanceShowDialog({ item, onClose }: { item: AttRow; onClose: () => 
           </p>
           <p className="flex flex-wrap items-center gap-2">
             <strong>{t('col.status')}:</strong>
-            <StatusBadge status={item.status} label={t(`attendance.${item.status}`) || item.status} />
+            <StatusBadge status={item.status} label={attendanceStatusLabel(t, item.status)} />
           </p>
+          {item.check_in_method === 'qr' ? (
+            <>
+              <p>
+                <strong>{t('student.attendance.checkInMethod')}:</strong> {t('student.attendance.qrCheckIn')}
+              </p>
+              {item.check_in_distance_m != null ? (
+                <p>
+                  <strong>{t('attendanceQr.distance')}:</strong>{' '}
+                  {t('attendanceQr.distanceMeters').replace('{distance}', String(Math.round(item.check_in_distance_m)))}
+                </p>
+              ) : null}
+            </>
+          ) : null}
           <p>
             <strong>{t('col.subject')}:</strong> {item.subject_name?.trim() || '—'}
           </p>
@@ -237,7 +253,7 @@ function AttendanceCard({
               {t('col.status')}
             </p>
             <div className="mt-1">
-              <StatusBadge status={item.status} label={t(`attendance.${item.status}`) || item.status} />
+              <StatusBadge status={item.status} label={attendanceStatusLabel(t, item.status)} />
             </div>
           </div>
         </div>

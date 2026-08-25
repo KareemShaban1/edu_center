@@ -7,19 +7,18 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  attendanceStatusLabel,
+  translateAttendanceError,
+  translateAttendanceErrorFromUnknown,
+} from '@/lib/translate-attendance-error';
+import {
   attendanceQrApi,
   type AttendanceCheckInResult,
 } from '@/services/endpoints/attendance-qr';
 
-function errMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'object' && error && 'message' in error) return String((error as { message: unknown }).message);
-  return 'Request failed';
-}
-
-async function readDeviceLocation(): Promise<{ latitude: number; longitude: number; accuracy: number | null }> {
+async function readDeviceLocation(t: (key: string) => string): Promise<{ latitude: number; longitude: number; accuracy: number | null }> {
   if (!navigator.geolocation) {
-    throw new Error('Geolocation is not supported on this device.');
+    throw new Error(t('attendanceQr.error.geoUnsupported'));
   }
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
@@ -30,14 +29,14 @@ async function readDeviceLocation(): Promise<{ latitude: number; longitude: numb
           accuracy: typeof pos.coords.accuracy === 'number' ? pos.coords.accuracy : null,
         });
       },
-      err => reject(new Error(err.message || 'Unable to read GPS location.')),
+      err => reject(new Error(translateAttendanceError(err.message || t('attendanceQr.error.gpsUnreadable'), t))),
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
   });
 }
 
 export default function StudentAttendanceCheckIn() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [scanning, setScanning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +45,7 @@ export default function StudentAttendanceCheckIn() {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const handlingRef = useRef(false);
   const readerId = 'student-attendance-qr-reader';
+  const dateLocale = locale === 'ar' ? 'ar' : 'en';
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
@@ -75,7 +75,7 @@ export default function StudentAttendanceCheckIn() {
       } catch {
         // payload may still be valid server-side
       }
-      const loc = await readDeviceLocation();
+      const loc = await readDeviceLocation(t);
       const checkIn = await attendanceQrApi.studentCheckIn({
         payload: rawPayload,
         latitude: loc.latitude,
@@ -87,10 +87,14 @@ export default function StudentAttendanceCheckIn() {
       await queryClient.invalidateQueries({ queryKey: ['student-bootstrap'] });
       toast({
         title: t('attendanceQr.checkInSuccess'),
-        description: t('attendanceQr.checkInSuccessDesc').replace('{status}', checkIn.status),
+        description: t('attendanceQr.checkInSuccessDesc').replace(
+          '{status}',
+          attendanceStatusLabel(t, checkIn.status),
+        ),
       });
     } catch (error: unknown) {
-      toast({ title: t('attendanceQr.checkInFailed'), description: errMessage(error), variant: 'destructive' });
+      const description = translateAttendanceErrorFromUnknown(error, t);
+      toast({ title: t('attendanceQr.checkInFailed'), description, variant: 'destructive' });
       handlingRef.current = false;
     } finally {
       setSubmitting(false);
@@ -116,14 +120,26 @@ export default function StudentAttendanceCheckIn() {
       );
     } catch (error: unknown) {
       setScanning(false);
-      setCameraError(errMessage(error));
-      toast({ title: t('attendanceQr.cameraFailed'), description: errMessage(error), variant: 'destructive' });
+      const description = translateAttendanceErrorFromUnknown(error, t);
+      setCameraError(description);
+      toast({ title: t('attendanceQr.cameraFailed'), description, variant: 'destructive' });
     }
   };
 
   useEffect(() => () => {
     void stopScanner();
   }, [stopScanner]);
+
+  const formattedCheckInTime = result?.checked_in_at
+    ? new Date(result.checked_in_at).toLocaleString(dateLocale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : null;
 
   return (
     <DashboardLayout>
@@ -162,11 +178,13 @@ export default function StudentAttendanceCheckIn() {
           <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm">
             <p className="flex items-center gap-2 font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              {t('attendanceQr.markedAs').replace('{status}', result.status)}
+              {t('attendanceQr.markedAs').replace('{status}', attendanceStatusLabel(t, result.status))}
             </p>
             <p className="mt-1 text-muted-foreground">
-              {result.checked_in_at}
-              {result.distance_m != null ? ` · ${result.distance_m}m` : ''}
+              {formattedCheckInTime}
+              {result.distance_m != null
+                ? ` · ${t('attendanceQr.distanceMeters').replace('{distance}', String(Math.round(result.distance_m)))}`
+                : ''}
             </p>
           </div>
         )}

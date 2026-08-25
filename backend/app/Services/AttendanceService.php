@@ -26,6 +26,19 @@ final class AttendanceService
     {
         $tenantDb = DB::connection('center');
         $hasSessionOnAttendance = Schema::connection('center')->hasColumn('attendances', 'session_id');
+        $hasQrCheckIn = Schema::connection('center')->hasColumn('attendances', 'checked_in_at');
+
+        $attendanceColumns = ['student_id', 'attendance_status', 'notes'];
+        if ($hasQrCheckIn) {
+            $attendanceColumns = array_merge($attendanceColumns, [
+                'checked_in_at',
+                'check_in_latitude',
+                'check_in_longitude',
+                'check_in_accuracy_m',
+                'check_in_distance_m',
+                'check_in_method',
+            ]);
+        }
 
         $students = $tenantDb->table('students')
             ->where('section_id', $sectionId)
@@ -39,10 +52,10 @@ final class AttendanceService
             $attendanceQuery->where('session_id', $filterSessionId);
         }
         $attendanceByStudent = $attendanceQuery
-            ->get(['student_id', 'attendance_status', 'notes'])
+            ->get($attendanceColumns)
             ->keyBy('student_id');
 
-        $rows = $students->map(function ($student) use ($attendanceByStudent) {
+        $rows = $students->map(function ($student) use ($attendanceByStudent, $hasQrCheckIn) {
             $record = $attendanceByStudent->get($student->id);
             $status = 'present';
             if ($record) {
@@ -50,7 +63,7 @@ final class AttendanceService
                 $status = $value === 0 ? 'absent' : ($value === 2 ? 'late' : 'present');
             }
 
-            return [
+            $row = [
                 'student_id' => $student->id,
                 'student_name' => $student->name,
                 'grade_id' => $student->grade_id,
@@ -59,6 +72,32 @@ final class AttendanceService
                 'status' => $status,
                 'notes' => $record?->notes ?? '',
             ];
+
+            if ($hasQrCheckIn) {
+                $method = isset($record->check_in_method) ? (string) ($record->check_in_method ?? '') : '';
+                $checkedInAt = ! empty($record?->checked_in_at) ? (string) $record->checked_in_at : null;
+                $scanned = $method === 'qr' && $checkedInAt !== null;
+
+                $row['qr_check_in'] = [
+                    'scanned' => $scanned,
+                    'method' => $method !== '' ? $method : null,
+                    'checked_in_at' => $checkedInAt,
+                    'latitude' => isset($record->check_in_latitude) && $record->check_in_latitude !== null
+                        ? (float) $record->check_in_latitude
+                        : null,
+                    'longitude' => isset($record->check_in_longitude) && $record->check_in_longitude !== null
+                        ? (float) $record->check_in_longitude
+                        : null,
+                    'accuracy_m' => isset($record->check_in_accuracy_m) && $record->check_in_accuracy_m !== null
+                        ? (float) $record->check_in_accuracy_m
+                        : null,
+                    'distance_m' => isset($record->check_in_distance_m) && $record->check_in_distance_m !== null
+                        ? (float) $record->check_in_distance_m
+                        : null,
+                ];
+            }
+
+            return $row;
         })->values();
 
         $sessionId = $filterSessionId;
@@ -161,10 +200,12 @@ final class AttendanceService
                 }
 
                 if ($exists) {
+                    $update = $data;
+                    unset($update['created_at']);
                     $tenantDb->table('attendances')
                         ->where('student_id', $row['student_id'])
                         ->whereDate('attendance_date', $date)
-                        ->update($data);
+                        ->update($update);
                 } else {
                     $data['created_at'] = now();
                     $tenantDb->table('attendances')->insert($data);

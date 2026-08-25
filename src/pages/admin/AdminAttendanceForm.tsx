@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import TableLoading, { TableLoadingRow } from '@/components/TableLoading';
 import { Button } from '@/components/ui/button';

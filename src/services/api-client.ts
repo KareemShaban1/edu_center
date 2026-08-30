@@ -184,6 +184,29 @@ class ApiClient {
     return this.handleResponse<T>(res);
   }
 
+  async download(path: string, filename: string, useLocale = true): Promise<void> {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
+      headers: this.headers(),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw {
+        message: (body as { message?: string }).message || `Download failed with status ${res.status}`,
+        status: res.status,
+      };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async getPaginated<T>(path: string, params?: Record<string, string | number>): Promise<PaginatedResponse<T>> {
     return this.get<PaginatedResponse<T>>(path, params);
   }

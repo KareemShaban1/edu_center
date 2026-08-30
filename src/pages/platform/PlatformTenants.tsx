@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, Plus, Trash2 } from 'lucide-react';
 import CrudPage, { CrudColumn } from '@/components/CrudPage';
@@ -24,6 +24,119 @@ function defaultEmailPreview(slug: string, role: string): string {
   return s === 'demo' ? `${role}@educenter.com` : `${role}-${s}@educenter.com`;
 }
 
+function TenantLocationFields({
+  form,
+  setForm,
+}: {
+  form: {
+    governorate_id: string;
+    city_id: string;
+    area_id: string;
+    lat: string;
+    long: string;
+  };
+  setForm: React.Dispatch<React.SetStateAction<{
+    name: string;
+    domain: string;
+    slug: string;
+    status: Tenant['status'];
+    plan: string;
+    email: string;
+    phone: string;
+    address: string;
+    governorate_id: string;
+    city_id: string;
+    area_id: string;
+    lat: string;
+    long: string;
+    seed_default_accounts: boolean;
+    admin_name: string;
+    admin_email: string;
+    admin_password: string;
+    teachers: TenantInitialUserRow[];
+  }>>;
+}) {
+  const { t } = useLocale();
+  const { data: governorates = [] } = useQuery({
+    queryKey: ['platform-governorates'],
+    queryFn: () => platformApi.listGovernorates(),
+  });
+  const { data: cities = [] } = useQuery({
+    queryKey: ['platform-cities', form.governorate_id],
+    queryFn: () => platformApi.listCities(form.governorate_id ? { governorate_id: Number(form.governorate_id) } : undefined),
+    enabled: !!form.governorate_id,
+  });
+  const { data: areas = [] } = useQuery({
+    queryKey: ['platform-areas', form.city_id],
+    queryFn: () => platformApi.listAreas(form.city_id ? { city_id: Number(form.city_id) } : undefined),
+    enabled: !!form.city_id,
+  });
+
+  const handleAreaChange = (areaId: string) => {
+    const selected = areas.find(a => String(a.id) === areaId);
+    setForm(f => ({
+      ...f,
+      area_id: areaId,
+      lat: selected?.lat != null ? String(selected.lat) : f.lat,
+      long: selected?.long != null ? String(selected.long) : f.long,
+    }));
+  };
+
+  return (
+    <>
+      <FormField label={t('col.governorate')} id="tenant-governorate">
+        <FormSelect
+          id="tenant-governorate"
+          title={t('col.governorate')}
+          value={form.governorate_id}
+          onChange={e => setForm(f => ({ ...f, governorate_id: e.target.value, city_id: '', area_id: '' }))}
+        >
+          <option value="">{t('form.select')}</option>
+          {governorates.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </FormSelect>
+      </FormField>
+      <FormField label={t('col.city')} id="tenant-city">
+        <FormSelect
+          id="tenant-city"
+          title={t('col.city')}
+          value={form.city_id}
+          onChange={e => setForm(f => ({ ...f, city_id: e.target.value, area_id: '' }))}
+          disabled={!form.governorate_id}
+        >
+          <option value="">{t('form.select')}</option>
+          {cities.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </FormSelect>
+      </FormField>
+      <FormField label={t('col.area')} id="tenant-area">
+        <FormSelect
+          id="tenant-area"
+          title={t('col.area')}
+          value={form.area_id}
+          onChange={e => handleAreaChange(e.target.value)}
+          disabled={!form.city_id}
+        >
+          <option value="">{t('form.select')}</option>
+          {areas.map(a => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </FormSelect>
+      </FormField>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label={t('col.lat')} id="tenant-lat">
+          <FormInput id="tenant-lat" type="number" step="any" value={form.lat} onChange={e => setForm(f => ({ ...f, lat: e.target.value }))} />
+        </FormField>
+        <FormField label={t('col.long')} id="tenant-long">
+          <FormInput id="tenant-long" type="number" step="any" value={form.long} onChange={e => setForm(f => ({ ...f, long: e.target.value }))} />
+        </FormField>
+      </div>
+    </>
+  );
+}
+
 function TenantForm({
   item,
   onClose,
@@ -37,18 +150,52 @@ function TenantForm({
   const isAr = locale === 'ar';
   const isCreate = !item;
 
+  const { data: fullTenant } = useQuery({
+    queryKey: ['platform-tenant-form', item?.id],
+    queryFn: () => platformApi.getTenant(item!.id),
+    enabled: !!item?.id,
+  });
+
   const [form, setForm] = useState({
     name: item?.name || '',
     domain: item?.domain || '',
     slug: item?.slug || '',
     status: item?.status || 'active',
     plan: item?.plan || 'Starter',
+    email: '',
+    phone: '',
+    address: '',
+    governorate_id: '',
+    city_id: '',
+    area_id: '',
+    lat: '',
+    long: '',
     seed_default_accounts: true,
     admin_name: '',
     admin_email: '',
     admin_password: 'password',
     teachers: [] as TenantInitialUserRow[],
   });
+
+  useEffect(() => {
+    if (!fullTenant) return;
+    setForm(f => ({
+      ...f,
+      name: fullTenant.name || f.name,
+      domain: fullTenant.domain || f.domain,
+      slug: fullTenant.slug || f.slug,
+      status: fullTenant.status || f.status,
+      plan: fullTenant.plan || f.plan,
+      email: fullTenant.email || '',
+      phone: fullTenant.phone || '',
+      address: fullTenant.address || '',
+      governorate_id: fullTenant.governorate_id ? String(fullTenant.governorate_id) : '',
+      city_id: fullTenant.city_id ? String(fullTenant.city_id) : '',
+      area_id: fullTenant.area_id ? String(fullTenant.area_id) : '',
+      lat: fullTenant.lat != null ? String(fullTenant.lat) : '',
+      long: fullTenant.long != null ? String(fullTenant.long) : '',
+    }));
+  }, [fullTenant]);
 
   const slugPreview = useMemo(() => {
     const raw = form.slug.trim() || form.name.trim();
@@ -64,6 +211,14 @@ function TenantForm({
       slug: form.slug || undefined,
       status: form.status as Tenant['status'],
       plan: form.plan,
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      address: form.address.trim() || null,
+      governorate_id: form.governorate_id ? Number(form.governorate_id) : null,
+      city_id: form.city_id ? Number(form.city_id) : null,
+      area_id: form.area_id ? Number(form.area_id) : null,
+      lat: form.lat.trim() ? Number(form.lat) : null,
+      long: form.long.trim() ? Number(form.long) : null,
     };
 
     if (isCreate) {
@@ -151,6 +306,20 @@ function TenantForm({
           <option value="inactive">Inactive</option>
         </FormSelect>
       </FormField>
+
+      <div className="space-y-3 rounded-lg border border-border p-4">
+        <p className="text-sm font-semibold">{t('col.address')}</p>
+        <FormField label={t('col.email')} id="tenant-email">
+          <FormInput id="tenant-email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        </FormField>
+        <FormField label={t('col.phone')} id="tenant-phone">
+          <FormInput id="tenant-phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+        </FormField>
+        <FormField label={t('col.address')} id="tenant-address">
+          <FormInput id="tenant-address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+        </FormField>
+        <TenantLocationFields form={form} setForm={setForm} />
+      </div>
 
       {isCreate && (
         <>
@@ -323,7 +492,11 @@ export default function PlatformTenants() {
         { label: t('col.domain'), value: viewItem.domain || '—' },
         { label: t('col.email'), value: viewItem.email || '—' },
         { label: t('col.phone'), value: viewItem.phone || '—' },
-        { label: t('col.city'), value: viewItem.city || '—' },
+        { label: t('col.governorate'), value: viewItem.governorate_name || '—' },
+        { label: t('col.city'), value: viewItem.city_name || '—' },
+        { label: t('col.area'), value: viewItem.area_name || '—' },
+        { label: t('col.lat'), value: viewItem.lat != null ? String(viewItem.lat) : '—' },
+        { label: t('col.long'), value: viewItem.long != null ? String(viewItem.long) : '—' },
         { label: t('col.address'), value: viewItem.address || '—' },
         { label: t('col.plan'), value: viewItem.plan || '—' },
         { label: t('col.status'), value: <StatusBadge status={viewItem.status} /> },

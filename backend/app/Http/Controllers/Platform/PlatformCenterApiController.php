@@ -151,11 +151,19 @@ class PlatformCenterApiController extends Controller
         ];
 
         if ($full) {
+            $center->loadMissing(['governorate', 'city', 'area']);
             $payload = array_merge($payload, [
                 'email' => $center->email,
                 'phone' => $center->phone,
                 'address' => $center->address,
-                'city' => $center->city,
+                'governorate_id' => $center->governorate_id,
+                'city_id' => $center->city_id,
+                'area_id' => $center->area_id,
+                'governorate_name' => $center->governorate?->name,
+                'city_name' => $center->city?->name,
+                'area_name' => $center->area?->name,
+                'lat' => $center->lat,
+                'long' => $center->long,
                 'updated_at' => optional($center->updated_at)->format('Y-m-d H:i') ?? null,
                 'subscription' => [
                     'plan' => data_get($subscription, 'plan', $center->plan()),
@@ -203,6 +211,14 @@ class PlatformCenterApiController extends Controller
             'initial_users.students.*.name' => ['required', 'string', 'max:255'],
             'initial_users.students.*.email' => ['required', 'email', 'max:255'],
             'initial_users.students.*.password' => ['nullable', 'string', 'min:6', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'governorate_id' => ['nullable', 'integer', 'exists:governorates,id'],
+            'city_id' => ['nullable', 'integer', 'exists:cities,id'],
+            'area_id' => ['nullable', 'integer', 'exists:areas,id'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'long' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $slug = ! empty($payload['slug']) ? Str::slug($payload['slug']) : Str::slug($payload['name']);
@@ -220,6 +236,14 @@ class PlatformCenterApiController extends Controller
             'name' => $payload['name'],
             'slug' => $slug,
             'domain' => $payload['domain'] ?? ($slug.'.localhost'),
+            'email' => $payload['email'] ?? null,
+            'phone' => $payload['phone'] ?? null,
+            'address' => $payload['address'] ?? null,
+            'governorate_id' => $payload['governorate_id'] ?? null,
+            'city_id' => $payload['city_id'] ?? null,
+            'area_id' => $payload['area_id'] ?? null,
+            'lat' => $payload['lat'] ?? null,
+            'long' => $payload['long'] ?? null,
             'status' => (($payload['status'] ?? 'active') === 'active') ? 1 : 0,
             'data' => [
                 'plan' => $plan,
@@ -282,6 +306,14 @@ class PlatformCenterApiController extends Controller
             'domain' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:active,inactive'],
             'plan' => ['nullable', 'string', 'max:100'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'governorate_id' => ['nullable', 'integer', 'exists:governorates,id'],
+            'city_id' => ['nullable', 'integer', 'exists:cities,id'],
+            'area_id' => ['nullable', 'integer', 'exists:areas,id'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'long' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $data = is_array($center->data) ? $center->data : [];
@@ -291,6 +323,14 @@ class PlatformCenterApiController extends Controller
         $center->update([
             'name' => $payload['name'],
             'domain' => $payload['domain'] ?? $center->domain,
+            'email' => array_key_exists('email', $payload) ? $payload['email'] : $center->email,
+            'phone' => array_key_exists('phone', $payload) ? $payload['phone'] : $center->phone,
+            'address' => array_key_exists('address', $payload) ? $payload['address'] : $center->address,
+            'governorate_id' => array_key_exists('governorate_id', $payload) ? $payload['governorate_id'] : $center->governorate_id,
+            'city_id' => array_key_exists('city_id', $payload) ? $payload['city_id'] : $center->city_id,
+            'area_id' => array_key_exists('area_id', $payload) ? $payload['area_id'] : $center->area_id,
+            'lat' => array_key_exists('lat', $payload) ? $payload['lat'] : $center->lat,
+            'long' => array_key_exists('long', $payload) ? $payload['long'] : $center->long,
             'status' => (($payload['status'] ?? 'active') === 'active') ? 1 : 0,
             'data' => $data,
         ]);

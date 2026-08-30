@@ -118,6 +118,7 @@ export default function AdminUnits() {
           <UnitForm
             item={item}
             classes={classes}
+            grades={grades}
             onClose={onClose}
             onSave={async (payload) => {
               try {
@@ -154,12 +155,14 @@ export default function AdminUnits() {
 function UnitForm({
   item,
   classes,
+  grades,
   onClose,
   onSave,
   saving,
 }: {
   item: Unit | null;
-  classes: Array<{ id: number; name: string }>;
+  classes: Array<{ id: number; name: string; grade_id: number }>;
+  grades: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSave: (payload: UnitSavePayload) => Promise<void>;
   saving: boolean;
@@ -171,6 +174,15 @@ function UnitForm({
   const [files, setFiles] = useState<File[]>([]);
   const [removeMediaIds, setRemoveMediaIds] = useState<number[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const classOptions = useMemo(() => (
+    classes
+      .map(cls => ({
+        ...cls,
+        gradeName: grades.find(grade => grade.id === cls.grade_id)?.name ?? '',
+      }))
+      .sort((a, b) => a.gradeName.localeCompare(b.gradeName) || a.name.localeCompare(b.name))
+  ), [classes, grades]);
 
   const existingMedia = useMemo(
     () => (item?.media || []).filter(m => !removeMediaIds.includes(Number(m.id))),
@@ -238,7 +250,11 @@ function UnitForm({
             className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             value={classId} onChange={e => setClassId(Number(e.target.value))}
           >
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {classOptions.map(cls => (
+              <option key={cls.id} value={cls.id}>
+                {cls.gradeName ? `${cls.gradeName} — ${cls.name}` : cls.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>

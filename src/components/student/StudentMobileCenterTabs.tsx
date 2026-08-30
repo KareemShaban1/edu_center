@@ -275,7 +275,7 @@ export default function StudentMobileCenterTabs({
             <section>
               <SectionHeader
                 title={t('section.recentExams')}
-                to="/student/grades"
+                to="/student/exams"
                 viewAllLabel={t('student.viewAll')}
               />
               {scoped.exams.length === 0 ? (
@@ -303,7 +303,7 @@ export default function StudentMobileCenterTabs({
             <section>
               <SectionHeader
                 title={t('section.recentQuizzes')}
-                to="/student/grades"
+                to="/student/quizzes"
                 viewAllLabel={t('student.viewAll')}
               />
               {scoped.quizzes.length === 0 ? (

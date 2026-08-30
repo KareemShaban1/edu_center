@@ -18,8 +18,7 @@ class StripApiLocalePrefix
 
     public function handle(Request $request, Closure $next)
     {
-        $uri = (string) $request->server->get('REQUEST_URI', '');
-        $path = parse_url($uri, PHP_URL_PATH) ?? '';
+        $path = $request->getPathInfo();
 
         if (! preg_match('#^/api/('.implode('|', self::LOCALES).')(/.*)?$#', $path, $matches)) {
             return $next($request);
@@ -31,10 +30,21 @@ class StripApiLocalePrefix
         }
 
         $newPath = '/api'.$rest;
-        $query = parse_url($uri, PHP_URL_QUERY);
+        $query = $request->getQueryString();
         $newUri = $newPath.($query ? '?'.$query : '');
 
         $request->server->set('REQUEST_URI', $newUri);
+        $request->server->set('PATH_INFO', $newPath);
+        $request->initialize(
+            $request->query->all(),
+            $request->request->all(),
+            $request->attributes->all(),
+            $request->cookies->all(),
+            $request->files->all(),
+            $request->server->all(),
+            $request->getContent()
+        );
+
         app()->setLocale($matches[1]);
 
         return $next($request);

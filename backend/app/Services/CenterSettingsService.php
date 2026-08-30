@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Centers\CenterContext;
+use App\Models\Platform\Center;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -160,12 +162,22 @@ class CenterSettingsService
     {
         $all = $this->all();
         $automation = $this->sessionAutomation();
+        $center = $this->currentCenter();
+        $center?->loadMissing(['governorate', 'city', 'area']);
 
         return [
             'center_name' => $all['center_name'] ?? '',
             'center_email' => $all['center_email'] ?? '',
             'phone' => $all['phone'] ?? '',
             'address' => $all['address'] ?? '',
+            'governorate_id' => $center?->governorate_id,
+            'city_id' => $center?->city_id,
+            'area_id' => $center?->area_id,
+            'governorate_name' => $center?->governorate?->name,
+            'city_name' => $center?->city?->name,
+            'area_name' => $center?->area?->name,
+            'lat' => $center?->lat,
+            'long' => $center?->long,
             'current_session' => $all['current_session'] ?? '',
             'timezone' => $automation['timezone'],
             'auto_generate_sessions' => $automation['enabled'],
@@ -212,5 +224,33 @@ class CenterSettingsService
         }
 
         $this->putMany($pairs);
+        $this->applyCenterLocationPayload($payload);
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    protected function applyCenterLocationPayload(array $payload): void
+    {
+        $center = $this->currentCenter();
+        if (! $center) {
+            return;
+        }
+
+        $updates = [];
+        foreach (['governorate_id', 'city_id', 'area_id', 'lat', 'long'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $updates[$key] = $payload[$key];
+            }
+        }
+
+        if ($updates === []) {
+            return;
+        }
+
+        $center->update($updates);
+    }
+
+    protected function currentCenter(): ?Center
+    {
+        return CenterContext::center();
     }
 }

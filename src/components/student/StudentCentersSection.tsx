@@ -59,7 +59,13 @@ export default function StudentCentersSection({ centers, loading }: StudentCente
           const profile = center.profile;
           const stats = center.stats;
           const enrollment = [profile?.grade_name, profile?.class_name, profile?.section_name].filter(Boolean).join(' · ');
-          const location = [center.address, center.city].filter(Boolean).join(', ');
+          const locationParts = [
+            center.area_name,
+            center.city_name,
+            center.governorate_name,
+            center.address,
+          ].filter(Boolean);
+          const location = locationParts.join(', ');
 
           return (
             <AccordionItem

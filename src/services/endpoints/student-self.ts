@@ -70,8 +70,11 @@ export interface StudentSelfBootstrapPayload {
     title: string;
     subject: string;
     due_date: string;
+    submit_date?: string;
     status: string;
-    grade: string;
+    degree: string;
+    final_degree?: string;
+    rate?: string;
     student_notes?: string;
     response?: string;
     file_url?: string | null;
@@ -79,6 +82,9 @@ export interface StudentSelfBootstrapPayload {
     correction_url?: string | null;
     correction_name?: string | null;
     upload_date?: string;
+    teacher?: string;
+    teacher_id?: number | null;
+    teacher_subject?: string;
     center_id?: string | number;
     center_slug?: string;
   }>;
@@ -154,7 +160,14 @@ export interface StudentCenterSummary {
   email?: string;
   phone?: string;
   address?: string;
-  city?: string;
+  governorate_id?: number | null;
+  city_id?: number | null;
+  area_id?: number | null;
+  governorate_name?: string;
+  city_name?: string;
+  area_name?: string;
+  lat?: number | null;
+  long?: number | null;
   profile?: StudentCenterProfile | null;
   stats?: StudentCenterStats;
 }

@@ -1,10 +1,19 @@
 import { apiClient, USE_MOCK } from '../api-client';
+import type { PlatformArea, PlatformCity, PlatformGovernorate } from '@/types/models';
 
 export interface AdminSettings {
   center_name: string;
   center_email: string;
   phone: string;
   address: string;
+  governorate_id?: number | null;
+  city_id?: number | null;
+  area_id?: number | null;
+  governorate_name?: string | null;
+  city_name?: string | null;
+  area_name?: string | null;
+  lat?: number | null;
+  long?: number | null;
   current_session: string;
   timezone: string;
   auto_generate_sessions: boolean;
@@ -58,5 +67,39 @@ export const adminSettingsApi = {
       return { message: 'Settings saved.', settings: { ...mockSettings }, generation: null };
     }
     return apiClient.put<AdminSettingsSaveResult>('/admin/settings', payload, false);
+  },
+
+  async listGovernorates(): Promise<PlatformGovernorate[]> {
+    if (USE_MOCK) {
+      return [
+        { id: 1, name: 'Qalyubia', status: 'active' },
+        { id: 2, name: 'Cairo', status: 'active' },
+      ];
+    }
+    return apiClient.get<PlatformGovernorate[]>('/admin/governorates', undefined, false);
+  },
+
+  async listCities(params?: { governorate_id?: number }): Promise<PlatformCity[]> {
+    if (USE_MOCK) {
+      const all = [
+        { id: 1, name: 'Benha', governorate_id: 1, status: 'active' as const },
+        { id: 2, name: 'Cairo', governorate_id: 2, status: 'active' as const },
+      ];
+      return params?.governorate_id ? all.filter(c => c.governorate_id === params.governorate_id) : all;
+    }
+    const query = params?.governorate_id ? { governorate_id: params.governorate_id } : undefined;
+    return apiClient.get<PlatformCity[]>('/admin/cities', query, false);
+  },
+
+  async listAreas(params?: { city_id?: number }): Promise<PlatformArea[]> {
+    if (USE_MOCK) {
+      const all: PlatformArea[] = [
+        { id: 1, name: 'Benha Center', city_id: 1, lat: 30.4663, long: 31.1848, status: 'active' },
+        { id: 2, name: 'Nasr City', city_id: 2, lat: 30.0511, long: 31.3656, status: 'active' },
+      ];
+      return params?.city_id ? all.filter(a => a.city_id === params.city_id) : all;
+    }
+    const query = params?.city_id ? { city_id: params.city_id } : undefined;
+    return apiClient.get<PlatformArea[]>('/admin/areas', query, false);
   },
 };

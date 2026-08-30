@@ -1,5 +1,5 @@
 import { apiClient, USE_MOCK } from '../api-client';
-import type { ActivityLog, PlatformParent, PlatformStudent, Subscription, Tenant, TenantCreatePayload, TenantCreateResponse, User } from '@/types/models';
+import type { ActivityLog, PlatformArea, PlatformCity, PlatformGovernorate, PlatformParent, PlatformStudent, Subscription, Tenant, TenantCreatePayload, TenantCreateResponse, User } from '@/types/models';
 import {
   BRANDING_STORAGE_KEY,
   DEFAULT_APP_BRANDING,
@@ -122,7 +122,14 @@ export const platformApi = {
         email: found.email ?? null,
         phone: found.phone ?? null,
         address: found.address ?? null,
-        city: found.city ?? null,
+        governorate_id: found.governorate_id ?? null,
+        city_id: found.city_id ?? null,
+        area_id: found.area_id ?? null,
+        governorate_name: found.governorate_name ?? null,
+        city_name: found.city_name ?? null,
+        area_name: found.area_name ?? null,
+        lat: found.lat ?? null,
+        long: found.long ?? null,
         subscription: found.subscription ?? {
           plan: found.plan,
           amount: 0,
@@ -356,5 +363,108 @@ export const platformApi = {
       return normalized;
     }
     return apiClient.put<AppBranding>('/platform/branding', normalized, false);
+  },
+
+  async listGovernorates(): Promise<PlatformGovernorate[]> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return [
+        { id: 1, name: 'Qalyubia', status: 'active', cities_count: 1 },
+        { id: 2, name: 'Cairo', status: 'active', cities_count: 1 },
+      ];
+    }
+    return apiClient.get<PlatformGovernorate[]>('/platform/governorates', undefined, false);
+  },
+
+  async saveGovernorate(payload: Partial<PlatformGovernorate> & { id?: number }): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    if (payload.id) {
+      await apiClient.put(`/platform/governorates/${payload.id}`, payload, false);
+      return;
+    }
+    await apiClient.post('/platform/governorates', payload, false);
+  },
+
+  async deleteGovernorate(id: number): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    return apiClient.delete<void>(`/platform/governorates/${id}`, false);
+  },
+
+  async listCities(params?: { governorate_id?: number }): Promise<PlatformCity[]> {
+    if (USE_MOCK) {
+      await sleep(200);
+      const all = [
+        { id: 1, name: 'Benha', governorate_id: 1, governorate_name: 'Qalyubia', status: 'active' as const },
+        { id: 2, name: 'Cairo', governorate_id: 2, governorate_name: 'Cairo', status: 'active' as const },
+      ];
+      if (params?.governorate_id) {
+        return all.filter(c => c.governorate_id === params.governorate_id);
+      }
+      return all;
+    }
+    const query = params?.governorate_id ? { governorate_id: params.governorate_id } : undefined;
+    return apiClient.get<PlatformCity[]>('/platform/cities', query, false);
+  },
+
+  async saveCity(payload: Partial<PlatformCity> & { id?: number }): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    if (payload.id) {
+      await apiClient.put(`/platform/cities/${payload.id}`, payload, false);
+      return;
+    }
+    await apiClient.post('/platform/cities', payload, false);
+  },
+
+  async deleteCity(id: number): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    return apiClient.delete<void>(`/platform/cities/${id}`, false);
+  },
+
+  async listAreas(params?: { city_id?: number }): Promise<PlatformArea[]> {
+    if (USE_MOCK) {
+      await sleep(200);
+      const all: PlatformArea[] = [
+        { id: 1, name: 'Benha Center', city_id: 1, city_name: 'Benha', governorate_id: 1, governorate_name: 'Qalyubia', lat: 30.4663, long: 31.1848, status: 'active' },
+        { id: 2, name: 'Nasr City', city_id: 2, city_name: 'Cairo', governorate_id: 2, governorate_name: 'Cairo', lat: 30.0511, long: 31.3656, status: 'active' },
+      ];
+      if (params?.city_id) {
+        return all.filter(a => a.city_id === params.city_id);
+      }
+      return all;
+    }
+    const query = params?.city_id ? { city_id: params.city_id } : undefined;
+    return apiClient.get<PlatformArea[]>('/platform/areas', query, false);
+  },
+
+  async saveArea(payload: Partial<PlatformArea> & { id?: number }): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    if (payload.id) {
+      await apiClient.put(`/platform/areas/${payload.id}`, payload, false);
+      return;
+    }
+    await apiClient.post('/platform/areas', payload, false);
+  },
+
+  async deleteArea(id: number): Promise<void> {
+    if (USE_MOCK) {
+      await sleep(200);
+      return;
+    }
+    return apiClient.delete<void>(`/platform/areas/${id}`, false);
   },
 };

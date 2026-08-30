@@ -16,3 +16,15 @@ Route::get('/platform/parents', [App\Http\Controllers\Api\Platform\PlatformParen
 Route::get('/platform/parents/{id}', [App\Http\Controllers\Api\Platform\PlatformParentsApiController::class, 'show'])->whereNumber('id');
 Route::get('/platform/roles', [App\Http\Controllers\Api\Platform\PlatformRolesApiController::class, 'index']);
 Route::get('/platform/activity-logs', [App\Http\Controllers\Api\Platform\PlatformActivityLogsApiController::class, 'index']);
+Route::get('/platform/governorates', [App\Http\Controllers\Api\Platform\PlatformGovernoratesApiController::class, 'index']);
+Route::post('/platform/governorates', [App\Http\Controllers\Api\Platform\PlatformGovernoratesApiController::class, 'store']);
+Route::put('/platform/governorates/{id}', [App\Http\Controllers\Api\Platform\PlatformGovernoratesApiController::class, 'update']);
+Route::delete('/platform/governorates/{id}', [App\Http\Controllers\Api\Platform\PlatformGovernoratesApiController::class, 'destroy']);
+Route::get('/platform/cities', [App\Http\Controllers\Api\Platform\PlatformCitiesApiController::class, 'index']);
+Route::post('/platform/cities', [App\Http\Controllers\Api\Platform\PlatformCitiesApiController::class, 'store']);
+Route::put('/platform/cities/{id}', [App\Http\Controllers\Api\Platform\PlatformCitiesApiController::class, 'update']);
+Route::delete('/platform/cities/{id}', [App\Http\Controllers\Api\Platform\PlatformCitiesApiController::class, 'destroy']);
+Route::get('/platform/areas', [App\Http\Controllers\Api\Platform\PlatformAreasApiController::class, 'index']);
+Route::post('/platform/areas', [App\Http\Controllers\Api\Platform\PlatformAreasApiController::class, 'store']);
+Route::put('/platform/areas/{id}', [App\Http\Controllers\Api\Platform\PlatformAreasApiController::class, 'update']);
+Route::delete('/platform/areas/{id}', [App\Http\Controllers\Api\Platform\PlatformAreasApiController::class, 'destroy']);

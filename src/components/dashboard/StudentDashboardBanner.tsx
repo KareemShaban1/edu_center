@@ -84,7 +84,7 @@ export default function StudentDashboardBanner({
 
           <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
             <Link
-              to="/student/grades"
+              to="/student/exams"
               className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-4 py-2 text-sm font-semibold backdrop-blur transition-colors hover:bg-background"
             >
               <Trophy className="h-4 w-4 text-warning" aria-hidden />

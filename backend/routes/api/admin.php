@@ -12,6 +12,9 @@ Route::get('/admin/sessions/{id}/attendance-qr', [App\Http\Controllers\Api\Admin
 Route::put('/admin/sessions/{id}/attendance-venue', [App\Http\Controllers\Api\Admin\AdminSessionsApiController::class, 'attendanceVenue']);
 Route::get('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'show']);
 Route::put('/admin/settings', [App\Http\Controllers\Api\Admin\AdminSettingsApiController::class, 'update']);
+Route::get('/admin/governorates', [App\Http\Controllers\Api\Admin\AdminLocationsApiController::class, 'governorates']);
+Route::get('/admin/cities', [App\Http\Controllers\Api\Admin\AdminLocationsApiController::class, 'cities']);
+Route::get('/admin/areas', [App\Http\Controllers\Api\Admin\AdminLocationsApiController::class, 'areas']);
 Route::get('/admin/students/search-by-code', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'searchByCode']);
 Route::get('/admin/students/{id}', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'show'])->whereNumber('id');
 Route::post('/admin/students/{id}/assign-center', [App\Http\Controllers\Api\Admin\AdminStudentsApiController::class, 'postAssignCenter']);
@@ -45,6 +48,20 @@ Route::get('/admin/homework/{id}/submissions', [App\Http\Controllers\Api\Admin\A
 Route::put('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'updateSubmissions'])->whereNumber('id');
 Route::get('/admin/homework/submissions/{id}', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'showSubmission'])->whereNumber('id');
 Route::post('/admin/homework/submissions/{id}/correction', [App\Http\Controllers\Api\Admin\AdminHomeworkApiController::class, 'postSubmissionsCorrection'])->whereNumber('id');
+Route::post('/admin/questions', [App\Http\Controllers\Api\Admin\AdminQuestionsApiController::class, 'store']);
+Route::post('/admin/questions/bulk', [App\Http\Controllers\Api\Admin\AdminQuestionsApiController::class, 'bulkStore']);
+Route::put('/admin/questions/{id}', [App\Http\Controllers\Api\Admin\AdminQuestionsApiController::class, 'update'])->whereNumber('id');
+Route::delete('/admin/questions/{id}', [App\Http\Controllers\Api\Admin\AdminQuestionsApiController::class, 'destroy'])->whereNumber('id');
+Route::post('/admin/exam-bank', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'store']);
+Route::put('/admin/exam-bank/{id}', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'update'])->whereNumber('id');
+Route::get('/admin/exam-bank/{id}', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'show'])->whereNumber('id');
+Route::put('/admin/exam-bank/{id}/questions/order', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'reorderQuestions'])->whereNumber('id');
+Route::put('/admin/exam-bank/{id}/layout', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'updateLayout'])->whereNumber('id');
+Route::get('/admin/exam-bank/{id}/export/{format}', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'export'])
+    ->whereNumber('id')
+    ->where('format', 'pdf|docx|word');
+Route::delete('/admin/exam-bank/{id}', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'destroy'])->whereNumber('id');
+Route::post('/admin/exam-bank/generate', [App\Http\Controllers\Api\Admin\AdminExamBankApiController::class, 'generate']);
 Route::post('/admin/fees', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'store']);
 Route::put('/admin/fees/{id}', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'update']);
 Route::delete('/admin/fees/{id}', [App\Http\Controllers\Api\Admin\AdminFeesApiController::class, 'destroy']);

@@ -24,6 +24,7 @@
         "minishlink/web-push": "^9.0",
         "opcodesio/log-viewer": "^2.5",
         "php-flasher/flasher-toastr-laravel": "^1.15",
+        "phpoffice/phpword": "^1.4",
         "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-medialibrary": "^10.15",
         "spatie/laravel-permission": "^6.21",

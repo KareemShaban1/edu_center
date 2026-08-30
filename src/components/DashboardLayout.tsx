@@ -40,6 +40,9 @@ import {
   ListTodo,
   NotebookPen,
   ScanLine,
+  MapPin,
+  HelpCircle,
+  ListPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
@@ -105,6 +108,19 @@ const platformNavBlocks: NavBlock[] = [
   {
     type: 'group',
     group: {
+      id: 'platform-locations',
+      labelKey: 'nav.group.locations',
+      icon: MapPin,
+      items: [
+        { labelKey: 'nav.governorates', path: '/platform/governorates', icon: MapPin },
+        { labelKey: 'nav.cities', path: '/platform/cities', icon: MapPin },
+        { labelKey: 'nav.areas', path: '/platform/areas', icon: MapPin },
+      ],
+    },
+  },
+  {
+    type: 'group',
+    group: {
       id: 'platform-access',
       labelKey: 'nav.group.access',
       icon: Shield,
@@ -158,6 +174,9 @@ const adminNavBlocks: NavBlock[] = [
       items: [
         { labelKey: 'nav.units', path: '/admin/units', icon: BookOpen },
         { labelKey: 'nav.lessons', path: '/admin/lessons', icon: FileText },
+        { labelKey: 'nav.questions', path: '/admin/questions', icon: HelpCircle },
+        { labelKey: 'nav.bulkQuestions', path: '/admin/questions/bulk', icon: ListPlus },
+        { labelKey: 'nav.examBank', path: '/admin/exam-bank', icon: ClipboardList },
         { labelKey: 'nav.homework', path: '/admin/homework', icon: ClipboardList },
         { labelKey: 'nav.library', path: '/admin/library', icon: Library },
 
@@ -294,7 +313,8 @@ const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.mySessions', path: '/student/sessions', icon: BookOpen } },
   { type: 'link', item: { labelKey: 'nav.attendance', path: '/student/attendance', icon: CalendarCheck } },
   { type: 'link', item: { labelKey: 'nav.attendanceCheckIn', path: '/student/attendance/check-in', icon: ScanLine } },
-  { type: 'link', item: { labelKey: 'nav.myGrades', path: '/student/grades', icon: ClipboardList } },
+  { type: 'link', item: { labelKey: 'nav.exams', path: '/student/exams', icon: GraduationCap } },
+  { type: 'link', item: { labelKey: 'nav.quizzes', path: '/student/quizzes', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
   { type: 'link', item: { labelKey: 'nav.library', path: '/student/library', icon: Library } },
   { type: 'link', item: { labelKey: 'nav.certifications', path: '/student/certifications', icon: Award } },

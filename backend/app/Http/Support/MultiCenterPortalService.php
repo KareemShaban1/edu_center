@@ -479,12 +479,21 @@ class MultiCenterPortalService
         }
 
         if ($teacherId === null) {
-            return [null, ''];
+            return [null, '', ''];
         }
 
-        $name = $tenantDb->table('teachers')->where('id', $teacherId)->value('name');
+        $teacher = $tenantDb->table('teachers')->where('id', $teacherId)->first(['name', 'subject']);
+        if (! $teacher) {
+            return [$teacherId, '', ''];
+        }
 
-        return [$teacherId, trim((string) ($name ?? ''))];
+        return [
+            $teacherId,
+            trim((string) ($teacher->name ?? '')),
+            Schema::connection('center')->hasColumn('teachers', 'subject')
+                ? trim((string) ($teacher->subject ?? ''))
+                : '',
+        ];
     }
 
     /**
@@ -662,6 +671,7 @@ class MultiCenterPortalService
     public function buildStudentCenterSummary(Center $center, int $studentId, ?int $membershipId = null, ?array $block = null): array
     {
         $block ??= $this->studentCenterBlock($center, $studentId);
+        $center->loadMissing(['governorate', 'city', 'area']);
 
         return [
             'membership_id' => $membershipId,
@@ -671,7 +681,14 @@ class MultiCenterPortalService
             'email' => $center->email ?? '',
             'phone' => $center->phone ?? '',
             'address' => $center->address ?? '',
-            'city' => $center->city ?? '',
+            'governorate_id' => $center->governorate_id,
+            'city_id' => $center->city_id,
+            'area_id' => $center->area_id,
+            'governorate_name' => $center->governorate?->name ?? '',
+            'city_name' => $center->city?->name ?? '',
+            'area_name' => $center->area?->name ?? '',
+            'lat' => $center->lat,
+            'long' => $center->long,
             'profile' => $this->enrichStudentProfile($block['profile'] ?? null),
             'stats' => $this->studentCenterStats($block),
         ];
@@ -796,18 +813,27 @@ class MultiCenterPortalService
 
             $homework = collect();
             if (Schema::connection('center')->hasTable('homeworks')) {
+                $homeworkSelect = ['id', 'title', 'due_date'];
+                if (Schema::connection('center')->hasColumn('homeworks', 'submit_date')) {
+                    $homeworkSelect[] = 'submit_date';
+                }
+                if (Schema::connection('center')->hasColumn('homeworks', 'final_degree')) {
+                    $homeworkSelect[] = 'final_degree';
+                }
+
                 $homeworkRows = $db->table('homeworks')
                     ->where('grade_id', $gradeId)
                     ->where('class_id', $classId)
                     ->where('section_id', $sectionId)
                     ->orderByDesc('due_date')
                     ->limit(300)
-                    ->get();
+                    ->get($homeworkSelect);
+                [$teacherId, $teacherName, $teacherSubject] = $this->resolveSectionTeacher($db, $sectionId);
                 $submissions = Schema::connection('center')->hasTable('student_homework')
-                    ? $db->table('student_homework')->where('student_id', $studentId)->get()->keyBy('homework_id')
+                    ? $db->table('student_homework')->where('student_id', $studentId)->get()->keyBy(fn ($row) => (int) $row->homework_id)
                     : collect();
-                $homework = $homeworkRows->map(function ($row) use ($submissions) {
-                    $submission = $submissions->get($row->id);
+                $homework = $homeworkRows->map(function ($row) use ($submissions, $teacherId, $teacherName, $teacherSubject) {
+                    $submission = $submissions->get((int) $row->id);
                     $fileUrl = null;
                     $fileName = null;
                     $correctionUrl = null;
@@ -833,10 +859,16 @@ class MultiCenterPortalService
                         'title' => $row->title,
                         'subject' => 'Homework',
                         'due_date' => (string) $row->due_date,
-                        'status' => $submission->status ?? 'not_submitted',
-                        'grade' => $submission->degree ?? '—',
-                        'student_notes' => $submission->student_notes ?? '',
-                        'response' => $submission->response ?? '',
+                        'submit_date' => (string) ($row->submit_date ?? ''),
+                        'status' => $submission?->status ?? 'not_submitted',
+                        'degree' => filled($submission?->degree) ? (string) $submission->degree : '—',
+                        'final_degree' => (string) ($row->final_degree ?? ''),
+                        'rate' => filled($submission?->rate) ? (string) $submission->rate : '—',
+                        'teacher_id' => $teacherId,
+                        'teacher' => $teacherName,
+                        'teacher_subject' => $teacherSubject,
+                        'student_notes' => $submission?->student_notes ?? '',
+                        'response' => $submission?->response ?? '',
                         'file_url' => $fileUrl,
                         'file_name' => $fileName,
                         'correction_url' => $correctionUrl,

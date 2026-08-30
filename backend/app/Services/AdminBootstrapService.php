@@ -10,6 +10,7 @@ use App\Models\Lesson;
 use App\Models\Platform\Center;
 use App\Models\Teacher;
 use App\Models\Unit;
+use App\Services\ExamBankService;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\Schema;
 
 final class AdminBootstrapService
 {
+    public function __construct(
+        private readonly ExamBankService $examBankService,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -115,6 +120,8 @@ final class AdminBootstrapService
         $units = $this->units($tenantDb);
         $lessons = $this->lessons($tenantDb);
         $homeworks = $this->homeworks($tenantDb);
+        $questions = $this->questions($tenantDb);
+        $generatedExams = $this->exams();
         $library = $this->library($tenantDb);
         $announcements = $this->announcements($tenantDb);
         $users = $this->users($tenantDb);
@@ -142,6 +149,9 @@ final class AdminBootstrapService
             'units' => $units,
             'lessons' => $lessons,
             'homework' => $homeworks,
+            'questions' => $questions,
+            'exams' => $generatedExams,
+            'generated_exams' => $generatedExams,
             'library' => $library,
             'announcements' => $announcements,
             'users' => $users,
@@ -407,6 +417,73 @@ final class AdminBootstrapService
                 'submissions_count' => (int) ($submissionCounts[$row->id] ?? 0),
             ];
         });
+    }
+
+    private function questions(Connection $tenantDb): Collection
+    {
+        if (! Schema::connection('center')->hasTable('questions')) {
+            return collect();
+        }
+
+        $questions = $tenantDb->table('questions')
+            ->select(
+                'id',
+                'question_text',
+                'type',
+                'lesson_id',
+                'grade_id',
+                'class_id',
+            )
+            ->orderByDesc('id')
+            ->get();
+
+        $answersByQuestion = collect();
+        if (Schema::connection('center')->hasTable('answers') && $questions->isNotEmpty()) {
+            $answersByQuestion = $tenantDb->table('answers')
+                ->select('id', 'question_id', 'answer_text', 'is_correct')
+                ->whereIn('question_id', $questions->pluck('id'))
+                ->get()
+                ->groupBy('question_id');
+        }
+
+        $examIdsByQuestion = collect();
+        if (Schema::connection('center')->hasTable('exam_questions') && $questions->isNotEmpty()) {
+            $examIdsByQuestion = $tenantDb->table('exam_questions')
+                ->select('question_id', 'exam_id')
+                ->whereIn('question_id', $questions->pluck('id'))
+                ->get()
+                ->groupBy('question_id')
+                ->map(fn ($rows) => $rows->pluck('exam_id')->map(fn ($id) => (int) $id)->values()->all());
+        }
+
+        return $questions->map(function ($row) use ($answersByQuestion, $examIdsByQuestion) {
+            $answers = ($answersByQuestion[$row->id] ?? collect())->map(fn ($answer) => [
+                'id' => $answer->id,
+                'answer_text' => $answer->answer_text,
+                'is_correct' => (bool) $answer->is_correct,
+                'question_id' => $answer->question_id,
+            ])->values()->all();
+
+            return [
+                'id' => $row->id,
+                'question_text' => $row->question_text,
+                'type' => $row->type,
+                'lesson_id' => $row->lesson_id,
+                'exam_ids' => $examIdsByQuestion->get($row->id, []),
+                'grade_id' => $row->grade_id,
+                'class_id' => $row->class_id,
+                'answers' => $answers,
+            ];
+        });
+    }
+
+    private function exams(): Collection
+    {
+        if (! Schema::connection('center')->hasTable('exams') && ! Schema::connection('center')->hasTable('generated_exams')) {
+            return collect();
+        }
+
+        return $this->examBankService->listSummaries();
     }
 
     private function library(Connection $tenantDb): Collection

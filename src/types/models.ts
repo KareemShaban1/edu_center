@@ -289,18 +289,70 @@ export interface Word {
 
 export interface Question {
   id: number;
-  title: string;
-  type: string;
+  question_text: string;
+  type: 'mcq' | 'true_false' | 'short_answer';
+  exam_ids?: number[];
   lesson_id?: number;
+  grade_id?: number;
+  class_id?: number;
+  sort_order?: number;
   answers?: Answer[];
 }
 
 export interface Answer {
-  id: number;
-  answer: string;
+  id?: number;
+  answer_text: string;
   is_correct: boolean;
-  question_id: number;
+  question_id?: number;
 }
+
+export interface ExamLayout {
+  header: {
+    enabled: boolean;
+    html: string;
+    align: 'left' | 'center' | 'right';
+  };
+  footer: {
+    enabled: boolean;
+    html: string;
+    align: 'left' | 'center' | 'right';
+  };
+  body: {
+    instructions_html: string;
+    show_answers: boolean;
+    number_questions: boolean;
+    font_family: string;
+    font_size: number;
+    answer_marker_style: 'letter_paren' | 'letter_dot' | 'letter_only' | 'number_paren' | 'number_dot' | 'arabic_paren' | 'arabic_dot' | 'bullet' | 'dash';
+    answers_per_row: number;
+    content_direction: 'rtl' | 'ltr';
+    question_spacing: number;
+    question_divider: boolean;
+    short_answer_lines: number;
+  };
+  page: {
+    margin_mm: number;
+    orientation: 'P' | 'L';
+  };
+}
+
+export interface ExamBank {
+  id: number;
+  name: string;
+  grade_id: number;
+  class_id: number;
+  total_questions: number;
+  notes?: string;
+  lesson_ids?: number[];
+  lesson_names?: string[];
+  question_ids?: number[];
+  questions?: Question[];
+  layout?: ExamLayout;
+  created_at?: string;
+}
+
+/** @deprecated Use ExamBank */
+export type GeneratedExam = ExamBank;
 
 export interface LibraryItem {
   id: number;
@@ -389,7 +441,14 @@ export interface Tenant {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
-  city?: string | null;
+  governorate_id?: number | null;
+  city_id?: number | null;
+  area_id?: number | null;
+  governorate_name?: string | null;
+  city_name?: string | null;
+  area_name?: string | null;
+  lat?: number | null;
+  long?: number | null;
   users_count?: number;
   teachers_count?: number;
   students_count?: number;
@@ -435,6 +494,36 @@ export interface TenantProvisionedAccount {
 
 export interface TenantCreateResponse extends Tenant {
   default_accounts?: TenantProvisionedAccount[];
+}
+
+export interface PlatformGovernorate {
+  id: number;
+  name: string;
+  status: 'active' | 'inactive';
+  cities_count?: number;
+  created_at?: string;
+}
+
+export interface PlatformCity {
+  id: number;
+  name: string;
+  governorate_id: number;
+  governorate_name?: string | null;
+  status: 'active' | 'inactive';
+  created_at?: string;
+}
+
+export interface PlatformArea {
+  id: number;
+  name: string;
+  city_id: number;
+  city_name?: string | null;
+  governorate_id?: number | null;
+  governorate_name?: string | null;
+  lat?: number | null;
+  long?: number | null;
+  status: 'active' | 'inactive';
+  created_at?: string;
 }
 
 export interface PlatformCenterRef {

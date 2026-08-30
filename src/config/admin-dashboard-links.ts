@@ -21,6 +21,8 @@ import {
   SlidersHorizontal,
   ListTodo,
   NotebookPen,
+  HelpCircle,
+  ListPlus,
 } from 'lucide-react';
 
 export interface AdminDashboardLink {
@@ -56,6 +58,9 @@ export const adminLinkGroups: AdminDashboardLinkGroup[] = [
     links: [
       { labelKey: 'nav.units', path: '/admin/units', icon: BookMarked },
       { labelKey: 'nav.lessons', path: '/admin/lessons', icon: FileText },
+      { labelKey: 'nav.questions', path: '/admin/questions', icon: HelpCircle },
+      { labelKey: 'nav.bulkQuestions', path: '/admin/questions/bulk', icon: ListPlus },
+      { labelKey: 'nav.examBank', path: '/admin/exam-bank', icon: ClipboardList },
       { labelKey: 'nav.homework', path: '/admin/homework', icon: ClipboardList },
     ],
   },

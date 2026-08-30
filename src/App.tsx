@@ -61,6 +61,10 @@ import AdminReportPayments from "@/pages/admin/AdminReportPayments";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminUnits from "@/pages/admin/AdminUnits";
 import AdminLessons from "@/pages/admin/AdminLessons";
+import AdminQuestions from "@/pages/admin/AdminQuestions";
+import AdminBulkQuestions from "@/pages/admin/AdminBulkQuestions";
+import AdminExamBank from "@/pages/admin/AdminExamBank";
+import AdminExamBuilder from "@/pages/admin/AdminExamBuilder";
 import AdminHomework from "@/pages/admin/AdminHomework";
 import AdminHomeworkReview from "@/pages/admin/AdminHomeworkReview";
 
@@ -91,6 +95,8 @@ import StudentLiveKitSession from "@/pages/student/StudentLiveKitSession";
 import StudentAttendance from "@/pages/student/StudentAttendance";
 import StudentAttendanceCheckIn from "@/pages/student/StudentAttendanceCheckIn";
 import StudentGrades from "@/pages/student/StudentGrades";
+import StudentExams from "@/pages/student/StudentExams";
+import StudentQuizzes from "@/pages/student/StudentQuizzes";
 import StudentHomework from "@/pages/student/StudentHomework";
 import StudentLibrary from "@/pages/student/StudentLibrary";
 import StudentCertifications from "@/pages/student/StudentCertifications";
@@ -109,6 +115,9 @@ import PersonalNotesPage from "@/pages/personal/PersonalNotesPage";
 // Platform
 import PlatformDashboard from "@/pages/platform/PlatformDashboard";
 import PlatformTenants from "@/pages/platform/PlatformTenants";
+import PlatformGovernorates from "@/pages/platform/PlatformGovernorates";
+import PlatformCities from "@/pages/platform/PlatformCities";
+import PlatformAreas from "@/pages/platform/PlatformAreas";
 import PlatformSubscriptions from "@/pages/platform/PlatformSubscriptions";
 import PlatformUsers from "@/pages/platform/PlatformUsers";
 import PlatformStudents from "@/pages/platform/PlatformStudents";
@@ -196,6 +205,11 @@ const App = () => (
               <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
               <Route path="/admin/units" element={<ProtectedRoute allowedRoles={['admin']}><AdminUnits /></ProtectedRoute>} />
               <Route path="/admin/lessons" element={<ProtectedRoute allowedRoles={['admin']}><AdminLessons /></ProtectedRoute>} />
+              <Route path="/admin/questions" element={<ProtectedRoute allowedRoles={['admin']}><AdminQuestions /></ProtectedRoute>} />
+              <Route path="/admin/questions/bulk" element={<ProtectedRoute allowedRoles={['admin']}><AdminBulkQuestions /></ProtectedRoute>} />
+              <Route path="/admin/exam-bank" element={<ProtectedRoute allowedRoles={['admin']}><AdminExamBank /></ProtectedRoute>} />
+              <Route path="/admin/exam-bank/:id/builder" element={<ProtectedRoute allowedRoles={['admin']}><AdminExamBuilder /></ProtectedRoute>} />
+              <Route path="/admin/generated-exams" element={<ProtectedRoute allowedRoles={['admin']}><AdminExamBank /></ProtectedRoute>} />
               <Route path="/admin/homework" element={<ProtectedRoute allowedRoles={['admin']}><AdminHomework /></ProtectedRoute>} />
               <Route path="/admin/homework/:homeworkId/review" element={<ProtectedRoute allowedRoles={['admin']}><AdminHomeworkReview /></ProtectedRoute>} />
               <Route path="/admin/homework/:homeworkId/submissions/:submissionId/remarks" element={<ProtectedRoute allowedRoles={['admin']}><Suspense fallback={null}><AdminHomeworkRemark /></Suspense></ProtectedRoute>} />
@@ -229,6 +243,8 @@ const App = () => (
               <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendance /></ProtectedRoute>} />
               <Route path="/student/attendance/check-in" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentAttendanceCheckIn /></ProtectedRoute>} />
               <Route path="/student/grades" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentGrades /></ProtectedRoute>} />
+              <Route path="/student/exams" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentExams /></ProtectedRoute>} />
+              <Route path="/student/quizzes" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentQuizzes /></ProtectedRoute>} />
               <Route path="/student/homework" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentHomework /></ProtectedRoute>} />
               <Route path="/student/library" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentLibrary /></ProtectedRoute>} />
               <Route path="/student/certifications" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentCertifications /></ProtectedRoute>} />
@@ -247,6 +263,9 @@ const App = () => (
               {/* Platform Admin Routes */}
               <Route path="/platform" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDashboard /></ProtectedRoute>} />
               <Route path="/platform/tenants" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformTenants /></ProtectedRoute>} />
+              <Route path="/platform/governorates" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformGovernorates /></ProtectedRoute>} />
+              <Route path="/platform/cities" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformCities /></ProtectedRoute>} />
+              <Route path="/platform/areas" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformAreas /></ProtectedRoute>} />
               <Route path="/platform/subscriptions" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSubscriptions /></ProtectedRoute>} />
               <Route path="/platform/users" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformUsers /></ProtectedRoute>} />
               <Route path="/platform/students" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformStudents /></ProtectedRoute>} />

@@ -115,15 +115,24 @@ final class StudentBootstrapService
             return ['homework' => collect(), 'options' => collect()];
         }
 
+        $homeworkColumns = ['id', 'title', 'due_date'];
+        if (Schema::connection('center')->hasColumn('homeworks', 'submit_date')) {
+            $homeworkColumns[] = 'submit_date';
+        }
+        if (Schema::connection('center')->hasColumn('homeworks', 'final_degree')) {
+            $homeworkColumns[] = 'final_degree';
+        }
+
         $homeworks = $tenantDb->table('homeworks')
             ->where('grade_id', $gradeId)
             ->where('class_id', $classId)
             ->where('section_id', $sectionId)
             ->orderByDesc('due_date')
             ->limit(300)
-            ->get(['id', 'title', 'due_date']);
+            ->get($homeworkColumns);
 
         $homeworkOptions = $homeworks->map(fn ($h) => ['id' => (int) $h->id, 'title' => $h->title])->values();
+        [$teacherId, $teacherName, $teacherSubject] = $this->portalService->resolveSectionTeacher($tenantDb, $sectionId);
 
         if (! Schema::connection('center')->hasTable('student_homework')) {
             return [
@@ -134,8 +143,14 @@ final class StudentBootstrapService
                     'title' => $row->title,
                     'subject' => 'Homework',
                     'due_date' => (string) $row->due_date,
+                    'submit_date' => (string) ($row->submit_date ?? ''),
                     'status' => 'not_submitted',
-                    'grade' => '—',
+                    'degree' => '—',
+                    'final_degree' => $row->final_degree ?? '',
+                    'rate' => '—',
+                    'teacher_id' => $teacherId,
+                    'teacher' => $teacherName,
+                    'teacher_subject' => $teacherSubject,
                     'student_notes' => '',
                     'response' => '',
                 ])->values(),
@@ -143,9 +158,9 @@ final class StudentBootstrapService
             ];
         }
 
-        $submissions = $tenantDb->table('student_homework')->where('student_id', $studentId)->get()->keyBy('homework_id');
-        $homework = $homeworks->map(function ($row) use ($submissions) {
-            $submission = $submissions->get($row->id);
+        $submissions = $tenantDb->table('student_homework')->where('student_id', $studentId)->get()->keyBy(fn ($row) => (int) $row->homework_id);
+        $homework = $homeworks->map(function ($row) use ($submissions, $teacherId, $teacherName, $teacherSubject) {
+            $submission = $submissions->get((int) $row->id);
             $fileUrl = null;
             $fileName = null;
             $correctionUrl = null;
@@ -171,10 +186,16 @@ final class StudentBootstrapService
                 'title' => $row->title,
                 'subject' => 'Homework',
                 'due_date' => (string) $row->due_date,
-                'status' => $submission->status ?? 'not_submitted',
-                'grade' => $submission->degree ?? '—',
-                'student_notes' => $submission->student_notes ?? '',
-                'response' => $submission->response ?? '',
+                'submit_date' => (string) ($row->submit_date ?? ''),
+                'status' => $submission?->status ?? 'not_submitted',
+                'degree' => filled($submission?->degree) ? (string) $submission->degree : '—',
+                'final_degree' => (string) ($row->final_degree ?? ''),
+                'rate' => filled($submission?->rate) ? (string) $submission->rate : '—',
+                'teacher_id' => $teacherId,
+                'teacher' => $teacherName,
+                'teacher_subject' => $teacherSubject,
+                'student_notes' => $submission?->student_notes ?? '',
+                'response' => $submission?->response ?? '',
                 'file_url' => $fileUrl,
                 'file_name' => $fileName,
                 'correction_url' => $correctionUrl,

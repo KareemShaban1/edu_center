@@ -70,7 +70,7 @@ function AssignByCodePanel({ onAssigned }: { onAssigned: () => Promise<void> }) 
 
   const handleUnassign = async () => {
     if (!result) return;
-    if (!window.confirm(`Unassign ${result.student.name} from this center? Their parent will be unassigned too if they have no other students here.`)) {
+    if (!window.confirm(`Unassign ${result.student.name} from this center? Their linked parent will be unassigned too.`)) {
       return;
     }
 
@@ -79,7 +79,7 @@ function AssignByCodePanel({ onAssigned }: { onAssigned: () => Promise<void> }) 
       await adminStudentsApi.unassignFromCenter(result.student.id);
       toast({
         title: 'Unassigned from center',
-        description: `${result.student.name} can be reassigned later using their code.`,
+        description: `${result.student.name} and linked parent were unassigned from this center.`,
       });
       setResult(null);
       setCode('');
@@ -203,7 +203,10 @@ export default function AdminStudents() {
     mutationFn: (id: number) => adminStudentsApi.unassignFromCenter(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] });
-      toast({ title: 'Unassigned from center', description: 'Student can be reassigned using their code.' });
+      toast({
+        title: 'Unassigned from center',
+        description: 'Student and linked parent were unassigned. They can be reassigned using the student code.',
+      });
     },
     onError: (error: Error) => {
       toast({ title: 'Unassign failed', description: error.message, variant: 'destructive' });
@@ -211,7 +214,7 @@ export default function AdminStudents() {
   });
 
   const handleUnassignStudent = async (student: Student) => {
-    if (!window.confirm(`Unassign ${student.name} from this center?`)) {
+    if (!window.confirm(`Unassign ${student.name} from this center? Their linked parent will be unassigned too.`)) {
       return;
     }
     await unassignMutation.mutateAsync(student.id);

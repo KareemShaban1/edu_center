@@ -20,11 +20,21 @@ final class AdminStudentService
     ) {}
 
     /**
+     * Profiles (students/parents) must be readable even when not assigned to the active center.
+     * The `center` connection applies membership scoping; use the default connection instead.
+     */
+    private function profiles(): \Illuminate\Database\Connection
+    {
+        return DB::connection((string) config('database.default', 'mysql'));
+    }
+
+    /**
      * @return array{student: array<string, mixed>, parent: array<string, mixed>|null}|null
      */
     public function searchByCode(string $code, Center $tenant): ?array
     {
-        $query = DB::connection('mysql')->table('students')->where('code', $code);
+        $code = trim($code);
+        $query = $this->profiles()->table('students')->where('code', $code);
         if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
             $query->whereNull('deleted_at');
         }
@@ -43,7 +53,7 @@ final class AdminStudentService
 
         $parent = null;
         if ($student->parent_id) {
-            $parentRow = DB::connection('mysql')->table('parents')->where('id', $student->parent_id)->first();
+            $parentRow = $this->profiles()->table('parents')->where('id', $student->parent_id)->first();
             if ($parentRow) {
                 $parentAssigned = CenterMembership::query()
                     ->where('center_id', $tenant->id)
@@ -80,7 +90,7 @@ final class AdminStudentService
      */
     public function assignToCenter(Center $tenant, int $id): ?array
     {
-        $studentQuery = DB::connection('mysql')->table('students')->where('id', $id);
+        $studentQuery = $this->profiles()->table('students')->where('id', $id);
         if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
             $studentQuery->whereNull('deleted_at');
         }
@@ -103,7 +113,7 @@ final class AdminStudentService
      */
     public function unassignFromCenter(Center $tenant, int $id): array|null
     {
-        $studentQuery = DB::connection('mysql')->table('students')->where('id', $id);
+        $studentQuery = $this->profiles()->table('students')->where('id', $id);
         if (Schema::connection('center')->hasColumn('students', 'deleted_at')) {
             $studentQuery->whereNull('deleted_at');
         }
@@ -121,7 +131,7 @@ final class AdminStudentService
         }
 
         return [
-            'message' => 'Student unassigned from center. They can be reassigned later.',
+            'message' => 'Student and parent unassigned from center. They can be reassigned later.',
             'student_id' => $id,
             'center_id' => $tenant->id,
             'membership_status' => CenterMembership::STATUS_NOT_ASSIGNED,

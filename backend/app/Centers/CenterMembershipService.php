@@ -308,47 +308,27 @@ class CenterMembershipService
     public function unassignStudentWithParent(Center $center, int $studentId): ?CenterMembership
     {
         $membership = $this->unassignMembership($center, $studentId, Student::class);
+        if (! $membership) {
+            return null;
+        }
 
-        $parentId = DB::connection('mysql')->table('students')
-            ->where('id', $studentId)
-            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
-            ->value('parent_id');
-
-        if ($parentId && ! $this->parentHasOtherAssignedStudentsInCenter($center, (int) $parentId, $studentId)) {
-            $this->unassignMembership($center, (int) $parentId, Parents::class);
+        $parentId = $this->resolveStudentParentId($studentId);
+        if ($parentId) {
+            // Always detach the linked parent with the student.
+            $this->unassignMembership($center, $parentId, Parents::class);
         }
 
         return $membership;
-    }
-
-    protected function parentHasOtherAssignedStudentsInCenter(Center $center, int $parentId, int $excludeStudentId): bool
-    {
-        return DB::connection('mysql')->table('students')
-            ->where('parent_id', $parentId)
-            ->where('id', '!=', $excludeStudentId)
-            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
-            ->whereIn('id', function ($query) use ($center) {
-                $query->from('center_memberships')
-                    ->select('user_id')
-                    ->where('center_id', $center->id)
-                    ->where('user_type', Student::class)
-                    ->where('status', CenterMembership::STATUS_ASSIGNED);
-            })
-            ->exists();
     }
 
     public function assignStudentWithParent(Center $center, int $studentId): CenterMembership
     {
         $membership = $this->assignMembership($center, $studentId, Student::class);
 
-        $parentId = DB::connection('mysql')->table('students')
-            ->where('id', $studentId)
-            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
-            ->value('parent_id');
+        $parentId = $this->resolveStudentParentId($studentId);
 
         if ($parentId) {
-            $this->assignMembership($center, (int) $parentId, Parents::class);
-            $this->assignParentChildrenToCenter($center, (int) $parentId);
+            $this->assignMembership($center, $parentId, Parents::class);
         }
 
         return $membership;
@@ -357,7 +337,7 @@ class CenterMembershipService
     public function assignParentChildrenToCenter(Center $center, int $parentId): void
     {
         $parentIds = $this->resolveParentProfileIdsForCenter($parentId);
-        $query = DB::connection('mysql')->table('students')
+        $query = $this->profiles()->table('students')
             ->whereIn('parent_id', $parentIds)
             ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'));
 
@@ -366,15 +346,34 @@ class CenterMembershipService
         }
     }
 
+    /**
+     * Students/parents lookups must ignore center membership scoping so unassigned
+     * profiles can still be resolved for assign/unassign flows.
+     */
+    protected function profiles(): \Illuminate\Database\Connection
+    {
+        return DB::connection((string) config('database.default', 'mysql'));
+    }
+
+    protected function resolveStudentParentId(int $studentId): ?int
+    {
+        $parentId = $this->profiles()->table('students')
+            ->where('id', $studentId)
+            ->when($this->tableHasColumn('students', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+            ->value('parent_id');
+
+        return $parentId ? (int) $parentId : null;
+    }
+
     /** @return list<int> */
     protected function resolveParentProfileIdsForCenter(int $parentId): array
     {
-        $email = DB::connection('mysql')->table('parents')->where('id', $parentId)->value('email');
+        $email = $this->profiles()->table('parents')->where('id', $parentId)->value('email');
         if (! is_string($email) || trim($email) === '') {
             return [$parentId];
         }
 
-        $ids = DB::connection('mysql')->table('parents')
+        $ids = $this->profiles()->table('parents')
             ->where('email', $email)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)

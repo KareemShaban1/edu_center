@@ -51,6 +51,7 @@ export interface DbTableDefinition {
 
 export interface DatabaseSchemaCatalog {
   syncedAt: string;
+  source?: string;
   tableCount: number;
   centerScopedCount: number;
   membershipScopedCount: number;

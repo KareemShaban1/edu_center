@@ -91,6 +91,18 @@ export const PLATFORM_DOCUMENTATION: PlatformDocEntry[] = [
     titleKey: 'docs.userGuide.title',
     descriptionKey: 'docs.userGuide.desc',
   },
+  {
+    id: 'manual-test-plan',
+    file: '14-manual-test-plan.md',
+    titleKey: 'docs.manualTestPlan.title',
+    descriptionKey: 'docs.manualTestPlan.desc',
+  },
+  {
+    id: 'demo-flows',
+    file: '15-demo-flows.md',
+    titleKey: 'docs.demoFlows.title',
+    descriptionKey: 'docs.demoFlows.desc',
+  },
 ];
 
 export const DEFAULT_PLATFORM_DOC_ID = 'index';
@@ -100,7 +112,7 @@ export function getPlatformDocById(id: string | undefined): PlatformDocEntry {
 }
 
 export function getPlatformDocUrl(id: string): string {
-  return `/platform/documentation/${id}`;
+  return `/developer/documentation/${id}`;
 }
 
 export function getDeveloperDocUrl(id: string): string {

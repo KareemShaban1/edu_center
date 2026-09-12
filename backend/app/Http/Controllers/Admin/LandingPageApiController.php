@@ -326,6 +326,16 @@ class LandingPageApiController extends Controller
         ];
     }
 
+    public function templates(Request $request): JsonResponse
+    {
+        $ctx = $this->resolveAdminContext($request);
+        if ($ctx['error']) {
+            return $ctx['error'];
+        }
+
+        return response()->json(['templates' => []]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $ctx = $this->resolveAdminContext($request);

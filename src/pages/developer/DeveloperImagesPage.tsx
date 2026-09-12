@@ -4,7 +4,8 @@ import { CheckCircle2, Image as ImageIcon, RefreshCcw, Search, Upload, XCircle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { WEBSITE_IMAGES, type WebsiteImageDefinition } from '@/config/website-images';
+import { PLATFORM_LANDING_HERO_IMAGE_KEY, WEBSITE_IMAGES, type WebsiteImageDefinition } from '@/config/website-images';
+import { PlatformLandingHeroIllustrationDefault } from '@/components/landing/platform-landing/PlatformLandingHeroIllustration';
 import { useLocale } from '@/contexts/LocaleContext';
 import { resolveAssetUrl } from '@/lib/asset-url';
 import { toast } from '@/hooks/use-toast';
@@ -22,6 +23,17 @@ function formatBytes(bytes?: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function DefaultComponentPreview({ imageKey }: { imageKey: string }) {
+  if (imageKey === PLATFORM_LANDING_HERO_IMAGE_KEY) {
+    return (
+      <div className="pointer-events-none scale-[0.55] origin-center">
+        <PlatformLandingHeroIllustrationDefault />
+      </div>
+    );
+  }
+  return null;
+}
+
 function ImageCard({
   image,
   dimensions,
@@ -29,7 +41,6 @@ function ImageCard({
   onReplace,
   onReset,
   replacing,
-  isAr,
 }: {
   image: WebsiteImageDefinition;
   dimensions?: ImageDimensions;
@@ -37,14 +48,15 @@ function ImageCard({
   onReplace: (file: File) => void;
   onReset: () => void;
   replacing: boolean;
-  isAr: boolean;
 }) {
+  const { t } = useLocale();
   const { data: overrides = {} } = useQuery({
     queryKey: ['website-images'],
     queryFn: websiteImagesApi.list,
   });
   const override = overrides[image.key];
-  const src = resolveAssetUrl(override?.url) || image.defaultUrl;
+  const useComponentDefault = Boolean(image.defaultIsComponent) && !override;
+  const src = resolveAssetUrl(override?.url) || (image.defaultIsComponent ? '' : image.defaultUrl);
   const actual = override?.width && override?.height
     ? { width: override.width, height: override.height }
     : dimensions;
@@ -55,17 +67,25 @@ function ImageCard({
   return (
     <article className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
       <div className="relative flex h-52 items-center justify-center overflow-hidden bg-muted/40 p-3">
-        <img
-          src={src}
-          alt={image.name}
-          className={image.fit === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
-          onLoad={event => onDimensions({
-            width: event.currentTarget.naturalWidth,
-            height: event.currentTarget.naturalHeight,
-          })}
-        />
+        {useComponentDefault ? (
+          <DefaultComponentPreview imageKey={image.key} />
+        ) : (
+          <img
+            src={src}
+            alt={image.name}
+            className={image.fit === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
+            onLoad={event => onDimensions({
+              width: event.currentTarget.naturalWidth,
+              height: event.currentTarget.naturalHeight,
+            })}
+          />
+        )}
         <Badge className="absolute end-3 top-3" variant={override ? 'default' : 'secondary'}>
-          {override ? (isAr ? 'معدلة' : 'Replaced') : (isAr ? 'أصلية' : 'Original')}
+          {override
+            ? t('developer.images.badgeReplaced')
+            : image.defaultIsComponent
+              ? t('developer.images.badgeBuiltin')
+              : t('developer.images.badgeOriginal')}
         </Badge>
       </div>
 
@@ -75,38 +95,56 @@ function ImageCard({
             <h2 className="font-semibold">{image.name}</h2>
             <Badge variant="outline">{image.category}</Badge>
           </div>
-          <p className="mt-1 break-all text-xs text-muted-foreground">{image.defaultUrl}</p>
+          <p className="mt-1 break-all text-xs text-muted-foreground">
+            {image.defaultIsComponent
+              ? t('developer.images.defaultBuiltinHint')
+              : image.defaultUrl}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">{image.pages.join(' · ')}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="rounded-lg bg-muted/60 p-2.5">
-            <p className="text-xs text-muted-foreground">{isAr ? 'الحجم الفعلي' : 'Actual size'}</p>
-            <p className="mt-1 font-medium">{actual ? `${actual.width} × ${actual.height}px` : '—'}</p>
+            <p className="text-xs text-muted-foreground">{t('developer.images.actualSize')}</p>
+            <p className="mt-1 font-medium">
+              {useComponentDefault
+                ? t('developer.images.liveComponent')
+                : actual
+                  ? `${actual.width} × ${actual.height}px`
+                  : '—'}
+            </p>
           </div>
           <div className="rounded-lg bg-muted/60 p-2.5">
-            <p className="text-xs text-muted-foreground">{isAr ? 'الحجم المطلوب' : 'Recommended'}</p>
+            <p className="text-xs text-muted-foreground">{t('developer.images.recommended')}</p>
             <p className="mt-1 font-medium">{image.recommendedWidth} × {image.recommendedHeight}px</p>
           </div>
         </div>
 
-        {actual && (
+        {actual && !useComponentDefault && (
           <div className={matchesRecommendation ? 'flex items-center gap-2 text-sm text-emerald-600' : 'flex items-center gap-2 text-sm text-amber-600'}>
             {matchesRecommendation
               ? <CheckCircle2 className="h-4 w-4" />
               : <XCircle className="h-4 w-4" />}
             {matchesRecommendation
-              ? (isAr ? 'الأبعاد مطابقة' : 'Dimensions match')
-              : (isAr ? 'يفضل استخدام الحجم المطلوب' : 'Recommended dimensions differ')}
+              ? t('developer.images.dimensionsMatch')
+              : t('developer.images.dimensionsDiffer')}
             {override?.bytes ? <span className="text-muted-foreground">· {formatBytes(override.bytes)}</span> : null}
           </div>
+        )}
+
+        {useComponentDefault && (
+          <p className="text-sm text-muted-foreground">{t('developer.images.builtinHelp')}</p>
         )}
 
         <div className="flex gap-2">
           <Button asChild className="flex-1 gap-2" disabled={replacing}>
             <label>
               <Upload className="h-4 w-4" />
-              {replacing ? (isAr ? 'جارٍ الرفع...' : 'Uploading...') : (isAr ? 'تغيير الصورة' : 'Replace image')}
+              {replacing
+                ? t('developer.images.uploading')
+                : image.defaultIsComponent
+                  ? t('developer.images.uploadReplacement')
+                  : t('developer.images.replace')}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif"
@@ -121,7 +159,15 @@ function ImageCard({
             </label>
           </Button>
           {override && (
-            <Button type="button" variant="outline" size="icon" onClick={onReset} title={isAr ? 'استعادة الأصل' : 'Restore original'}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onReset}
+              title={image.defaultIsComponent
+                ? t('developer.images.restoreBuiltin')
+                : t('developer.images.restoreOriginal')}
+            >
               <RefreshCcw className="h-4 w-4" />
             </Button>
           )}
@@ -132,8 +178,7 @@ function ImageCard({
 }
 
 export default function DeveloperImagesPage() {
-  const { locale } = useLocale();
-  const isAr = locale === 'ar';
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -150,10 +195,10 @@ export default function DeveloperImagesPage() {
     onMutate: ({ key }) => setReplacingKey(key),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['website-images'] });
-      toast({ title: isAr ? 'تم تغيير الصورة' : 'Image replaced' });
+      toast({ title: t('developer.images.replacedToast') });
     },
     onError: error => toast({
-      title: isAr ? 'تعذر تغيير الصورة' : 'Could not replace image',
+      title: t('developer.images.replaceFailed'),
       description: error instanceof Error ? error.message : undefined,
       variant: 'destructive',
     }),
@@ -164,7 +209,10 @@ export default function DeveloperImagesPage() {
     mutationFn: websiteImagesApi.reset,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['website-images'] });
-      toast({ title: isAr ? 'تمت استعادة الصورة الأصلية' : 'Original image restored' });
+      toast({
+        title: t('developer.images.restoredToast'),
+        description: t('developer.images.restoredDesc'),
+      });
     },
   });
 
@@ -185,12 +233,8 @@ export default function DeveloperImagesPage() {
   return (
     <div className="space-y-6">
       <div className="page-header">
-        <h1 className="page-title">{isAr ? 'مكتبة صور الموقع' : 'Website image library'}</h1>
-        <p className="page-description">
-          {isAr
-            ? 'معاينة صور صفحات الموقع، مقارنة أبعادها، وتغييرها من مكان واحد.'
-            : 'Preview website images, compare their dimensions, and replace them from one place.'}
-        </p>
+        <h1 className="page-title">{t('developer.images.title')}</h1>
+        <p className="page-description">{t('developer.images.desc')}</p>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4 shadow-card">
@@ -200,7 +244,7 @@ export default function DeveloperImagesPage() {
             <Input
               value={search}
               onChange={event => setSearch(event.target.value)}
-              placeholder={isAr ? 'ابحث عن صورة أو صفحة...' : 'Search images or pages...'}
+              placeholder={t('developer.images.search')}
               className="ps-9"
             />
           </div>
@@ -209,7 +253,7 @@ export default function DeveloperImagesPage() {
             onChange={event => setCategory(event.target.value)}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="all">{isAr ? 'كل الأقسام' : 'All categories'}</option>
+            <option value="all">{t('developer.images.allCategories')}</option>
             {categories.map(item => <option key={item} value={item}>{item}</option>)}
           </select>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -229,7 +273,6 @@ export default function DeveloperImagesPage() {
             onReplace={file => replaceMutation.mutate({ key: image.key, file })}
             onReset={() => resetMutation.mutate(image.key)}
             replacing={replacingKey === image.key}
-            isAr={isAr}
           />
         ))}
       </div>

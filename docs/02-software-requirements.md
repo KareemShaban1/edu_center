@@ -2,7 +2,7 @@
 
 > **Document metadata**  
 > Product: EduCenter  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Regenerate API/table lists: `npm run docs:sync`
 
 ---
@@ -28,8 +28,10 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-AUTH-05 | System shall expose current user and guard via API | `GET /api/user`, `GET /api/auth/guards` |
 | FR-AUTH-06 | System shall support logout and session invalidation | `POST /api/logout` |
 | FR-AUTH-07 | Center staff (admin users) shall be created by center admin with roles | `POST /api/admin/users`, Spatie roles |
+| FR-AUTH-08 | A new center shall self-register with an admin account | `POST /api/register/center`, `/center/register` |
+| FR-AUTH-09 | Students and parents shall self-register into a chosen center | `POST /api/register/student`, `POST /api/register/parent` |
 
-*Registration is admin-driven (students/teachers/parents created by staff), not public self-signup.*
+Staff can still create people from the admin SPA. Public self-signup is available and used for onboarding.
 
 ### 2.2 Academic structure
 
@@ -47,6 +49,7 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-ATT-01 | Record attendance per section and date (present/absent/late) |
 | FR-ATT-02 | View and edit attendance history by section |
 | FR-ATT-03 | Notify parents/students on attendance events (database + optional push/WhatsApp) |
+| FR-ATT-04 | Students shall check in to a live session via QR + optional geolocation | `/student/attendance/check-in`, session QR APIs |
 
 ### 2.4 Assessments (exams & quizzes)
 
@@ -63,6 +66,7 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-HW-01 | CRUD units and lessons |
 | FR-HW-02 | Assign homework to sections; students submit work |
 | FR-HW-03 | Admin/teacher manage homework; student CRUD on own submissions |
+| FR-HW-04 | Question bank (single + bulk) and exam builder/export |
 
 ### 2.6 Payments & fees
 
@@ -92,14 +96,15 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-RPT-04 | Teacher section reports (attendance, exam, quiz, payment) |
 | FR-RPT-05 | Section fee report (paid/unpaid in date range) |
 
-### 2.9 Online meetings
+### 2.9 Scheduled sessions (hybrid / online)
 
 | ID | Requirement |
 |----|-------------|
-| FR-MTG-01 | CRUD meeting series (recurrence) |
-| FR-MTG-02 | CRUD meetings linked to sections |
-| FR-MTG-03 | Issue LiveKit tokens for teacher and student join |
-| FR-MTG-04 | Students cannot create/update/delete meetings (403) |
+| FR-SES-01 | CRUD center sessions (in-person or online) per section |
+| FR-SES-02 | Optional auto-generate sessions from section working days |
+| FR-SES-03 | Issue LiveKit tokens for teacher and student join |
+| FR-SES-04 | In-person sessions expose attendance QR / venue |
+| FR-SES-05 | Students cannot create/update/delete sessions they do not own (403) |
 
 ### 2.10 Content & communications
 
@@ -108,6 +113,8 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-CNT-01 | Digital library with file uploads by scope |
 | FR-CNT-02 | Announcements with media |
 | FR-CNT-03 | Landing page builder: CRUD, publish, duplicate, revisions, analytics |
+| FR-CNT-04 | Certification templates and issued certificates |
+| FR-CNT-05 | Personal todos and notes for admin, teacher, and student |
 
 ### 2.11 Platform administration
 
@@ -117,6 +124,9 @@ This document defines **what the EduCenter system shall do** from a software per
 | FR-PLT-02 | Manage subscriptions metadata |
 | FR-PLT-03 | Platform users and roles |
 | FR-PLT-04 | Activity log viewing |
+| FR-PLT-05 | CRUD Egypt location hierarchy (governorates, cities, areas) |
+| FR-PLT-06 | Platform branding and Lucide UI icon overrides |
+| FR-PLT-07 | Developer documentation viewer and Testing module (`/developer/documentation`, `/developer/testing`) |
 
 ### 2.12 Localization
 
@@ -124,7 +134,7 @@ This document defines **what the EduCenter system shall do** from a software per
 |----|-------------|
 | FR-I18N-01 | UI strings in English and Arabic |
 | FR-I18N-02 | RTL layout when locale is `ar` |
-| FR-I18N-03 | Backend localized routes for legacy Blade dashboards |
+| FR-I18N-03 | Developer-editable UI translation overrides (`/api/ui-translations`) |
 
 ---
 
@@ -201,7 +211,7 @@ See [Security Documentation](./10-security.md).
 | Interface | Protocol | Purpose |
 |-----------|----------|---------|
 | SPA ↔ Laravel API | HTTPS JSON `/api/*` | Primary UI |
-| LiveKit | WebRTC + REST token | Video meetings |
+| LiveKit | WebRTC + REST token | Live video sessions |
 | Web Push / FCM | VAPID / FCM HTTP | Push notifications |
 | WhatsApp | Template + provider API | Parent messaging |
 | Pusher (optional) | WebSocket | Realtime (legacy) |

@@ -5,7 +5,7 @@ import { revokeDeveloperAccess } from '@/config/developer-access';
 import { useAppFontClasses } from '@/hooks/use-app-font';
 import HeaderUserMenu from '@/components/dashboard/HeaderUserMenu';
 import { cn } from '@/lib/utils';
-import { BookOpen, Code2, Database, Images, Languages, LayoutDashboard, LogOut, Menu, Terminal } from 'lucide-react';
+import { BookOpen, Code2, Database, Images, Languages, LayoutDashboard, LogOut, Menu, Palette, Shapes, Terminal, TestTube2 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
@@ -14,6 +14,9 @@ const navItems = [
   { labelKey: 'developer.tab.database', path: '/developer/database', icon: Database, exact: false },
   { labelKey: 'developer.tab.translations', path: '/developer/translations', icon: Languages, exact: false },
   { labelKey: 'developer.tab.images', path: '/developer/images', icon: Images, exact: false },
+  { labelKey: 'developer.tab.appearance', path: '/developer/settings', icon: Palette, exact: false },
+  { labelKey: 'developer.tab.icons', path: '/developer/icons', icon: Shapes, exact: false },
+  { labelKey: 'developer.tab.testing', path: '/developer/testing', icon: TestTube2, exact: false },
   { labelKey: 'developer.tab.documentation', path: '/developer/documentation', icon: BookOpen, exact: false },
 ];
 

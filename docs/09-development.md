@@ -1,7 +1,9 @@
 # Development Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16
+> Last reviewed: 2026-09-12  
+> Frontend client: `src/services/api-client.ts`  
+> API routes: `backend/routes/api.php` + `backend/routes/api/*.php`
 
 ---
 
@@ -72,8 +74,10 @@ Create `.env.local` at repo root (optional):
 
 ```env
 VITE_API_BASE_URL=/api
-VITE_DEFAULT_LOCALE=en
+VITE_DEFAULT_LOCALE=ar
 VITE_USE_MOCK=false
+# Optional: gate /platform/login (dev default is "platform")
+# VITE_PLATFORM_ACCESS_PASSWORD=platform
 ```
 
 ### 2.5 Run development servers
@@ -106,8 +110,9 @@ Open `http://127.0.0.1:8080` (API on `http://127.0.0.1:8000`).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `VITE_API_BASE_URL` | `/api` (dev proxy) | API base URL in production |
-| `VITE_DEFAULT_LOCALE` | `en` | Default UI locale |
+| `VITE_DEFAULT_LOCALE` | `ar` | Default UI locale (`src/services/api-client.ts`) |
 | `VITE_USE_MOCK` | `false` | Use mock API instead of backend |
+| `VITE_PLATFORM_ACCESS_PASSWORD` | `platform` | Extra gate on `/platform/login` |
 | `VITE_AUTH_LOGIN_ENDPOINT` | `/login` | Override login path |
 | `VITE_AUTH_LOGOUT_ENDPOINT` | `/logout` | Override logout path |
 | `VITE_AUTH_USER_ENDPOINT` | `/user` | Override user path |
@@ -118,7 +123,7 @@ Open `http://127.0.0.1:8080` (API on `http://127.0.0.1:8000`).
 |----------|---------|
 | `APP_DOMAIN` | Center subdomain base |
 | `GLOBAL_IDENTITY_ENABLED` | Parent/student global login |
-| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Video meetings |
+| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Video sessions |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web push |
 | `FCM_SERVER_KEY` | Firebase push |
 | `ZOOM_CLIENT_KEY`, `ZOOM_CLIENT_SECRET` | Legacy Zoom |
@@ -132,17 +137,18 @@ Full template: `backend/.example.env`
 ```
 edu-center/
 ├── src/                          # React SPA
-│   ├── App.tsx                   # Routes
+│   ├── App.tsx                   # Routes (~128)
 │   ├── components/               # Shared UI + shadcn
-│   ├── contexts/                 # Auth, Locale
+│   ├── contexts/                 # Auth, Locale, UiIcons, Branding
 │   ├── hooks/                    # Custom hooks
 │   ├── pages/                    # Route pages by role
+│   ├── services/api-client.ts    # HTTP client (default locale ar)
 │   ├── services/endpoints/       # API modules
 │   ├── types/                    # TypeScript models
 │   └── lib/                      # Utilities, routes helper
-├── public/                       # Static assets, PWA icons
+├── public/                       # Static assets, PWA icons, copied docs/
 ├── scripts/                      # sync-documentation, PWA icons
-├── docs/                         # Project documentation
+├── docs/                         # Project documentation (viewer source)
 ├── backend/
 │   ├── app/
 │   │   ├── Centers/              # Multi-center module
@@ -151,8 +157,9 @@ edu-center/
 │   │   └── Repository/           # Data access layer
 │   ├── config/centers.php        # Scoping config
 │   ├── database/migrations/      # Schema
-│   ├── routes/api.php            # SPA API
-│   └── resources/views/          # Legacy Blade
+│   ├── routes/api.php            # SPA API entry
+│   ├── routes/api/*.php          # Split route files
+│   └── resources/views/          # Legacy Blade (do not extend)
 ├── vite.config.ts
 ├── tailwind.config.ts
 └── package.json
@@ -169,7 +176,7 @@ edu-center/
 | Language | TypeScript strict mode |
 | Lint | `npm run lint` (ESLint) |
 | Components | Functional components + hooks |
-| State | TanStack Query for server state; React Context for auth/locale |
+| State | TanStack Query for server state; React Context for auth, locale, UiIcons, branding |
 | Styling | Tailwind utility classes; shadcn variants |
 | Paths | `@/` alias → `src/` |
 | Forms | react-hook-form + Zod schemas |
@@ -205,8 +212,8 @@ npm run docs:sync
 
 **Recommended flow:**
 1. Branch from `main`
-2. Implement + run `npm run lint`, `npm test`, `cd backend && php artisan test`
-3. Run `npm run docs:sync` if API/schema changed
+2. Implement + run `npm run lint`, `npm run test:all`
+3. Run `npm run docs:sync` if API/schema/docs changed
 4. Pull request with description and test plan
 5. Merge after review
 
@@ -222,9 +229,10 @@ npm run docs:sync
 | Build SPA | `npm run build` |
 | Preview build | `npm run preview` |
 | Run frontend tests | `npm test` |
-| Run backend tests | `cd backend && php artisan test` |
+| Run backend tests | `npm run test:backend` |
+| Run all automated tests | `npm run test:all` |
 | Create center | `php artisan centers:create-test` or platform UI |
-| Sync docs | `npm run docs:sync` |
+| Sync docs (and copy to `public/docs`) | `npm run docs:sync` |
 | Generate PWA icons | `npm run icons:generate` |
 
 ---
@@ -232,7 +240,7 @@ npm run docs:sync
 ## 8. API client usage
 
 ```typescript
-import { apiClient } from '@/services/apiClient';
+import { apiClient } from '@/services/api-client';
 
 // Center context set after login
 apiClient.setTenantSlug('demo');

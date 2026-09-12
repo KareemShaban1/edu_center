@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale } from '@/contexts/LocaleContext';
 import { fetchDatabaseSchemaCatalog } from '@/lib/developer-api-catalog';
-import type { DbTableDefinition, DbTableScoping } from '@/types/developer-database';
+import { developerDatabaseApi } from '@/services/endpoints/developer-database';
+import type { DatabaseSchemaCatalog, DbTableDefinition, DbTableScoping } from '@/types/developer-database';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,8 +18,9 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { ChevronRight, Database, Key, Link2, Search, Table2 } from 'lucide-react';
+import { ChevronRight, Database, Key, Link2, Loader2, RefreshCcw, Search, Table2 } from 'lucide-react';
 
 const scopingStyles: Record<DbTableScoping, string> = {
   platform: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20',
@@ -219,17 +222,44 @@ function EmptyHint({ text }: { text: string }) {
 
 export default function DeveloperDatabaseSection() {
   const { t } = useLocale();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [scopingFilter, setScopingFilter] = useState<'all' | DbTableScoping>('all');
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['developer-database-schema'],
     queryFn: fetchDatabaseSchemaCatalog,
     staleTime: 5 * 60 * 1000,
   });
 
+  const syncMutation = useMutation({
+    mutationFn: () => developerDatabaseApi.syncFromLiveDatabase(),
+    onSuccess: result => {
+      queryClient.setQueryData<DatabaseSchemaCatalog>(
+        ['developer-database-schema'],
+        result.catalog,
+      );
+      toast({
+        title: t('developer.db.syncSuccess'),
+        description: t('developer.db.syncSuccessDesc').replace(
+          '{count}',
+          String(result.catalog.tableCount),
+        ),
+      });
+    },
+    onError: error => {
+      toast({
+        title: t('developer.db.syncError'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const tables = data?.tables ?? [];
+  const syncedAt = data?.syncedAt ? new Date(data.syncedAt).toLocaleString() : null;
+  const syncing = syncMutation.isPending;
 
   const filteredTables = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -247,103 +277,146 @@ export default function DeveloperDatabaseSection() {
   const activeTable = tables.find(t => t.name === selectedTable) ?? null;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-      <Card className="h-fit xl:sticky xl:top-4">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Database className="h-4 w-4 text-primary" />
-            {t('developer.db.catalog')}
-          </CardTitle>
-          <CardDescription>
-            {isLoading
-              ? '…'
-              : t('developer.db.tableCount').replace('{count}', String(filteredTables.length))}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="relative">
-            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="ps-9"
-              placeholder={t('developer.db.search')}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t('developer.db.syncTitle')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {syncedAt
+              ? t('developer.db.lastSynced').replace('{time}', syncedAt)
+              : t('developer.db.syncHint')}
+            {data?.source === 'live-database' ? ` · ${t('developer.db.sourceLive')}` : ''}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isFetching || syncing}
+            onClick={() => refetch()}
+          >
+            {isFetching && !syncing ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="me-2 h-4 w-4" />
+            )}
+            {t('developer.db.reload')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={syncing}
+            onClick={() => syncMutation.mutate()}
+          >
+            {syncing ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="me-2 h-4 w-4" />
+            )}
+            {t('developer.db.syncButton')}
+          </Button>
+        </div>
+      </div>
 
-          <Select value={scopingFilter} onValueChange={v => setScopingFilter(v as typeof scopingFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('developer.db.scopingFilter')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('developer.db.allScoping')}</SelectItem>
-              <SelectItem value="platform">{t('developer.db.scoping.platform')}</SelectItem>
-              <SelectItem value="center">{t('developer.db.scoping.center')}</SelectItem>
-              <SelectItem value="membership">{t('developer.db.scoping.membership')}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {isLoading && (
-            <div className="space-y-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 rounded-lg" />
-              ))}
+      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <Card className="h-fit xl:sticky xl:top-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Database className="h-4 w-4 text-primary" />
+              {t('developer.db.catalog')}
+            </CardTitle>
+            <CardDescription>
+              {isLoading
+                ? '…'
+                : t('developer.db.tableCount').replace('{count}', String(filteredTables.length))}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="relative">
+              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="ps-9"
+                placeholder={t('developer.db.search')}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-          )}
 
-          {isError && (
-            <p className="text-sm text-destructive">{t('developer.db.loadError')}</p>
-          )}
+            <Select value={scopingFilter} onValueChange={v => setScopingFilter(v as typeof scopingFilter)}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('developer.db.scopingFilter')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('developer.db.allScoping')}</SelectItem>
+                <SelectItem value="platform">{t('developer.db.scoping.platform')}</SelectItem>
+                <SelectItem value="center">{t('developer.db.scoping.center')}</SelectItem>
+                <SelectItem value="membership">{t('developer.db.scoping.membership')}</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {!isLoading && !isError && (
-            <ScrollArea className="h-[min(560px,60vh)]">
-              <div className="space-y-1 pe-2">
-                {filteredTables.map(table => {
-                  const isActive = table.name === selectedTable;
-                  return (
-                    <button
-                      key={table.name}
-                      type="button"
-                      onClick={() => setSelectedTable(table.name)}
-                      className={cn(
-                        'flex w-full items-start gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors',
-                        isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      )}
-                    >
-                      <Table2 className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-mono text-xs">{table.name}</span>
-                        <span className="mt-0.5 block text-[10px] opacity-70">
-                          {table.columnCount} {t('developer.db.columns').toLowerCase()}
-                        </span>
-                      </span>
-                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 opacity-50" />
-                    </button>
-                  );
-                })}
+            {isLoading && (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 rounded-lg" />
+                ))}
               </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+            )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('developer.db.details')}</CardTitle>
-          <CardDescription>{t('developer.db.detailsDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!activeTable ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              {t('developer.db.selectTable')}
-            </p>
-          ) : (
-            <TableDetail table={activeTable} />
-          )}
-        </CardContent>
-      </Card>
+            {isError && (
+              <p className="text-sm text-destructive">{t('developer.db.loadError')}</p>
+            )}
+
+            {!isLoading && !isError && (
+              <ScrollArea className="h-[min(560px,60vh)]">
+                <div className="space-y-1 pe-2">
+                  {filteredTables.map(table => {
+                    const isActive = table.name === selectedTable;
+                    return (
+                      <button
+                        key={table.name}
+                        type="button"
+                        onClick={() => setSelectedTable(table.name)}
+                        className={cn(
+                          'flex w-full items-start gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        <Table2 className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-mono text-xs">{table.name}</span>
+                          <span className="mt-0.5 block text-[10px] opacity-70">
+                            {table.columnCount} {t('developer.db.columns').toLowerCase()}
+                          </span>
+                        </span>
+                        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 opacity-50" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('developer.db.details')}</CardTitle>
+            <CardDescription>{t('developer.db.detailsDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!activeTable ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                {t('developer.db.selectTable')}
+              </p>
+            ) : (
+              <TableDetail table={activeTable} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

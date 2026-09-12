@@ -1,7 +1,7 @@
 # User Stories & Use Cases
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Routes: `npm run docs:sync` → `generated/frontend-routes.md`, `generated/api-routes.md`
 
 ---
@@ -63,7 +63,7 @@ flowchart LR
 | 2 | Open form `/admin/attendance/:sectionId/:date` |
 | 3 | `GET /api/admin/attendance/section/{id}/date/{date}` |
 | 4 | Edit statuses; `POST` same endpoint |
-| 5 | Optional: notification/WhatsApp from legacy Blade flow |
+| 5 | Optional: notify parents via in-app notifications or WhatsApp templates |
 
 ---
 
@@ -99,16 +99,16 @@ flowchart LR
 ### US-TCH-02 — Run online class
 
 **As a** teacher  
-**I want** to join a LiveKit room for a scheduled meeting  
+**I want** to join a LiveKit room for a scheduled session  
 **So that** I teach remotely  
 
-**Use case: Join LiveKit meeting**
+**Use case: Join LiveKit session**
 
 | Step | Action |
 |------|--------|
-| 1 | `/teacher/meetings` — list upcoming meetings |
-| 2 | Click join → `/teacher/meetings/:id/livekit` |
-| 3 | `GET /api/teacher/meetings/{id}/livekit-token` |
+| 1 | `/teacher/sessions` — list upcoming sessions |
+| 2 | Click join → `/teacher/sessions/:id/livekit` |
+| 3 | `GET /api/teacher/sessions/{id}/livekit-token` |
 | 4 | Client connects with `livekit-client` |
 
 ---
@@ -118,10 +118,10 @@ flowchart LR
 ### US-STU-01 — View schedule and join class
 
 **As a** student  
-**I want** to see meetings and join video  
-**So that** I attend online sessions  
+**I want** to see sessions and join video  
+**So that** I attend online classes  
 
-**Flow:** `/student/login` → portal auth → `/student/meetings` → LiveKit room.
+**Flow:** `/student/login` (or `/student/register`) → portal auth → `/student/sessions` → LiveKit room `/student/sessions/:id/livekit`. QR check-in: `/student/attendance/check-in`.
 
 ---
 
@@ -175,6 +175,8 @@ flowchart LR
 | 4 | `SetupCenter` job runs migrations/seed for center |
 | 5 | Center accessible at `{slug}.{APP_DOMAIN}` or slug header |
 
+Centers may also self-register at `/center/register` (`POST /api/register/center`).
+
 ---
 
 ## Epic: Public marketing
@@ -218,7 +220,7 @@ flowchart LR
 | Expired session | Redirect to appropriate login |
 | Access wrong role route | Redirect to role dashboard |
 | Center not found | 404 / center required error |
-| Student writes meeting | 403 Forbidden |
+| Student writes session | 403 Forbidden |
 
 ---
 

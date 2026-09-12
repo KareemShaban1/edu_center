@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { WEBSITE_IMAGES, WEBSITE_IMAGE_BY_DEFAULT_URL } from '@/config/website-images';
 import { resolveAssetUrl } from '@/lib/asset-url';
@@ -8,12 +8,14 @@ interface WebsiteImagesContextValue {
   overrides: Record<string, WebsiteImageOverride>;
   loading: boolean;
   resolve: (defaultUrl: string) => string;
+  resolveByKey: (key: string, fallbackUrl?: string) => string | null;
 }
 
 const WebsiteImagesContext = createContext<WebsiteImagesContextValue>({
   overrides: {},
   loading: true,
   resolve: defaultUrl => defaultUrl,
+  resolveByKey: () => null,
 });
 
 function pathFromUrl(value: string): string {
@@ -116,6 +118,11 @@ export function WebsiteImagesProvider({ children }: { children: ReactNode }) {
       if (!definition) return defaultUrl;
       return resolveAssetUrl(overrides[definition.key]?.url) || defaultUrl;
     },
+    resolveByKey: (key, fallbackUrl) => {
+      const overrideUrl = resolveAssetUrl(overrides[key]?.url);
+      if (overrideUrl) return overrideUrl;
+      return fallbackUrl ?? null;
+    },
   }), [overrides, isLoading]);
 
   return (
@@ -123,4 +130,8 @@ export function WebsiteImagesProvider({ children }: { children: ReactNode }) {
       {children}
     </WebsiteImagesContext.Provider>
   );
+}
+
+export function useWebsiteImages() {
+  return useContext(WebsiteImagesContext);
 }

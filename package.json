@@ -15,6 +15,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:backend": "cd backend && php artisan test",
+    "test:all": "vitest run && npm run test:backend",
     "icons:generate": "node scripts/generate-pwa-icons.mjs",
     "docs:sync": "node scripts/sync-documentation.mjs"
   },

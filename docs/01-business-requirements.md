@@ -2,7 +2,7 @@
 
 > **Document metadata**  
 > Product: EduCenter  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Source of truth: product routes in `src/App.tsx`, domain models in `backend/app/Models/`
 
 ---
@@ -13,11 +13,12 @@
 
 The product delivers:
 
-- A modern **React SPA** for day-to-day operations (admin, teacher, student, parent, platform)
-- A **Laravel API** with legacy Blade dashboards for backward compatibility
-- **Bilingual support** (English / Arabic) with RTL layout
-- **Online classes** via LiveKit video meetings
-- **Platform tier** for operators who provision and manage multiple centers
+- A modern **React SPA** (PWA) for day-to-day operations (admin, teacher, student, parent, platform)
+- A **Laravel 9 JSON API** (`backend/routes/api.php` + `backend/routes/api/*.php`) — ~235 endpoints
+- **Bilingual support** (Arabic default / English) with RTL layout
+- **Hybrid classes** via scheduled sessions (in-person QR check-in or LiveKit / Jitsi / external link)
+- **Public onboarding:** a center can self-register; students and parents can self-register into a center
+- **Platform tier** for operators who provision centers, locations, branding, icons, docs, and QA
 
 ---
 
@@ -28,7 +29,7 @@ The product delivers:
 | **Centralize center operations** | Replace spreadsheets and disconnected tools with one system for people, classes, attendance, grades, and fees |
 | **Improve parent engagement** | Give parents real-time visibility into attendance, exams, quizzes, and payments |
 | **Scale as SaaS** | Allow platform operators to onboard many centers from a single control plane |
-| **Support hybrid learning** | Schedule recurring meeting series and run live video sessions |
+| **Support hybrid learning** | Schedule sessions (in-person QR or live video) and run them from teacher/student portals |
 | **Localize for MENA markets** | Arabic UI, RTL, WhatsApp templates, and culturally appropriate UX |
 | **Monetize centers** | Subscription/plan metadata per center for platform billing |
 
@@ -41,7 +42,7 @@ The product delivers:
 | Manual attendance and grade tracking | Section/date workflows with history and notifications |
 | Fee collection chaos | Structured fees by grade/class/section; payment recording and unpaid reports |
 | Poor parent communication | Parent portal, push notifications, WhatsApp templates |
-| Fragmented online classes | Meeting series + LiveKit integration in teacher/student portals |
+| Fragmented online classes | Scheduled `sessions` with LiveKit, Jitsi, or an external join URL |
 | No marketing presence per center | Landing page builder with public URLs and analytics |
 | Multi-branch student/parent identity | Global user + center memberships (one login, multiple centers) |
 | Lack of auditability | Activity logs, role-based permissions (Spatie) |
@@ -53,10 +54,10 @@ The product delivers:
 | Segment | Needs |
 |---------|-------|
 | **Center owners / admins** | Full operational control, reports, staff management, settings |
-| **Teachers** | Class lists, attendance, assessments, homework, live meetings |
-| **Students** | Schedule, grades, homework submissions, library, online classes |
+| **Teachers** | Class lists, attendance, assessments, homework, live sessions |
+| **Students** | Schedule, QR check-in, grades, homework, library, certificates, online classes |
 | **Parents** | Multi-child dashboard, attendance/grades/fees visibility |
-| **Platform operators** | Center provisioning, subscriptions, global users, audit |
+| **Platform operators** | Center provisioning, subscriptions, locations, branding/icons, documentation, testing |
 | **Geography** | Primary: Egypt and broader Arabic-speaking education market |
 
 ---
@@ -83,7 +84,7 @@ The product delivers:
 | Attendance capture rate | Sessions recorded / scheduled sessions | > 90% |
 | Fee collection visibility | Unpaid student reports acted on | Decrease overdue |
 | Parent portal usage | Parent logins / enrolled families | Increase |
-| Meeting attendance | LiveKit joins / scheduled meetings | Increase |
+| Session attendance | QR check-ins and LiveKit/online joins vs scheduled sessions | Increase |
 | System availability | Uptime of API + SPA | ≥ 99.5% |
 | Support tickets | Issues per center per month | Decrease |
 | Time to onboard center | Center created → first student enrolled | < 1 day |
@@ -96,12 +97,14 @@ The product delivers:
 
 - Academic hierarchy: grades → classes → sections
 - People: students, teachers, parents, admin users
-- Operations: attendance, exams, quizzes, homework, fees, payments
-- Content: library, announcements, units, lessons, questions
-- Communications: in-app notifications, web push, WhatsApp templates
-- Online learning: meeting series, meetings, LiveKit rooms
+- Operations: attendance (incl. session QR), exams, quizzes, exam bank, homework, fees, payments
+- Content: library, announcements, units, lessons, questions (incl. bulk)
+- Communications: in-app notifications, web push, WhatsApp templates, certifications
+- Online / hybrid learning: scheduled sessions, LiveKit (or Jitsi / external URL), student check-in
 - Marketing: per-center landing pages (builder, publish, analytics)
-- Platform: center CRUD, subscriptions, platform users/roles, activity logs
+- Platform: center CRUD, subscriptions, governorates/cities/areas, branding, UI icons, documentation, Testing module, activity logs
+- Public self-registration for centers, students, and parents
+- Personal todos/notes (admin, teacher, student)
 - RBAC within center (Spatie permissions)
 - EN/AR localization and RTL
 
@@ -110,7 +113,7 @@ The product delivers:
 - Full accounting / ERP integration
 - Native iOS/Android apps (PWA is supported)
 - Automated payment gateways (recording is manual; gateway integration is future)
-- LMS content authoring beyond units/lessons/homework
+- LMS content authoring beyond units/lessons/homework/exam bank
 - Government exam certification workflows (templates exist; external validation is manual)
 
 ---
@@ -121,10 +124,10 @@ The product delivers:
 |------|--------|
 | **Architecture** | Shared MySQL database with `center_id` scoping (migrated from database-per-tenant) |
 | **Auth** | Session + encrypted bearer token for SPA; not OAuth-first |
-| **Legacy UI** | Blade dashboards remain; SPA is primary for new features |
-| **Integrations** | Zoom config exists; LiveKit is primary for video |
+| **Legacy UI** | Blade/Livewire views may still exist in `backend/resources/views`; **new work targets the SPA only** |
+| **Integrations** | Zoom config exists; LiveKit is primary for in-app video; sessions also support Jitsi and external links |
 | **Assumption** | Each center has reliable internet for web app and video |
-| **Assumption** | Admins configure academic structure before operational use |
+| **Assumption** | Admins configure academic structure (grade → class → section) before operational use |
 
 ---
 

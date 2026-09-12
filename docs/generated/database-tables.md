@@ -1,6 +1,6 @@
 # Database Tables (auto-generated)
 
-> Last synced: 2026-07-17T16:46:22.188Z
+> Last synced: 2026-09-11T22:49:42.541Z
 > Sources: `backend/database/migrations/`, `backend/config/centers.php`
 > Regenerate: `npm run docs:sync`
 
@@ -56,6 +56,7 @@
 | `student_certifications` | `2026_07_06_000001_create_student_certifications_table.php` |
 | `ui_translation_overrides` | `2026_07_13_000001_create_ui_translation_overrides_table.php` |
 | `personal_todos` | `2026_07_17_000001_create_personal_productivity_tables.php` |
+| `governorates` | `2026_08_28_100000_create_location_tables.php` |
 
 ## Center-scoped tables (`center_id`)
 
@@ -93,6 +94,7 @@
 - `lessons`
 - `questions`
 - `answers`
+- `exams`
 - `words`
 - `landing_pages`
 - `landing_page_revisions`

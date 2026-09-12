@@ -71,7 +71,7 @@ export default function DocumentationViewer({
   defaultDocId = DEFAULT_PLATFORM_DOC_ID,
 }: DocumentationViewerProps) {
   const navigate = useNavigate();
-  const { t } = useLocale();
+  const { t, dir } = useLocale();
   const activeDoc = getPlatformDocById(docId || defaultDocId);
 
   const { data: markdown, isLoading, isError, error } = useQuery({
@@ -110,7 +110,7 @@ export default function DocumentationViewer({
             <CardDescription>{t('docs.catalogDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[min(420px,50vh)] px-4 pb-4">
+            <ScrollArea className="h-[min(70vh,720px)] px-4 pb-4">
               <nav className="space-y-1">
                 {PLATFORM_DOCUMENTATION.map((doc: PlatformDocEntry) => {
                   const isActive = doc.id === activeDoc.id;
@@ -118,8 +118,9 @@ export default function DocumentationViewer({
                     <Link
                       key={doc.id}
                       to={getDocUrl(doc.id)}
+                      dir={dir}
                       className={cn(
-                        'flex items-start gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
+                        'flex items-start gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors',
                         isActive
                           ? 'bg-primary/10 font-medium text-primary'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground',

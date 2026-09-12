@@ -18,6 +18,14 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Clock: LucideIcons.Clock, GraduationCap: LucideIcons.GraduationCap,
 };
 
+function resolveLandingBuilderIcon(name: unknown): React.ElementType {
+  const key = String(name || 'BookOpen');
+  if (ICON_MAP[key]) return ICON_MAP[key];
+  const dynamic = (LucideIcons as Record<string, unknown>)[key];
+  if (typeof dynamic === 'function') return dynamic as React.ElementType;
+  return BookOpen;
+}
+
 interface ComponentRendererProps {
   component: LandingComponent;
   locale: 'en' | 'ar';
@@ -158,7 +166,7 @@ export function ComponentRenderer({
         ),
       );
     case 'icon': {
-      const Icon = ICON_MAP[String(c.icon || 'BookOpen')] ?? BookOpen;
+      const Icon = resolveLandingBuilderIcon(c.icon);
       return shell(
         wrapAlign(
           <div className="inline-flex flex-col items-center gap-2">

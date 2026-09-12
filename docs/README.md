@@ -1,6 +1,25 @@
 # EduCenter Documentation
 
-Living documentation for the EduCenter education management platform. Keep it current by running **`npm run docs:sync`** after route, migration, or schema changes — this also copies files to `public/docs/` for the Platform viewer at `/platform/documentation`.
+Living documentation for the EduCenter education management platform. Keep it current by running **`npm run docs:sync`** after route, migration, or schema changes — this also copies files to `public/docs/` for the Developer viewer at `/developer/documentation`.
+
+## Current system snapshot
+
+> Last synced with the codebase: **2026-09-12** (via `npm run docs:sync`)
+
+| Item | Current value |
+|------|----------------|
+| Product UI | React SPA (Vite) + Laravel 9 JSON API — Blade is legacy only |
+| Isolation | Shared MySQL, `center_id` + `center_memberships` |
+| Roles | `admin`, `teacher`, `student`, `parent`, `super_admin`, `platform_admin` |
+| API routes | **235** — see [`generated/api-routes.md`](./generated/api-routes.md) |
+| Frontend routes | **131** — see [`generated/frontend-routes.md`](./generated/frontend-routes.md) |
+| Database tables | **60** schema / **49** migrations — see [`generated/database-tables.md`](./generated/database-tables.md) |
+| Locales | English + Arabic (RTL); default locale **`ar`** |
+| Platform extras | Locations, subscriptions, users/roles, activity logs |
+| Developer extras | Branding, icons, documentation, **Testing** (`/developer/testing`), images, translations, API explorer |
+| Public onboarding | `/center/register`, `/student/register`, `/parent/register` |
+
+**Shipped since the June 2026 draft docs:** scheduled **sessions** (not “meetings”), attendance **QR check-in**, exam **bank / builder**, bulk questions, certifications, personal todos/notes, Egypt location hierarchy, UI icon overrides, live API test suite, demo filming scripts.
 
 ## Quick sync
 
@@ -36,8 +55,10 @@ Manual sections (business goals, user stories, security policies) are edited dir
 | 9 | [Development](./09-development.md) | Setup, env, standards, folder structure, Git |
 | 10 | [Security](./10-security.md) | Auth, authorization, encryption, incident response |
 | 11 | [Deployment](./11-deployment.md) | Servers, CI/CD, env vars, rollback |
-| 12 | [Testing](./12-testing.md) | Strategy, test types, sample cases |
+| 12 | [Testing](./12-testing.md) | Strategy, automated suites, platform Testing module |
 | 13 | [User Guide](./13-user-guide.md) | Arabic end-user guide (no technical details) — public at `/guide` |
+| 14 | [Manual Test Plan](./14-manual-test-plan.md) | Screen-by-screen manual cases; also at `/developer/testing` |
+| 15 | [Demo flows](./15-demo-flows.md) | A-to-Z filming scripts for center, student, and parent |
 
 ## Legacy / supplementary
 

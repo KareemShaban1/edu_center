@@ -1,14 +1,15 @@
 # Security Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
-> Implementation: `backend/app/Http/Support/`, `backend/config/auth.php`, `backend/app/Centers/`
+> Last reviewed: 2026-09-12  
+> Implementation: `backend/app/Http/Support/`, `backend/config/auth.php`, `backend/app/Centers/`  
+> Public register: `POST /api/register/{center,student,parent}`
 
 ---
 
 ## 1. Security overview
 
-EduCenter handles **PII** (student/parent names, contacts), **financial records** (fees/payments), and ** educational data**. Security relies on:
+EduCenter handles **PII** (student/parent names, contacts), **financial records** (fees/payments), and educational data. Security relies on:
 
 - Multi-guard authentication
 - Center-level data isolation
@@ -28,8 +29,8 @@ sequenceDiagram
   participant Auth as AuthLoginHandler
   participant DB
 
-  User->>SPA: Enter credentials + guard
-  SPA->>API: POST /api/login
+  User->>SPA: Enter credentials + guard (or register)
+  SPA->>API: POST /api/login (or POST /api/register/*)
   API->>Auth: Validate guard path
   alt Center-scoped admin/teacher
     Auth->>DB: Resolve center by slug
@@ -41,6 +42,10 @@ sequenceDiagram
   API->>SPA: token + user
   SPA->>API: Subsequent requests with Bearer + cookies
 ```
+
+### Platform / developer gate
+
+`/platform/login` and `/developer/login` also require a **client-side access password** (`VITE_PLATFORM_ACCESS_PASSWORD`, `src/config/platform-access.ts`) before the account login form. This is an extra UI gate, not a substitute for the `platform_admin` API guard.
 
 ### Token format
 
@@ -66,11 +71,11 @@ sequenceDiagram
 | Resource | admin (`web`) | teacher | student | parent | platform_admin |
 |----------|---------------|---------|---------|--------|----------------|
 | Admin bootstrap/CRUD | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Teacher bootstrap/meetings | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Student portal | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Teacher bootstrap/sessions | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Student portal (incl. QR check-in) | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Parent portal | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Platform centers | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Public landing | ✅ (no auth) | ✅ | ✅ | ✅ | ✅ |
+| Platform centers, locations, icons, testing | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Public landing + self-register | ✅ (no auth) | ✅ | ✅ | ✅ | ✅ |
 
 ### Spatie permissions (center staff)
 

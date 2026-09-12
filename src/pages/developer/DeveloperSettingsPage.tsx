@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { FormField, FormSelect } from '@/components/FormFields';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -44,7 +43,7 @@ function ScaleSelect({
   );
 }
 
-export default function PlatformSettings() {
+export default function DeveloperSettingsPage() {
   const { t } = useLocale();
   const { branding, loading, save } = useBranding();
   const [form, setForm] = useState<AppBranding>(() => normalizeBranding(branding));
@@ -85,17 +84,15 @@ export default function PlatformSettings() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          <Loader2 className="me-2 h-5 w-5 animate-spin" />
-          {t('landing.loading')}
-        </div>
-      </DashboardLayout>
+      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+        <Loader2 className="me-2 h-5 w-5 animate-spin" />
+        {t('landing.loading')}
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <div className="space-y-6">
       <div className="page-header">
         <h1 className="page-title">{t('platform.settings.title')}</h1>
         <p className="page-description">{t('platform.settings.desc')}</p>
@@ -315,65 +312,81 @@ export default function PlatformSettings() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
-              <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-primary" />
-                <h3 className="font-display font-semibold">{t('platform.settings.landingSizes')}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">{t('platform.settings.landingSizesDesc')}</p>
+        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-semibold">{t('platform.settings.landingSizes')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('platform.settings.landingSizesDesc')}</p>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ScaleSelect
-                  id="landing-text-scale"
-                  label={t('platform.settings.landingSizeLatin')}
-                  value={form.landing_text_scale}
-                  onChange={value => setForm(prev => ({ ...prev, landing_text_scale: value }))}
-                  t={t}
-                />
-                <ScaleSelect
-                  id="landing-text-scale-ar"
-                  label={t('platform.settings.landingSizeArabic')}
-                  value={form.landing_text_scale_ar}
-                  onChange={value => setForm(prev => ({ ...prev, landing_text_scale_ar: value }))}
-                  t={t}
-                />
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ScaleSelect
+              id="landing-text-scale"
+              label={t('platform.settings.landingSizeLatin')}
+              value={form.landing_text_scale}
+              onChange={value => setForm(prev => ({ ...prev, landing_text_scale: value }))}
+              t={t}
+            />
+            <ScaleSelect
+              id="landing-text-scale-ar"
+              label={t('platform.settings.landingSizeArabic')}
+              value={form.landing_text_scale_ar}
+              onChange={value => setForm(prev => ({ ...prev, landing_text_scale_ar: value }))}
+              t={t}
+            />
+          </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                {([
-                  ['en', form.landing_text_scale, form.font_body, form.font_display] as const,
-                  ['ar', form.landing_text_scale_ar, form.font_arabic, form.font_arabic] as const,
-                ]).map(([lang, scale, bodyFont, displayFont]) => {
-                  const landingFonts = resolveLandingFonts('desktop', Number(scale) || 100);
-                  return (
-                    <div
-                      key={lang}
-                      dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                      className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3"
-                    >
-                      <p className="text-sm font-medium">
-                        {lang === 'ar' ? t('platform.settings.landingPreviewAr') : t('platform.settings.landingPreviewEn')}
-                      </p>
-                      <p className="font-bold leading-tight" style={{ fontFamily: displayFont, fontSize: landingFonts.heroTitle }}>
-                        {lang === 'ar' ? 'منصة تعليمية متكاملة' : 'Education Center Platform'}
-                      </p>
-                      <p className="text-muted-foreground" style={{ fontFamily: bodyFont, fontSize: landingFonts.heroSubtitle }}>
-                        {lang === 'ar'
-                          ? 'إدارة الطلاب والحضور والواجبات في مكان واحد'
-                          : 'Manage students, attendance, and homework in one place'}
-                      </p>
-                      <p className="font-semibold" style={{ fontFamily: displayFont, fontSize: landingFonts.sectionTitle }}>
-                        {lang === 'ar' ? 'المميزات' : 'Features'}
-                      </p>
-                      <p style={{ fontFamily: bodyFont, fontSize: landingFonts.cardBody }}>
-                        {lang === 'ar' ? 'نص بطاقة توضيحية على الصفحة الرئيسية.' : 'Sample card body text on the landing page.'}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {([
+              {
+                lang: 'en' as const,
+                scale: form.landing_text_scale,
+                bodyFont: form.font_body,
+                displayFont: form.font_display,
+                previewLabelKey: 'platform.settings.landingPreviewEn',
+                titleKey: 'platform.settings.landingSampleTitleEn',
+                subtitleKey: 'platform.settings.landingSampleSubtitleEn',
+                sectionKey: 'platform.settings.landingSampleSectionEn',
+                cardKey: 'platform.settings.landingSampleCardEn',
+              },
+              {
+                lang: 'ar' as const,
+                scale: form.landing_text_scale_ar,
+                bodyFont: form.font_arabic,
+                displayFont: form.font_arabic,
+                previewLabelKey: 'platform.settings.landingPreviewAr',
+                titleKey: 'platform.settings.landingSampleTitleAr',
+                subtitleKey: 'platform.settings.landingSampleSubtitleAr',
+                sectionKey: 'platform.settings.landingSampleSectionAr',
+                cardKey: 'platform.settings.landingSampleCardAr',
+              },
+            ]).map(preview => {
+              const landingFonts = resolveLandingFonts('desktop', Number(preview.scale) || 100);
+              return (
+                <div
+                  key={preview.lang}
+                  dir={preview.lang === 'ar' ? 'rtl' : 'ltr'}
+                  className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3"
+                >
+                  <p className="text-sm font-medium">{t(preview.previewLabelKey)}</p>
+                  <p className="font-bold leading-tight" style={{ fontFamily: preview.displayFont, fontSize: landingFonts.heroTitle }}>
+                    {t(preview.titleKey)}
+                  </p>
+                  <p className="text-muted-foreground" style={{ fontFamily: preview.bodyFont, fontSize: landingFonts.heroSubtitle }}>
+                    {t(preview.subtitleKey)}
+                  </p>
+                  <p className="font-semibold" style={{ fontFamily: preview.displayFont, fontSize: landingFonts.sectionTitle }}>
+                    {t(preview.sectionKey)}
+                  </p>
+                  <p style={{ fontFamily: preview.bodyFont, fontSize: landingFonts.cardBody }}>
+                    {t(preview.cardKey)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -384,6 +397,6 @@ export default function PlatformSettings() {
           </Button>
         </div>
       </form>
-    </DashboardLayout>
+    </div>
   );
 }

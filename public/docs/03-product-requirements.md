@@ -2,7 +2,7 @@
 
 > **Document metadata**  
 > Product: EduCenter  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Frontend routes: run `npm run docs:sync` → `generated/frontend-routes.md`
 
 ---
@@ -22,13 +22,15 @@
 
 ### F1 — Center authentication & multi-center portal
 
-**Description:** Center staff log in with email/password at `/{centerSlug}/login`. Students and parents use dedicated portal logins without center slug; system resolves memberships.
+**Description:** Center staff log in with email/password at `/{centerSlug}/login`. Students and parents use dedicated portal logins; they may also **self-register**. System resolves memberships across centers. A new school can **self-register a center** at `/center/register`.
 
 | User story | Priority |
 |------------|----------|
 | As an admin, I log in to my center so I can manage operations | P0 |
-| As a parent enrolled in two centers, I pick which center to enter after login | P1 |
-| As a student, I use one portal login for all my centers | P1 |
+| As a parent enrolled in two centers, I pick which center to enter after login | P0 |
+| As a student, I use one portal login for all my centers | P0 |
+| As a new center owner, I register my center without a platform operator | P0 |
+| As a student/parent, I create my own account and join a center | P1 |
 
 **Acceptance criteria:**
 - [ ] Invalid credentials return 401 with clear message
@@ -65,6 +67,7 @@
 |------------|----------|
 | As an admin/teacher, I mark attendance for a section on a given date | P0 |
 | As an admin, I review attendance history for a section | P0 |
+| As a student, I check in to a session with QR (and location when required) | P0 |
 | As a parent, I see my child's attendance | P0 |
 
 **Acceptance criteria:**
@@ -129,20 +132,21 @@
 
 ---
 
-### F7 — Online meetings (LiveKit)
+### F7 — Scheduled sessions (hybrid / LiveKit)
 
-**Description:** Recurring series and scheduled meetings with in-browser video.
+**Description:** In-person and online sessions with QR attendance and in-browser video.
 
 | User story | Priority |
 |------------|----------|
-| As an admin/teacher, I create meeting series for a section | P1 |
-| As a teacher, I start/join a LiveKit room | P1 |
-| As a student, I join scheduled meetings | P1 |
+| As an admin, I schedule or auto-generate sessions for a section | P0 |
+| As a teacher, I start/join a LiveKit (or Jitsi) room | P1 |
+| As a student, I join scheduled online sessions | P1 |
 
 **Acceptance criteria:**
-- [ ] LiveKit token endpoint returns valid join credentials
-- [ ] Meeting list filtered by role and section
-- [ ] Student cannot mutate meetings via API
+- [ ] LiveKit token endpoint returns valid join credentials when configured
+- [ ] Session list filtered by role and section
+- [ ] Student cannot mutate other users’ sessions via API
+- [ ] In-person sessions can show attendance QR
 
 ---
 
@@ -205,6 +209,9 @@
 |------------|----------|
 | As a platform admin, I create a new center | P0 |
 | As a platform admin, I assign subscription plan to center | P1 |
+| As a platform admin, I manage Egypt locations (governorate/city/area) | P1 |
+| As a platform admin, I override branding and sidebar/landing icons | P1 |
+| As a platform admin, I run the Testing module and read project docs | P1 |
 | As a platform admin, I audit activity across centers | P2 |
 
 **Acceptance criteria:**
@@ -230,13 +237,36 @@
 
 ---
 
-## Release roadmap (suggested)
+### F13 — Exam bank & certifications
 
-| Phase | Features | Priority focus |
-|-------|----------|----------------|
-| **MVP** | F1, F2, F3, F4, F5, F11, F12 (locale) | P0 |
-| **v1.1** | F6, F7, F8, F10 | P1 |
-| **v1.2** | F9, PWA polish, analytics | P2–P3 |
+**Description:** Question bank, exam builder/export, and issued certificates.
+
+| User story | Priority |
+|------------|----------|
+| As an admin, I build exams from a question bank and export PDF/Word | P1 |
+| As an admin, I issue a certificate a student can download | P1 |
+
+---
+
+### F14 — Personal productivity
+
+**Description:** Private todos and notes for admin, teacher, and student accounts.
+
+| User story | Priority |
+|------------|----------|
+| As staff or a student, I keep a private to-do list and notes | P2 |
+
+---
+
+## Release status (2026-09)
+
+The catalog above is **implemented in the current SPA**. Remaining work is polish, load testing, and optional payment-gateway integration — not missing P0 modules.
+
+| Phase | Features | Status |
+|-------|----------|--------|
+| **MVP** | F1–F5, F11, F12 | Shipped |
+| **v1.1** | F6, F7, F8, F10, F13 | Shipped |
+| **v1.2** | F9, F14, PWA, Testing module, demo scripts | Shipped |
 
 ---
 

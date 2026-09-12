@@ -1,7 +1,7 @@
 # Deployment Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Detailed nginx guide: [`DEPLOYMENT_CONTABO_AAPANEL.md`](./DEPLOYMENT_CONTABO_AAPANEL.md)
 
 ---
@@ -69,7 +69,7 @@ No CI pipeline is committed yet. Suggested GitHub Actions workflow:
 
 | Stage | Actions |
 |-------|---------|
-| **CI** | `npm ci`, `npm run lint`, `npm test`, `composer install`, `php artisan test` |
+| **CI** | `npm ci`, `npm run lint`, `npm run test:all` (`npm test` + `php artisan test`) |
 | **Build** | `npm run build`, artifact `dist/` |
 | **Deploy** | SSH/rsync to server, run migrations, reload PHP-FPM |
 
@@ -113,8 +113,9 @@ Set before `npm run build`:
 
 ```env
 VITE_API_BASE_URL=https://yourdomain.com/api
-VITE_DEFAULT_LOCALE=en
+VITE_DEFAULT_LOCALE=ar
 VITE_USE_MOCK=false
+VITE_PLATFORM_ACCESS_PASSWORD=<strong-gate-password>
 ```
 
 ---

@@ -1,7 +1,7 @@
 # System Architecture Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Regenerate routes/tables: `npm run docs:sync`
 
 ---
@@ -14,7 +14,6 @@ EduCenter follows a **decoupled SPA + API** pattern with a **shared-database mul
 flowchart TB
   subgraph clients [Clients]
     Browser[Browser SPA PWA]
-    Legacy[Legacy Blade dashboards]
   end
 
   subgraph frontend [Frontend - Vite React]
@@ -22,8 +21,7 @@ flowchart TB
   end
 
   subgraph backend [Backend - Laravel 9]
-    API[routes/api.php JSON API]
-    Web[Web routes Blade Livewire]
+    API[routes/api.php plus routes/api/*.php]
     Centers[Centers module scoping]
   end
 
@@ -39,10 +37,8 @@ flowchart TB
   end
 
   Browser --> SPA
-  Legacy --> Web
   SPA -->|/api proxy| API
   API --> Centers
-  Web --> Centers
   Centers --> MySQL
   API --> Storage
   API --> LiveKit
@@ -90,8 +86,9 @@ erDiagram
 |--------|----------|----------------|
 | Routing | `src/App.tsx` | Role-based protected routes |
 | Auth | `src/contexts/AuthContext.tsx` | Token, user, tenant context |
-| i18n | `src/contexts/LocaleContext.tsx` | EN/AR, RTL |
-| API client | `src/services/apiClient.ts` | Bearer token, center headers |
+| i18n | `src/contexts/LocaleContext.tsx` | EN/AR, RTL (default `ar`) |
+| Icons | `src/contexts/UiIconsContext.tsx` | Platform Lucide overrides |
+| API client | `src/services/api-client.ts` | Bearer token, center headers |
 | Endpoints | `src/services/endpoints/` | Domain API wrappers |
 | UI | `src/components/ui/` | shadcn/Radix design system |
 
@@ -99,12 +96,12 @@ erDiagram
 
 | Module | Location | Responsibility |
 |--------|----------|----------------|
-| API layer | `routes/api.php` | SPA JSON endpoints (~130 routes) |
-| Auth | `AuthLoginHandler`, `ApiBearerAuth` | Multi-guard login, encrypted bearer |
-| Admin domain | `Repository/Admin/*`, Admin controllers | CRUD and reports |
-| Platform | `PlatformCenterApiController` | Center lifecycle |
+| API layer | `routes/api.php` + `routes/api/*.php` | SPA JSON endpoints (**235** routes) |
+| Auth | `AuthLoginHandler`, `ApiBearerAuth` | Multi-guard login, encrypted bearer, public register |
+| Admin domain | `Http/Controllers/Api/Admin/*` | CRUD, sessions, exam bank, reports |
+| Platform | `Platform*ApiController`, UI icons/branding | Center lifecycle, locations, appearance |
 | Jobs | `SetupCenter`, `DeleteCenterData` | Async provisioning |
-| Legacy UI | `routes/admin.php`, etc. | Blade dashboards |
+| Tests | `backend/tests/Feature/Api/` | Catalog + unauthenticated smoke for every route |
 
 ---
 
@@ -131,8 +128,8 @@ Full table list: [`generated/database-tables.md`](./generated/database-tables.md
 |---------|-----------|-----------|
 | SPA API | `/api/*` | React app |
 | Public landing | `GET /api/public/landing/{slug}` | Marketing pages |
-| Legacy AJAX | `/ajax/*` | Blade dropdowns |
-| Config | `GET /api/config` | Returns `tenancy_mode: central_shared` |
+| Public catalogs | `/api/public/centers`, `/api/public/stats`, `/api/ui-icons` | Landing + icons |
+| Config | `GET /api/config` | Returns `storage_mode: central_database` |
 
 Full route list: [`generated/api-routes.md`](./generated/api-routes.md)
 
@@ -182,7 +179,7 @@ See [Deployment Documentation](./11-deployment.md).
 
 | Service | Config | Usage |
 |---------|--------|-------|
-| LiveKit | `LIVEKIT_*` env | Meeting tokens, WebRTC |
+| LiveKit | `LIVEKIT_*` env | Session join tokens, WebRTC |
 | Web Push | VAPID keys | Parent/student notifications |
 | FCM | `FCM_*` | Mobile push |
 | WhatsApp | Templates in DB | Attendance/grade messages |
@@ -193,12 +190,12 @@ See [Deployment Documentation](./11-deployment.md).
 
 ## 9. Legacy vs modern stack
 
-| Aspect | Modern (primary) | Legacy |
-|--------|------------------|--------|
-| UI | React SPA | Blade + Livewire 2 |
-| API | `routes/api.php` | Form posts to web routes |
-| Tenancy term | Center | Tenant (aliases remain) |
-| Video | LiveKit | Zoom (optional) |
+| Aspect | Modern (primary) | Legacy (do not extend) |
+|--------|------------------|------------------------|
+| UI | React SPA at `/` | Blade + Livewire 2 under `backend/resources/views` |
+| API | `routes/api.php` + split files | Form posts to web routes |
+| Tenancy term | Center | Tenant (aliases remain: `/platform/tenants`) |
+| Classes | `sessions` + LiveKit/Jitsi/URL | Zoom (optional) |
 
 New features should target the SPA API first.
 

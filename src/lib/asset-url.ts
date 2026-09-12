@@ -15,28 +15,33 @@ export function resolveAssetUrl(url: string | undefined | null): string {
   const brokenHost = u.match(/^https?:\/\/storage(\/.*)$/i);
   if (brokenHost) {
     const path = brokenHost[1].replace(/^\/storage\//, '/');
-    return `/api/storage${path.startsWith('/') ? path : `/${path}`}`;
+    return toApiStoragePath(path.startsWith('/') ? path.slice(1) : path);
   }
 
   const protocolRelative = u.match(/^\/\/storage(\/.*)$/i);
   if (protocolRelative) {
     const path = protocolRelative[1].replace(/^\/storage\//, '/');
-    return `/api/storage${path.startsWith('/') ? path : `/${path}`}`;
+    return toApiStoragePath(path.startsWith('/') ? path.slice(1) : path);
   }
 
   // Absolute backend URL with /storage/...
   const storageAbs = u.match(/^https?:\/\/[^/]+\/storage\/(.+)$/i);
-  if (storageAbs) return `/api/storage/${storageAbs[1]}`;
+  if (storageAbs) return toApiStoragePath(storageAbs[1]);
 
   if (/^https?:\/\//i.test(u)) return u;
 
   // /storage/1/file.png or storage/1/file.png
-  if (u.startsWith('/storage/')) return `/api/storage/${u.slice('/storage/'.length)}`;
-  if (u.startsWith('storage/')) return `/api/storage/${u.slice('storage/'.length)}`;
+  if (u.startsWith('/storage/')) return toApiStoragePath(u.slice('/storage/'.length));
+  if (u.startsWith('storage/')) return toApiStoragePath(u.slice('storage/'.length));
   if (u.startsWith('/')) return u;
 
-  // Bare "1/file.png"
-  if (/^\d+\//.test(u)) return `/api/storage/${u}`;
+  // Bare "1/file.png" or "website-images/file.png"
+  if (/^\d+\//.test(u) || u.startsWith('website-images/')) return toApiStoragePath(u);
 
   return u;
+}
+
+function toApiStoragePath(relative: string): string {
+  const cleaned = relative.replace(/^\/+/, '');
+  return `/api/storage/${cleaned}`;
 }

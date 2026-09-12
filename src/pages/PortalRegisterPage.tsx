@@ -230,7 +230,7 @@ export default function PortalRegisterPage({
         }}
       />
 
-      <div dir="ltr" className="relative flex min-h-screen items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16">
+      <div dir="rtl" className="relative flex min-h-screen items-center justify-start px-4 py-12 sm:px-8 lg:px-32 lg:py-16">
         <div dir={dir} className="w-full max-w-md">
           <div className="mb-6 flex items-center gap-2.5">
             <div

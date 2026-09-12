@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { WebsiteImagesProvider } from "@/contexts/WebsiteImagesContext";
+import { UiIconsProvider } from "@/contexts/UiIconsContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
 import UserGuidePage from "@/pages/UserGuidePage";
@@ -124,7 +125,6 @@ import PlatformStudents from "@/pages/platform/PlatformStudents";
 import PlatformParents from "@/pages/platform/PlatformParents";
 import PlatformRoles from "@/pages/platform/PlatformRoles";
 import PlatformLogs from "@/pages/platform/PlatformLogs";
-import PlatformDocumentation from "@/pages/platform/PlatformDocumentation";
 import DeveloperDashboardLayout from "@/components/DeveloperDashboardLayout";
 import DeveloperProtectedRoute from "@/components/DeveloperProtectedRoute";
 import DeveloperOverviewPage from "@/pages/developer/DeveloperOverviewPage";
@@ -133,7 +133,14 @@ import DeveloperDatabasePage from "@/pages/developer/DeveloperDatabasePage";
 import DeveloperDocumentationPage from "@/pages/developer/DeveloperDocumentationPage";
 import DeveloperTranslationsPage from "@/pages/developer/DeveloperTranslationsPage";
 import DeveloperImagesPage from "@/pages/developer/DeveloperImagesPage";
-import PlatformSettings from "@/pages/platform/PlatformSettings";
+import DeveloperSettingsPage from "@/pages/developer/DeveloperSettingsPage";
+import DeveloperIconsPage from "@/pages/developer/DeveloperIconsPage";
+import DeveloperTestingPage from "@/pages/developer/DeveloperTestingPage";
+
+function PlatformDocRedirect() {
+  const { docId } = useParams<{ docId: string }>();
+  return <Navigate to={docId ? `/developer/documentation/${docId}` : '/developer/documentation'} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -143,6 +150,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <WebsiteImagesProvider>
+        <UiIconsProvider>
         <BrowserRouter>
         <LocaleProvider>
           <BrandingProvider>
@@ -272,9 +280,11 @@ const App = () => (
               <Route path="/platform/parents" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformParents /></ProtectedRoute>} />
               <Route path="/platform/roles" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformRoles /></ProtectedRoute>} />
               <Route path="/platform/logs" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformLogs /></ProtectedRoute>} />
-              <Route path="/platform/documentation" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
-              <Route path="/platform/documentation/:docId" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDocumentation /></ProtectedRoute>} />
-              <Route path="/platform/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformSettings /></ProtectedRoute>} />
+              <Route path="/platform/documentation" element={<Navigate to="/developer/documentation" replace />} />
+              <Route path="/platform/documentation/:docId" element={<PlatformDocRedirect />} />
+              <Route path="/platform/settings" element={<Navigate to="/developer/settings" replace />} />
+              <Route path="/platform/icons" element={<Navigate to="/developer/icons" replace />} />
+              <Route path="/platform/testing" element={<Navigate to="/developer/testing" replace />} />
 
               {/* Developer Portal */}
               <Route path="/developer/login" element={<DeveloperLoginPage />} />
@@ -284,6 +294,9 @@ const App = () => (
                 <Route path="database" element={<DeveloperDatabasePage />} />
                 <Route path="translations" element={<DeveloperTranslationsPage />} />
                 <Route path="images" element={<DeveloperImagesPage />} />
+                <Route path="settings" element={<DeveloperSettingsPage />} />
+                <Route path="icons" element={<DeveloperIconsPage />} />
+                <Route path="testing" element={<DeveloperTestingPage />} />
                 <Route path="documentation" element={<DeveloperDocumentationPage />} />
                 <Route path="documentation/:docId" element={<DeveloperDocumentationPage />} />
               </Route>
@@ -294,6 +307,7 @@ const App = () => (
           </BrandingProvider>
         </LocaleProvider>
         </BrowserRouter>
+        </UiIconsProvider>
       </WebsiteImagesProvider>
     </TooltipProvider>
   </QueryClientProvider>

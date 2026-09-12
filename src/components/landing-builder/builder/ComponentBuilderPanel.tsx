@@ -12,6 +12,7 @@ import { BUILDER_COMPONENT_TYPES } from '@/lib/landing/component-defaults';
 import type { ComponentType, LandingComponent, LandingSection, LocalizedText } from '@/types/landing';
 import { cn } from '@/lib/utils';
 import { ImageUrlField } from './ImageUrlField';
+import IconNameField from '@/components/IconNameField';
 
 interface ComponentBuilderPanelProps {
   section: LandingSection;
@@ -162,10 +163,11 @@ function ComponentPropertyEditor({
     case 'icon':
       return (
         <>
-          <div className="space-y-1">
-            <Label className="text-xs">{t('landing.iconName')}</Label>
-            <Input value={String(c.icon ?? 'BookOpen')} onChange={e => set({ icon: e.target.value })} placeholder="BookOpen" />
-          </div>
+          <IconNameField
+            label={t('landing.iconName')}
+            value={String(c.icon ?? 'BookOpen')}
+            onChange={icon => set({ icon })}
+          />
           {localizedField('label', 'landing.text.title')}
         </>
       );

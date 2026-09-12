@@ -1,8 +1,10 @@
 # Testing Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
-> Test locations: `src/**/*.test.ts`, `backend/tests/`
+> Last reviewed: 2026-09-12  
+> Test locations: `src/**/*.test.ts`, `backend/tests/`  
+> Manual plan: [14-manual-test-plan.md](./14-manual-test-plan.md)  
+> In-app module: `/developer/testing`
 
 ---
 
@@ -12,92 +14,104 @@ EduCenter uses a **pragmatic test pyramid**:
 
 | Layer | Tool | Focus |
 |-------|------|-------|
-| Unit | Vitest (FE), PHPUnit (BE) | Pure functions, helpers |
-| Integration | PHPUnit Feature tests | API routes, auth, scoping |
+| Unit | Vitest (FE), PHPUnit (BE) | Pure functions, helpers, catalogs |
+| Integration | PHPUnit Feature tests | All `/api` routes: catalog, public, auth, unauthenticated smoke |
+| Live suite | Platform Testing module | Hits the running API with the signed-in session |
+| Manual | Checklist in docs + `/developer/testing` | Every screen and role flow |
 | E2E | Manual / future Playwright | Critical user flows |
 | Load | Manual / k6 (future) | Bootstrap and login under load |
 
-**Current state:** Minimal automated coverage — example tests only. This document defines target strategy and sample cases to implement.
+---
+
+## 2. Commands
+
+From the repository root:
+
+```bash
+npm test                 # Vitest once
+npm run test:watch       # Vitest watch
+npm run test:backend     # PHPUnit via Laravel
+npm run test:all         # Frontend then backend
+```
+
+Backend only:
+
+```bash
+cd backend
+php artisan test
+php artisan test --filter=Api
+```
+
+After adding routes, regenerate the API catalog used by the Testing module:
+
+```bash
+npm run docs:sync
+```
 
 ---
 
-## 2. Frontend testing
+## 3. Frontend testing
 
-### 2.1 Setup
+Config: `vitest.config.ts` (jsdom).
 
 ```bash
-npm test              # vitest run
-npm run test:watch    # watch mode
+npm test
 ```
 
-Config: `vitest.config.ts`  
-Environment: jsdom (if configured in vitest setup)
+### 3.1 Automated cases (current)
 
-### 2.2 Unit tests (target)
+| File | Asserts |
+|------|---------|
+| `src/lib/routes.test.ts` | Dashboard and login paths per role |
+| `src/lib/api-test-suite.test.ts` | Public route detection, dummy params, verdicts |
+| `src/config/manual-test-plan.test.ts` | Plan IDs are unique and cover every role |
 
-| Area | Examples to test |
-|------|------------------|
-| `src/lib/routes.ts` | `getDashboardPath()` per role |
+### 3.2 Target unit tests (still useful)
+
+| Area | Examples |
+|------|----------|
 | API client | Token header injection, tenant slug |
 | Form validators | Zod schemas for CRUD forms |
 | Locale | Key fallback en → ar |
 
-### 2.3 Component tests (target)
-
-| Component | Cases |
-|-----------|-------|
-| `ProtectedRoute` | Redirect when unauthenticated; wrong role |
-| `PwaInstallButton` | Hidden when standalone |
-| `DataTable` | Sort, empty state |
-
-### 2.4 Running with mock API
+### 3.3 Running with mock API
 
 Set `VITE_USE_MOCK=true` for UI development without backend — not for automated CI unless mock handlers are deterministic.
 
 ---
 
-## 3. Backend testing
+## 4. Backend API tests
 
-### 3.1 Setup
+Config: `backend/phpunit.xml`. Tests send requests to `http://127.0.0.1/api/...` so they match domain-bound routes in `config/centers.php`.
 
-```bash
-cd backend
-cp .example.env .env.testing   # create if missing
-php artisan test
-```
+| File | What it covers |
+|------|----------------|
+| `tests/Feature/Api/ApiRouteCatalogTest.php` | Every split `routes/api*.php` file is registered under the `api` prefix |
+| `tests/Feature/Api/PublicApiTest.php` | Public GETs (`/config`, `/branding`, `/auth/guards`, `/public/centers`, `/public/stats`, icons, translations, images) |
+| `tests/Feature/Api/AuthApiTest.php` | Login validation, `/user` unauthenticated, logout |
+| `tests/Feature/Api/ProtectedApiUnauthenticatedTest.php` | Every registered API route without a session: never 500; protected routes 401/403 (or 404/405) |
 
-Config: `backend/phpunit.xml`
+These tests do **not** mutate tenant data. Authenticated CRUD is exercised live from `/developer/testing` (GET suite) and by the manual plan.
 
-### 3.2 Unit tests (target)
-
-| Class | Cases |
-|-------|-------|
-| `ApiBearerAuth` | Valid token restores session; expired rejects |
-| `CenterContextManager` | Resolves center by slug; fails unknown |
-| `GlobalMembershipService` | Lists memberships; switch center |
-
-### 3.3 Feature / integration tests (priority)
-
-| ID | Test case | Assert |
-|----|-----------|--------|
-| IT-AUTH-01 | POST `/api/login` admin with valid center | 200, user + token |
-| IT-AUTH-02 | POST `/api/login` admin without center_slug | 422/400 |
-| IT-AUTH-03 | GET `/api/admin/bootstrap` without auth | 401 |
-| IT-AUTH-04 | Parent portal login multi-membership | selection payload |
-| IT-SCOPE-01 | Admin A cannot read center B students | Empty or 403 |
-| IT-SCOPE-02 | Student POST meeting | 403 |
-| IT-PLT-01 | Platform center CRUD as platform_admin | 200 |
-| IT-PLT-02 | Platform route as center admin | 403 |
-
-### 3.4 Database testing
-
-- Use SQLite in-memory or dedicated `edu_center_test` database
-- Run migrations before test suite
-- Seed minimal center + user fixtures per test class
+If MySQL is unavailable, Feature tests that touch the database will fail — keep `.env` pointed at a working local database when running `php artisan test`.
 
 ---
 
-## 4. Load testing (planned)
+## 5. Platform Testing module
+
+Route: `/developer/testing` (developer portal; platform / super admin).
+
+| Tab | Purpose |
+|-----|---------|
+| **Manual plan** | Interactive checklist (same cases as [14-manual-test-plan.md](./14-manual-test-plan.md)); progress stored in the browser |
+| **API tests** | Live suite against all catalogued endpoints. Unauthenticated: public 2xx / protected 401. Authenticated GET: current bearer token, mutating methods skipped |
+| **Automated** | Commands and file list for Vitest + PHPUnit |
+
+A 5xx from the live suite is always a failure.
+
+---
+
+## 6. Load testing (planned)
 
 | Scenario | Target | Tool |
 |----------|--------|------|
@@ -109,46 +123,9 @@ Script location (future): `tests/load/login.js`
 
 ---
 
-## 5. Manual test cases (smoke)
+## 7. Regression checklist by module
 
-Run before each release:
-
-### Authentication
-
-| # | Steps | Expected |
-|---|-------|----------|
-| M-01 | Admin login at `/demo/login` | Lands on `/admin` |
-| M-02 | Teacher login same center | Lands on `/teacher` |
-| M-03 | Student portal login | Lands on `/student` |
-| M-04 | Parent portal login | Lands on `/parent` |
-| M-05 | Platform login | Lands on `/platform` |
-| M-06 | Logout | Returns to login; `/api/user` 401 |
-
-### Center isolation
-
-| # | Steps | Expected |
-|---|-------|----------|
-| M-10 | Create student in center A | Not visible in center B bootstrap |
-| M-11 | API with wrong `X-Center-Slug` | Error or empty data |
-
-### Operations
-
-| # | Steps | Expected |
-|---|-------|----------|
-| M-20 | Record attendance section/date | Saves; history shows date |
-| M-21 | Record payment | Appears in reports |
-| M-22 | Create meeting + LiveKit join | Token works; room connects |
-
-### i18n & PWA
-
-| # | Steps | Expected |
-|---|-------|----------|
-| M-30 | Switch to Arabic | RTL layout, Arabic strings |
-| M-31 | Install PWA (Chrome) | App opens standalone |
-
----
-
-## 6. Regression checklist by module
+Use the full plan in [14-manual-test-plan.md](./14-manual-test-plan.md). High-risk regressions:
 
 | Module | Key regression |
 |--------|----------------|
@@ -157,10 +134,11 @@ Run before each release:
 | Global identity | Switch center mid-session |
 | Landing pages | Publish/unpublish public URL |
 | RBAC | Limited user cannot delete students |
+| Center isolation | Admin A cannot read center B students |
 
 ---
 
-## 7. CI integration (recommended)
+## 8. CI integration (recommended)
 
 ```yaml
 # .github/workflows/test.yml (future)
@@ -178,7 +156,7 @@ jobs:
 
 ---
 
-## 8. Test data
+## 9. Test data
 
 | Command | Purpose |
 |---------|---------|
@@ -192,6 +170,9 @@ Document demo credentials in internal runbook only — not in public docs.
 
 ## Related documents
 
+- [Manual test plan](./14-manual-test-plan.md)
+- [Demo flows](./15-demo-flows.md)
 - [SRS — functional requirements](./02-software-requirements.md)
 - [Development — setup](./09-development.md)
 - [PRD — acceptance criteria](./03-product-requirements.md)
+- [API](./07-api.md)

@@ -47,9 +47,10 @@ final class WebsiteImageService
         }
 
         $dimensions = @getimagesize($file->getRealPath()) ?: null;
+        $publicUrl = '/storage/'.$path;
         $item = [
             'key' => $key,
-            'url' => Storage::disk('public')->url($path),
+            'url' => $publicUrl,
             'path' => $path,
             'name' => $file->getClientOriginalName(),
             'mime' => $file->getMimeType(),

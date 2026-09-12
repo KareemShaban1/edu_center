@@ -18,12 +18,24 @@ mkdirSync(OUT, { recursive: true });
 
 const now = new Date().toISOString();
 
-function extractApiRoutes() {
-  const apiPath = join(ROOT, "backend", "routes", "api.php");
-  const content = readFileSync(apiPath, "utf8");
+function collectApiRouteFiles() {
+  const files = [join(ROOT, "backend", "routes", "api.php")];
+  const apiDir = join(ROOT, "backend", "routes", "api");
+  try {
+    for (const name of readdirSync(apiDir)) {
+      if (!name.endsWith(".php") || name === "locale.php") continue;
+      files.push(join(apiDir, name));
+    }
+  } catch {
+    // Split route files are optional for older checkouts.
+  }
+  return files;
+}
+
+function extractRoutesFromFile(filePath) {
+  const content = readFileSync(filePath, "utf8");
   const routes = [];
-  const re =
-    /Route::(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/gi;
+  const re = /Route::(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/gi;
   let m;
   while ((m = re.exec(content)) !== null) {
     routes.push({ method: m[1].toUpperCase(), path: m[2] });
@@ -37,6 +49,24 @@ function extractApiRoutes() {
       handler: m[3].trim(),
     });
   }
+  const matchRe = /Route::match\(\s*\[([^\]]+)\]\s*,\s*['"]([^'"]+)['"]/gi;
+  while ((m = matchRe.exec(content)) !== null) {
+    const methods = [
+      ...new Set(
+        (m[1].match(/GET|POST|PUT|PATCH|DELETE/gi) || []).map((x) =>
+          x.toUpperCase(),
+        ),
+      ),
+    ].filter((method) => method !== "HEAD");
+    for (const method of methods) {
+      routes.push({ method, path: m[2] });
+    }
+  }
+  return routes;
+}
+
+function extractApiRoutes() {
+  const routes = collectApiRouteFiles().flatMap(extractRoutesFromFile);
   const seen = new Set();
   const unique = routes.filter((r) => {
     const key = `${r.method} ${r.path}`;
@@ -135,9 +165,23 @@ function enrichApiRoute(route) {
   const module = segments[0] || "root";
   const method = route.method;
   const acceptsBody = ["POST", "PUT", "PATCH"].includes(method);
-  const publicPaths = ["/login", "/register", "/auth/guards"];
-  const authRequired = !publicPaths.some(
-    (p) => path === p || path.startsWith(`${p}/`),
+  const publicExact = new Set([
+    "/login",
+    "/register/parent",
+    "/register/student",
+    "/register/center",
+    "/auth/guards",
+    "/config",
+    "/branding",
+    "/ui-translations",
+    "/website-images",
+    "/ui-icons",
+    "/public/centers",
+    "/public/stats",
+  ]);
+  const publicPrefixes = ["/login", "/register/", "/public/", "/storage/"];
+  const authRequired = !(
+    publicExact.has(path) || publicPrefixes.some((p) => path.startsWith(p))
   );
   const id = `${method}-${path.replace(/\//g, "_").replace(/\{|\}/g, "_")}`;
   return {
@@ -159,7 +203,7 @@ function writeGeneratedApiRoutes(routes) {
     "# API Routes (auto-generated)",
     "",
     `> Last synced: ${now}`,
-    "> Source: `backend/routes/api.php`",
+    "> Source: `backend/routes/api.php` and `backend/routes/api/*.php`",
     "> Regenerate: `npm run docs:sync`",
     "",
     "| Method | Path | Handler |",

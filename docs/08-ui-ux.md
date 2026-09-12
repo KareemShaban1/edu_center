@@ -1,7 +1,7 @@
 # UI/UX Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > Routes: `npm run docs:sync` → [`generated/frontend-routes.md`](./generated/frontend-routes.md)  
 > i18n: `src/contexts/LocaleContext.tsx`
 
@@ -12,7 +12,7 @@
 | Principle | Application |
 |-----------|-------------|
 | **Role-first navigation** | Each role sees a tailored sidebar (admin, teacher, student, parent, platform) |
-| **Bilingual by default** | EN/AR toggle on all authenticated screens |
+| **Bilingual by default** | AR/EN toggle on all authenticated screens (default **Arabic**) |
 | **RTL-aware** | Arabic sets `dir=rtl` and Arabic fonts |
 | **Mobile-ready** | Responsive layouts; bottom nav on small screens in dashboard |
 | **Consistent CRUD** | Admin lists use `CrudPage` + `DataTable` + `FormDialog` |
@@ -64,9 +64,9 @@ CSS variables for `.dark` are defined; **no global theme toggle** is wired in th
 
 ### `DashboardLayout`
 
-- Collapsible sidebar with grouped sections per role
-- Header: locale toggle, user menu, sign out
-- Mobile: bottom navigation bar
+- Collapsible sidebar with grouped sections per role (Lucide icons overridable from `/developer/icons`)
+- Header: locale toggle, notifications, user menu
+- Mobile: bottom navigation / role-specific tabs
 - PWA install button in sidebar
 
 ### Marketing `LandingPage`
@@ -84,23 +84,28 @@ CSS variables for `.dark` are defined; **no global theme toggle** is wired in th
 | Route | Screen | Purpose |
 |-------|--------|---------|
 | `/` | Marketing landing | Product introduction |
+| `/guide` | User guide | Arabic end-user help |
+| `/center/register` | Center self-signup | New school onboarding |
 | `/:tenantSlug/login` | Center login | Admin & teacher |
 | `/student/login` | Student portal login | Cross-center |
+| `/student/register` | Student self-signup | Joins a center + section |
 | `/parent/login` | Parent portal login | Cross-center |
-| `/platform/login` | Platform login | Operators |
+| `/parent/register` | Parent self-signup | |
+| `/platform/login` | Platform login | Operators (access password + account) |
+| `/developer/login` | Developer portal | Docs + API explorer |
 | `/:tenantSlug/p/*` | Public landing page | Center marketing |
 
 ### Admin (`/admin/*`)
 
-Dashboard, Students, Teachers, Parents, Grades, Classes, Sections, Attendance (+ form/history), Fees, Exams (+ form/history), Quizzes (+ form/history), Payments (+ form/history), Library, Announcements, Reports, Settings, Units, Lessons, Homework, Meetings, Meeting Series, Users, Roles, Landing Pages (+ builder + analytics)
+Dashboard, Students (+ detail), Teachers, Parents, Grades, Classes, Sections (+ section sessions), Attendance / Exams / Quizzes / Payments (today, history, date), Fees, Library, Announcements, Notifications, WhatsApp (+ templates), Certifications (+ templates/builder), Units, Lessons, Questions (+ bulk), Exam bank (+ builder), Homework (+ review/remarks), Sessions, Reports (attendance, exams, quizzes, payments), Users, Roles, Settings, Landing (+ builder + analytics), Todos, Notes
 
 ### Teacher (`/teacher/*`)
 
-Dashboard, Classes, Attendance, Exams, Quizzes, Homework, Library, Meeting Series, Meetings, LiveKit room
+Dashboard, Classes, Sessions (+ LiveKit), Attendance, Exams, Quizzes, Homework, Library, Todos, Notes
 
 ### Student (`/student/*`)
 
-Dashboard, Meetings, LiveKit room, Attendance, Grades, Homework, Library
+Dashboard, Sessions (+ LiveKit), Attendance, QR check-in, Grades, Exams, Quizzes, Homework, Library, Certifications, Todos, Notes (`/student/courses` redirects to sessions)
 
 ### Parent (`/parent/*`)
 
@@ -108,7 +113,11 @@ Dashboard, Children, Attendance, Exams, Quizzes, Fees, Reports
 
 ### Platform (`/platform/*`)
 
-Dashboard, Tenants (centers), Subscriptions, Users, Roles, Activity Logs
+Dashboard, Tenants (centers), Students, Parents, Subscriptions, Governorates, Cities, Areas, Users, Roles, Activity Logs
+
+### Developer (`/developer/*`)
+
+Overview, APIs (live tester), Database catalog, Translations, Images, Appearance (branding), Icons, **Testing**, Documentation
 
 **Full list:** [`generated/frontend-routes.md`](./generated/frontend-routes.md)
 
@@ -125,6 +134,10 @@ flowchart TD
   LoginType -->|Student| SL["/student/login"]
   LoginType -->|Parent| PL["/parent/login"]
   LoginType -->|Platform| PFL["/platform/login"]
+  LoginType -->|Developer| DL["/developer/login"]
+  LoginType -->|Center register| CR["/center/register"]
+  LoginType -->|Student register| SR["/student/register"]
+  LoginType -->|Parent register| PR["/parent/register"]
   CL --> DashA["/admin or /teacher"]
   SL --> DashS["/student"]
   PL --> Multi{Multiple centers?}
@@ -132,6 +145,10 @@ flowchart TD
   Multi -->|No| DashP["/parent"]
   Pick --> DashP
   PFL --> DashPl["/platform"]
+  DL --> DashDev["/developer"]
+  CR --> DashA
+  SR --> DashS
+  PR --> DashP
 ```
 
 ### 5.2 Section/date operational flow (attendance, exams, payments)
@@ -145,10 +162,10 @@ Shared pattern across admin modules:
 
 Routes follow: `/admin/{module}/:sectionId/:date` and `/admin/{module}/:sectionId/history`
 
-### 5.3 LiveKit meeting flow
+### 5.3 LiveKit session flow
 
-1. Meetings list with status and time
-2. "Join" → dedicated full-screen LiveKit page
+1. Sessions list with status and time
+2. "Join" → dedicated full-screen LiveKit page (`/teacher/sessions/:id/livekit` or student equivalent)
 3. Token fetched on mount; connection states shown (connecting, connected, error)
 
 ---

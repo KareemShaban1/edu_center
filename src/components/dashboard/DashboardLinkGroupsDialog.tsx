@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useUiIcons } from '@/contexts/UiIconsContext';
 import { cn } from '@/lib/utils';
 
 export interface DashboardLinkGroupItem {
@@ -38,6 +39,7 @@ export default function DashboardLinkGroupsDialog({
   showLabel = true,
 }: DashboardLinkGroupsDialogProps) {
   const { t } = useLocale();
+  const { resolvePathIcon } = useUiIcons();
 
   if (linkGroups.length === 0) {
     return null;
@@ -70,18 +72,16 @@ export default function DashboardLinkGroupsDialog({
               </h4>
               <div className="grid gap-2 sm:grid-cols-2">
                 {group.links.map(link => {
-                  const Icon = link.icon;
+                  const Icon = resolvePathIcon(link.path, link.icon);
                   return (
                     <Link
                       key={link.path}
                       to={link.path}
                       className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5 hover:shadow-md"
                     >
-                      {Icon ? (
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                      ) : null}
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                        <Icon className="h-4 w-4" />
+                      </span>
                       <span className="truncate">{t(link.labelKey)}</span>
                     </Link>
                   );

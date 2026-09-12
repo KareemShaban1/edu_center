@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-07-17T16:46:22.188Z
+> Last synced: 2026-09-11T22:49:42.541Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -21,11 +21,14 @@
 | `/admin/certifications/templates/:id/edit` |
 | `/admin/certifications/templates/new` |
 | `/admin/classes` |
+| `/admin/exam-bank` |
+| `/admin/exam-bank/:id/builder` |
 | `/admin/exams` |
 | `/admin/exams/section/:sectionId/date/:date` |
 | `/admin/exams/section/:sectionId/history` |
 | `/admin/exams/section/:sectionId/today` |
 | `/admin/fees` |
+| `/admin/generated-exams` |
 | `/admin/grades` |
 | `/admin/homework` |
 | `/admin/homework/:homeworkId/review` |
@@ -42,6 +45,8 @@
 | `/admin/payments/section/:sectionId/date/:date` |
 | `/admin/payments/section/:sectionId/history` |
 | `/admin/payments/section/:sectionId/today` |
+| `/admin/questions` |
+| `/admin/questions/bulk` |
 | `/admin/quizzes` |
 | `/admin/quizzes/section/:sectionId/date/:date` |
 | `/admin/quizzes/section/:sectionId/history` |
@@ -57,12 +62,14 @@
 | `/admin/sessions` |
 | `/admin/settings` |
 | `/admin/students` |
+| `/admin/students/:id` |
 | `/admin/teachers` |
 | `/admin/todos` |
 | `/admin/units` |
 | `/admin/users` |
 | `/admin/whatsapp` |
 | `/admin/whatsapp/templates` |
+| `/center/register` |
 | `/developer` |
 | `/developer/login` |
 | `/guide` |
@@ -78,8 +85,12 @@
 | `/parent/register` |
 | `/parent/reports` |
 | `/platform` |
+| `/platform/areas` |
+| `/platform/cities` |
 | `/platform/documentation` |
 | `/platform/documentation/:docId` |
+| `/platform/governorates` |
+| `/platform/icons` |
 | `/platform/login` |
 | `/platform/logs` |
 | `/platform/parents` |
@@ -88,16 +99,20 @@
 | `/platform/students` |
 | `/platform/subscriptions` |
 | `/platform/tenants` |
+| `/platform/testing` |
 | `/platform/users` |
 | `/student` |
 | `/student/attendance` |
+| `/student/attendance/check-in` |
 | `/student/certifications` |
 | `/student/courses` |
+| `/student/exams` |
 | `/student/grades` |
 | `/student/homework` |
 | `/student/library` |
 | `/student/login` |
 | `/student/notes` |
+| `/student/quizzes` |
 | `/student/register` |
 | `/student/sessions` |
 | `/student/sessions/:sessionId/livekit` |
@@ -117,5 +132,8 @@
 | `database` |
 | `documentation` |
 | `documentation/:docId` |
+| `icons` |
 | `images` |
+| `settings` |
+| `testing` |
 | `translations` |

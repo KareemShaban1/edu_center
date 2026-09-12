@@ -24,6 +24,8 @@ Route::middleware([
     \App\Http\Middleware\RestoreApiSessionFromBearer::class,
 ])->group(function () {
     Route::get('/config', [ConfigApiController::class, 'show']);
+    Route::match(['GET', 'HEAD'], '/storage/website-images/{fileName}', [App\Http\Controllers\Api\StorageFileApiController::class, 'showWebsiteImage'])
+        ->where('fileName', '[^/]+');
     Route::match(['GET', 'HEAD'], '/storage/{mediaId}/{fileName}', [App\Http\Controllers\Api\StorageFileApiController::class, 'show'])
         ->whereNumber('mediaId')
         ->where('fileName', '[^/]+');
@@ -38,6 +40,14 @@ Route::middleware([
     Route::post('/developer/website-images/{key}', [App\Http\Controllers\Api\Platform\WebsiteImageApiController::class, 'update'])
         ->where('key', '[A-Za-z0-9_.-]+');
     Route::delete('/developer/website-images/{key}', [App\Http\Controllers\Api\Platform\WebsiteImageApiController::class, 'destroy'])
+        ->where('key', '[A-Za-z0-9_.-]+');
+    Route::get('/developer/database-schema', [App\Http\Controllers\Api\Platform\DeveloperDatabaseSchemaApiController::class, 'show']);
+    Route::post('/developer/database-schema/sync', [App\Http\Controllers\Api\Platform\DeveloperDatabaseSchemaApiController::class, 'sync']);
+    Route::get('/ui-icons', [App\Http\Controllers\Api\Platform\UiIconApiController::class, 'index']);
+    Route::put('/platform/ui-icons', [App\Http\Controllers\Api\Platform\UiIconApiController::class, 'update']);
+    Route::put('/platform/ui-icons/{key}', [App\Http\Controllers\Api\Platform\UiIconApiController::class, 'updateOne'])
+        ->where('key', '[A-Za-z0-9_.-]+');
+    Route::delete('/platform/ui-icons/{key}', [App\Http\Controllers\Api\Platform\UiIconApiController::class, 'destroy'])
         ->where('key', '[A-Za-z0-9_.-]+');
 
     Route::get('/personal/todos', [App\Http\Controllers\Api\PersonalProductivityApiController::class, 'todos']);

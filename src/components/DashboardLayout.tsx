@@ -29,7 +29,6 @@ import {
   BookMarked,
   ClipboardCheck,
   CircleDollarSign,
-  Palette,
   FolderOpen,
   Video,
   PieChart,
@@ -43,6 +42,7 @@ import {
   MapPin,
   HelpCircle,
   ListPlus,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/models';
@@ -52,6 +52,8 @@ import { PwaInstallButton } from '@/components/PwaInstallButton';
 import { NotificationBell } from '@/components/NotificationBell';
 import HeaderUserMenu from '@/components/dashboard/HeaderUserMenu';
 import AdminTopbarQuickNav from '@/components/dashboard/AdminTopbarQuickNav';
+import { useUiIcons } from '@/contexts/UiIconsContext';
+import { navGroupIconKey, navPathIconKey } from '@/lib/lucide-icons';
 
 type NavIcon = React.ElementType;
 
@@ -131,8 +133,6 @@ const platformNavBlocks: NavBlock[] = [
     },
   },
   { type: 'link', item: { labelKey: 'nav.activityLogs', path: '/platform/logs', icon: Activity } },
-  { type: 'link', item: { labelKey: 'nav.appearance', path: '/platform/settings', icon: Palette } },
-  { type: 'link', item: { labelKey: 'nav.documentation', path: '/platform/documentation', icon: BookOpen } },
 ];
 
 const adminNavBlocks: NavBlock[] = [
@@ -347,23 +347,24 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const { locale, setLocale, t, dir } = useLocale();
+  const { resolveIcon } = useUiIcons();
   const fonts = useAppFontClasses();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  const navBlocks = useMemo(() => {
+  const navBlocks = useMemo((): NavBlock[] => {
     const blocks = user ? roleNavBlocks[user.role] || [] : [];
     if (!user || user.role !== 'admin') return blocks;
 
-    return blocks.flatMap(block => {
+    return blocks.flatMap((block): NavBlock[] => {
       if (block.type === 'link') {
         return canAccessAdminPath(block.item.path, user) ? [block] : [];
       }
       const items = block.group.items.filter(item => canAccessAdminPath(item.path, user));
       if (items.length === 0) return [];
-      return [{ type: 'group' as const, group: { ...block.group, items } }];
+      return [{ type: 'group', group: { ...block.group, items } }];
     });
   }, [user]);
   const flatNav = useMemo(() => flattenNavBlocks(navBlocks), [navBlocks]);
@@ -411,6 +412,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             if (block.type === 'link') {
               const item = block.item;
               const isActive = location.pathname === item.path;
+              const ItemIcon = resolveIcon(navPathIconKey(item.path), item.icon as LucideIcon);
               return (
                 <Link
                   key={item.path}
@@ -423,14 +425,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
                   )}
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
+                  <ItemIcon className="h-4 w-4 shrink-0" />
                   {t(item.labelKey)}
                 </Link>
               );
             }
 
             const { group } = block;
-            const GroupIcon = group.icon;
+            const GroupIcon = resolveIcon(navGroupIconKey(group.id), group.icon as LucideIcon);
             const groupActive = group.items.some(i => i.path === location.pathname);
             const open = openGroups[group.id] ?? false;
 
@@ -461,7 +463,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <CollapsibleContent>
                   <div className="mt-1 space-y-0.5 ltr:pl-2 rtl:pr-2">
                     {group.items.map(sub => {
-                      const SubIcon = sub.icon;
+                      const SubIcon = resolveIcon(navPathIconKey(sub.path), sub.icon as LucideIcon);
                       const subActive = location.pathname === sub.path;
                       return (
                         <Link

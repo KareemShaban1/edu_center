@@ -13,6 +13,27 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class StorageFileApiController extends Controller
 {
+    public function showWebsiteImage(string $fileName): BinaryFileResponse
+    {
+        $fileName = rawurldecode($fileName);
+        $fileName = basename(str_replace(['\\', "\0"], ['/', ''], $fileName));
+
+        if ($fileName === '' || $fileName === '.' || $fileName === '..') {
+            abort(404, 'Invalid website image path');
+        }
+
+        $relative = 'website-images/'.$fileName;
+        $fullPath = $this->findRelativePublicFile($relative);
+
+        if ($fullPath === null) {
+            abort(404, 'Website image not found');
+        }
+
+        return Response::file($fullPath, [
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+
     public function show(int $mediaId, string $fileName): BinaryFileResponse
     {
         $fileName = rawurldecode($fileName);
@@ -32,6 +53,22 @@ class StorageFileApiController extends Controller
         return Response::file($fullPath, [
             'Cache-Control' => 'public, max-age=86400',
         ]);
+    }
+
+    private function findRelativePublicFile(string $relative): ?string
+    {
+        $candidates = [
+            public_path('storage/'.$relative),
+            storage_path('app/public/'.$relative),
+        ];
+
+        foreach ($candidates as $fullPath) {
+            if ($this->isSafeReadableFile($fullPath)) {
+                return $fullPath;
+            }
+        }
+
+        return null;
     }
 
     private function findFile(string $relative, int $mediaId, string $fileName): ?string

@@ -1,9 +1,9 @@
 # API Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > **Full route list:** `npm run docs:sync` → [`generated/api-routes.md`](./generated/api-routes.md)  
-> Implementation: `backend/routes/api.php`, `src/services/endpoints/`
+> Implementation: `backend/routes/api.php`, `backend/routes/api/*.php`, `src/services/endpoints/`
 
 ---
 
@@ -77,7 +77,7 @@ Multi-center selection response:
 
 - API uses **Laravel session** (cookies) plus **encrypted bearer token** in `Authorization` header
 - Token restored by `ApiBearerAuth` on `GET /user`
-- SPA stores token via `apiClient`
+- SPA stores token via `apiClient` (`src/services/api-client.ts`; default locale `ar`)
 
 Headers for center context:
 
@@ -110,6 +110,14 @@ Accept: application/json
 
 **`GET /auth/guards`** — lists available login guards for UI tabs.
 
+Public registration (no session):
+
+| Method | Path | Role |
+|--------|------|------|
+| POST | `/register/center` | Creates a center + admin |
+| POST | `/register/student` | Student self-signup into a center |
+| POST | `/register/parent` | Parent self-signup |
+
 | Guard key | Laravel guard | Role |
 |-----------|---------------|------|
 | `users` | `web` | Center admin/staff |
@@ -127,7 +135,7 @@ Accept: application/json
 | GET | `/config` | Storage/tenancy mode metadata |
 | GET | `/dashboard` | Role-aware dashboard stats |
 | GET | `/admin/bootstrap` | Full admin reference payload |
-| GET | `/teacher/bootstrap` | Teacher sections, meetings, etc. |
+| GET | `/teacher/bootstrap` | Teacher sections, sessions, etc. |
 | GET | `/parent/bootstrap` | Parent children and summaries |
 | GET | `/student/bootstrap` | Student profile and data |
 | GET | `/parent/portal` | Portal center list |
@@ -149,14 +157,19 @@ Requires guard `users` (admin/staff). Pass `X-Center-Slug` or initialize via ses
 | PUT | `/admin/teachers/{id}` | Update teacher |
 | POST | `/admin/parents` | Create parent |
 | PUT | `/admin/parents/{id}` | Update parent |
-| POST/PUT | `/admin/grades`, `/admin/classes`, `/admin/sections` | Academic CRUD |
+| POST | `/admin/students/{id}/assign-center` | Assign existing student by membership |
+| GET | `/admin/students/search-by-code` | Lookup student code |
+| POST/PUT/DELETE | `/admin/grades`, `/admin/classes`, `/admin/sections` | Academic CRUD |
+| GET | `/admin/governorates`, `/admin/cities`, `/admin/areas` | Location lookups |
 
 ### Curriculum & content
 
 | Method | Path | Action |
 |--------|------|--------|
 | POST/PUT | `/admin/units`, `/admin/lessons` | Curriculum |
-| POST/PUT | `/admin/homework` | Homework |
+| POST/PUT | `/admin/questions`, `/admin/questions/bulk` | Question bank |
+| POST/PUT/GET/DELETE | `/admin/exam-bank` | Exam builder, generate, export |
+| POST/PUT | `/admin/homework` | Homework + submissions review |
 | POST/PUT/DELETE | `/admin/fees`, `/admin/fees/{id}` | Fees |
 | POST/PUT | `/admin/library`, `/admin/announcements` | Content |
 
@@ -171,20 +184,24 @@ Requires guard `users` (admin/staff). Pass `X-Center-Slug` or initialize via ses
 | GET/POST | `/admin/payments/section/{sectionId}/date/{date}` | Payments |
 | GET | `/admin/reports` | Aggregated reports |
 
-### Meetings
+### Sessions
 
 | Method | Path | Action |
 |--------|------|--------|
-| GET/POST/DELETE | `/admin/meeting-series` | Series CRUD |
-| GET/POST/PUT/DELETE | `/admin/meetings` | Meetings CRUD |
+| GET/POST/PUT/DELETE | `/admin/sessions` | Session CRUD |
+| POST | `/admin/sessions/generate` | Generate from working days |
+| GET | `/admin/sessions/{id}/attendance-qr` | QR payload |
+| PUT | `/admin/sessions/{id}/attendance-venue` | In-person venue |
 
-### RBAC & landing
+### RBAC, settings, landing, WhatsApp, certificates
 
 | Method | Path | Action |
 |--------|------|--------|
-| GET/POST/PUT | `/admin/users` | Staff users |
-| GET/POST/PUT | `/admin/roles` | Roles (Spatie) |
-| * | `/admin/landing-pages/*` | Landing builder API |
+| GET/POST/PUT/DELETE | `/admin/users`, `/admin/roles` | Staff + Spatie roles |
+| GET/PUT | `/admin/settings` | Center settings |
+| * | `/admin/landing-pages/*` | Landing builder |
+| * | `/admin/whatsapp/*` | Templates + send |
+| * | `/admin/certifications/*` | Templates + issue |
 
 ---
 
@@ -193,9 +210,10 @@ Requires guard `users` (admin/staff). Pass `X-Center-Slug` or initialize via ses
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/teacher/bootstrap` | Initial data |
-| GET/POST/DELETE | `/teacher/meeting-series` | Series |
-| GET/PUT/DELETE | `/teacher/meetings` | Meetings |
-| GET | `/teacher/meetings/{id}/livekit-token` | Video join token |
+| GET | `/teacher/sessions` | Assigned sessions |
+| GET | `/teacher/sessions/{id}/livekit-token` | Video join token |
+| GET | `/teacher/sessions/{id}/attendance-qr` | Session QR |
+| PUT | `/teacher/sessions/{id}/attendance-venue` | Venue |
 
 ---
 
@@ -204,11 +222,11 @@ Requires guard `users` (admin/staff). Pass `X-Center-Slug` or initialize via ses
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/student/bootstrap` | Read profile/data |
-| GET | `/student/meetings/{id}/livekit-token` | Join meeting |
+| GET | `/student/sessions/{id}/livekit-token` | Join online session |
+| POST | `/student/attendance/check-in` | QR check-in |
 | POST/PUT/DELETE | `/student/homework/submissions` | Own submissions |
 | POST/PUT/DELETE | `/student/library` | Scoped library CRUD |
-| POST/PUT/DELETE | `/student/meetings` | **403** — not allowed |
-| POST/PUT/DELETE | `/student/grades` | **403** — not allowed |
+| POST/PUT/DELETE | `/student/sessions` | Mutating another teacher's session is rejected |
 
 ---
 
@@ -219,11 +237,16 @@ Requires `platform_admin` guard. No center header.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET/POST/PUT/DELETE | `/platform/centers` | Center CRUD |
-| GET/POST/PUT/DELETE | `/platform/tenants` | Legacy alias |
+| GET/POST/PUT/DELETE | `/platform/tenants` | Alias of centers |
 | GET/POST/PUT/DELETE | `/platform/subscriptions` | Plans |
 | GET/POST/PUT/DELETE | `/platform/users` | Platform staff |
 | GET | `/platform/roles` | Platform roles |
 | GET | `/platform/activity-logs` | Audit log |
+| GET | `/platform/students`, `/platform/parents` | Cross-center directories |
+| GET/POST/PUT/DELETE | `/platform/governorates`, `/cities`, `/areas` | Locations |
+| GET/PUT | `/platform/branding` | Appearance |
+| GET/PUT/DELETE | `/ui-icons`, `/platform/ui-icons` | Icon catalog + overrides |
+| GET/POST/PUT | `/personal/todos`, `/personal/notes` | Personal productivity |
 
 ---
 
@@ -232,6 +255,10 @@ Requires `platform_admin` guard. No center header.
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/public/landing/{slug}` | None |
+| GET | `/public/centers` | None — register/login pickers |
+| GET | `/public/centers/{slug}/academic` | None — grade/class/section for signup |
+| GET | `/public/stats` | None — landing stats |
+| GET | `/config`, `/branding`, `/ui-translations`, `/ui-icons`, `/website-images` | None |
 
 ---
 
@@ -277,13 +304,15 @@ TypeScript wrappers in `src/services/endpoints/`:
 
 | Module | Domain |
 |--------|--------|
-| `auth.ts` | Login, logout, user |
-| `admin.ts` | Admin CRUD |
-| `teacher.ts` | Teacher operations |
-| `student.ts` | Student portal |
+| `auth.ts` | Login, logout, user, register |
+| `admin*.ts` | Split admin modules (students, sessions, homework, …) |
+| `teacher.ts` / `teacher-sessions.ts` | Teacher portal |
+| `student-self.ts` | Student portal |
 | `parent.ts` | Parent portal |
 | `platform.ts` | Platform admin |
 | `dashboard.ts` | Dashboard stats |
+| `ui-icons.ts` / `ui-translations.ts` / `website-images.ts` | Appearance |
+| `attendance-qr.ts` | Session QR check-in |
 
 List synced in `generated/MANIFEST.json` → `endpointModules`.
 
@@ -291,7 +320,7 @@ List synced in `generated/MANIFEST.json` → `endpointModules`.
 
 ## 11. Keeping this document current
 
-1. Run `npm run docs:sync` after changing `backend/routes/api.php`
+1. Run `npm run docs:sync` after changing `backend/routes/api.php` or `backend/routes/api/*.php`
 2. Update request/response examples here when payload shapes change
 3. Add new endpoint groups to section 4–7 following the same table format
 

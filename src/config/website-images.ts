@@ -7,7 +7,15 @@ export interface WebsiteImageDefinition {
   recommendedWidth: number;
   recommendedHeight: number;
   fit: 'cover' | 'contain';
+  /**
+   * When true, the live default is an in-app React illustration (not an image file).
+   * Uploading a replacement shows the file; resetting restores the built-in illustration.
+   */
+  defaultIsComponent?: boolean;
 }
+
+/** Sentinel path for component-backed defaults (never used as a real asset URL). */
+export const PLATFORM_LANDING_HERO_IMAGE_KEY = 'platform-landing-hero';
 
 export const WEBSITE_IMAGES: WebsiteImageDefinition[] = [
   {
@@ -19,6 +27,17 @@ export const WEBSITE_IMAGES: WebsiteImageDefinition[] = [
     recommendedWidth: 1920,
     recommendedHeight: 1080,
     fit: 'cover',
+  },
+  {
+    key: PLATFORM_LANDING_HERO_IMAGE_KEY,
+    name: 'Platform landing hero illustration',
+    defaultUrl: '/__builtin__/platform-landing-hero',
+    category: 'Landing page',
+    pages: ['Platform landing page — hero'],
+    recommendedWidth: 1040,
+    recommendedHeight: 720,
+    fit: 'contain',
+    defaultIsComponent: true,
   },
   {
     key: 'platform-contact-egypt',
@@ -193,5 +212,11 @@ export const WEBSITE_IMAGES: WebsiteImageDefinition[] = [
 ];
 
 export const WEBSITE_IMAGE_BY_DEFAULT_URL = new Map(
-  WEBSITE_IMAGES.map(image => [image.defaultUrl, image]),
+  WEBSITE_IMAGES
+    .filter(image => !image.defaultIsComponent)
+    .map(image => [image.defaultUrl, image]),
 );
+
+export function getWebsiteImageDefinition(key: string): WebsiteImageDefinition | undefined {
+  return WEBSITE_IMAGES.find(image => image.key === key);
+}

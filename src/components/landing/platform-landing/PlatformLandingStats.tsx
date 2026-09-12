@@ -5,6 +5,8 @@ import { BookOpenCheck, GraduationCap, School2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { publicApi } from '@/services/endpoints/public';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useUiIcons } from '@/contexts/UiIconsContext';
+import { landingStatIconKey } from '@/lib/lucide-icons';
 import { useLandingBrand } from './useLandingBrand';
 import PlatformLandingCentersMarquee from './PlatformLandingCentersMarquee';
 import { cn } from '@/lib/utils';
@@ -79,6 +81,7 @@ export default function PlatformLandingStats() {
   const { locale } = useLocale();
   const brand = useLandingBrand();
   const isAr = locale === 'ar';
+  const { resolveIcon } = useUiIcons();
 
   const { data, isLoading } = useQuery({
     queryKey: ['public-platform-stats'],
@@ -92,21 +95,21 @@ export default function PlatformLandingStats() {
       value: data?.centers ?? 0,
       label: isAr ? 'مركز تعليمي' : 'Educational centers',
       description: isAr ? 'مراكز نشطة على المنصة' : 'Active centers on the platform',
-      icon: School2,
+      icon: resolveIcon(landingStatIconKey('centers'), School2),
     },
     {
       key: 'students',
       value: data?.students ?? 0,
       label: isAr ? 'طالب مسجّل' : 'Registered students',
       description: isAr ? 'طلاب عبر جميع المراكز' : 'Students across all centers',
-      icon: GraduationCap,
+      icon: resolveIcon(landingStatIconKey('students'), GraduationCap),
     },
     {
       key: 'teachers',
       value: data?.teachers ?? 0,
       label: isAr ? 'معلم ومعلّمة' : 'Teachers & educators',
       description: isAr ? 'معلمون يستخدمون المنصة يومياً' : 'Educators using the platform daily',
-      icon: BookOpenCheck,
+      icon: resolveIcon(landingStatIconKey('teachers'), BookOpenCheck),
     },
   ];
 

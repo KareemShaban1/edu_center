@@ -1,7 +1,7 @@
 # Database Documentation
 
 > **Document metadata**  
-> Last reviewed: 2026-06-16  
+> Last reviewed: 2026-09-12  
 > **Auto-generated table list:** run `npm run docs:sync` → [`generated/database-tables.md`](./generated/database-tables.md)
 
 ---
@@ -12,9 +12,10 @@ EduCenter uses a **single MySQL database** with logical isolation per center.
 
 | Layer | Tables | Scoping |
 |-------|--------|---------|
-| Platform | `centers`, `global_users`, `center_memberships`, `admins` | Not center-scoped |
+| Platform | `centers`, `global_users`, `center_memberships`, `admins`, `governorates`, `cities`, `areas` | Not center-scoped |
 | Identity-linked | `students`, `parents` | Via `center_memberships.profile_id` |
-| Operational | grades, classes, sections, fees, etc. | `center_id` column |
+| Operational | grades, classes, sections, sessions, fees, exam bank, etc. | `center_id` column |
+| Personal | `personal_todos`, `personal_notes` | `center_id` + user |
 | RBAC | roles, permissions, pivots | `center_id` on permission tables |
 
 ---
@@ -188,14 +189,15 @@ Cross-center identity for parents and students.
 |-------|---------|
 | `fees` | Fee definitions by section |
 | `payments` | Payment records |
-| `attendances` | Daily attendance |
+| `attendances` | Daily attendance (`session_id` when tied to a scheduled session) |
 | `quiz_degrees` | Quiz scores |
 | `exam_degrees` | Exam scores |
 | `homeworks` | Assignments |
 | `student_homework` | Submissions |
-| `meetings`, `meeting_series` | Online/offline classes |
+| `sessions` | Scheduled in-person or online classes (QR venue, LiveKit/Jitsi/URL) |
 | `library` | Shared files |
 | `announcements` | Center announcements |
+| `personal_todos`, `personal_notes` | Per-user productivity (center-scoped) |
 
 ---
 
@@ -204,7 +206,8 @@ Cross-center identity for parents and students.
 | Table | Purpose |
 |-------|---------|
 | `units`, `lessons` | Curriculum structure |
-| `questions`, `answers` | Q&A bank |
+| `questions`, `answers` | Question bank (also used by exam builder) |
+| `exams` | Exam bank definitions |
 | `words` | Vocabulary |
 | `notes` | Polymorphic notes |
 
@@ -215,8 +218,12 @@ Cross-center identity for parents and students.
 | Table | Purpose |
 |-------|---------|
 | `settings` | Center configuration key/value |
+| `platform_settings` | Platform branding and operator settings |
+| `ui_translation_overrides` | Locale string overrides |
 | `whatsapp_templates` | Message templates |
 | `certification_templates` | PDF certificate layouts |
+| `student_certifications` | Issued certificates |
+| `governorates`, `cities`, `areas` | Egypt location hierarchy (platform-managed) |
 | `activity_logs` | Audit trail |
 | `notifications` | Laravel notifications |
 | `landing_pages`, `landing_page_revisions`, `landing_page_analytics`, `landing_media` | Marketing builder |

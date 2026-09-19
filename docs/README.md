@@ -59,6 +59,7 @@ Manual sections (business goals, user stories, security policies) are edited dir
 | 13 | [User Guide](./13-user-guide.md) | Arabic end-user guide (no technical details) — public at `/guide` |
 | 14 | [Manual Test Plan](./14-manual-test-plan.md) | Screen-by-screen manual cases; also at `/developer/testing` |
 | 15 | [Demo flows](./15-demo-flows.md) | A-to-Z filming scripts for center, student, and parent |
+| 16 | [Chat module](./16-chat-module.md) | Realtime chat: roles, APIs, data model, security, UI |
 
 ## Legacy / supplementary
 

@@ -379,6 +379,8 @@ const defaultTranslations: Record<Locale, Record<string, string>> = {
     'docs.manualTestPlan.desc': 'Screen-by-screen checklist for every role and module.',
     'docs.demoFlows.title': 'Demo flows (A to Z)',
     'docs.demoFlows.desc': 'Filming scripts: center, student, and parent from first login to daily work.',
+    'docs.chat.title': 'Chat module',
+    'docs.chat.desc': 'Realtime chat for admin, teacher, student, and parent: rules, APIs, schema, and UI.',
 
     'testing.pageTitle': 'Testing',
     'testing.pageDesc': 'Manual checklists, live API suites, and automated test commands.',
@@ -2360,6 +2362,8 @@ const defaultTranslations: Record<Locale, Record<string, string>> = {
     'docs.manualTestPlan.desc': 'قائمة تحقق لكل دور ووحدة في التطبيق.',
     'docs.demoFlows.title': 'تدفقات العرض (من الألف إلى الياء)',
     'docs.demoFlows.desc': 'سيناريوهات تصوير: المركز والطالب وولي الأمر من أول دخول حتى العمل اليومي.',
+    'docs.chat.title': 'وحدة المحادثات',
+    'docs.chat.desc': 'محادثات فورية للإدارة والمعلم والطالب وولي الأمر: القواعد وواجهات البرمجة والبنية والواجهة.',
 
     'testing.pageTitle': 'الاختبار',
     'testing.pageDesc': 'قوائم تحقق يدوية ومجموعات API حية وأوامر الاختبار الآلي.',

@@ -1,6 +1,6 @@
 # API Routes (auto-generated)
 
-> Last synced: 2026-09-11T22:49:42.541Z
+> Last synced: 2026-09-19T11:29:59.921Z
 > Source: `backend/routes/api.php` and `backend/routes/api/*.php`
 > Regenerate: `npm run docs:sync`
 
@@ -136,8 +136,21 @@
 | POST | `/api/auth/switch-center` | closure |
 | POST | `/api/auth/switch-tenant` | closure |
 | GET | `/api/branding` | closure |
+| GET | `/api/chat/contacts` | closure |
+| GET | `/api/chat/conversations` | closure |
+| POST | `/api/chat/conversations` | closure |
+| GET | `/api/chat/conversations/{id}` | closure |
+| GET | `/api/chat/conversations/{id}/attachment/{mediaId}` | closure |
+| GET | `/api/chat/conversations/{id}/messages` | closure |
+| POST | `/api/chat/conversations/{id}/messages` | closure |
+| POST | `/api/chat/conversations/{id}/read` | closure |
+| POST | `/api/chat/conversations/{id}/typing` | closure |
+| GET | `/api/chat/stream` | closure |
+| GET | `/api/chat/unread` | closure |
 | GET | `/api/config` | closure |
 | GET | `/api/dashboard` | closure |
+| GET | `/api/developer/database-schema` | closure |
+| POST | `/api/developer/database-schema/sync` | closure |
 | POST | `/api/developer/ui-translations` | closure |
 | DELETE | `/api/developer/ui-translations/{key}` | closure |
 | PUT | `/api/developer/ui-translations/{key}` | closure |
@@ -168,6 +181,8 @@
 | PUT | `/api/platform/areas/{id}` | closure |
 | GET | `/api/platform/branding` | closure |
 | PUT | `/api/platform/branding` | closure |
+| DELETE | `/api/platform/branding/logo` | closure |
+| POST | `/api/platform/branding/logo` | closure |
 | GET | `/api/platform/centers` | closure |
 | POST | `/api/platform/centers` | closure |
 | DELETE | `/api/platform/centers/{id}` | closure |
@@ -210,6 +225,7 @@
 | POST | `/api/register/parent` | closure |
 | POST | `/api/register/student` | closure |
 | GET | `/api/storage/{mediaId}/{fileName}` | closure |
+| GET | `/api/storage/website-images/{fileName}` | closure |
 | POST | `/api/student/attendance` | closure |
 | DELETE | `/api/student/attendance/{id}` | closure |
 | PUT | `/api/student/attendance/{id}` | closure |

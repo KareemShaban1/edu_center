@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-09-11T22:49:42.541Z",
+  "syncedAt": "2026-09-19T11:29:59.921Z",
   "routes": [
     {
       "id": "GET-_admin_announcements",
@@ -1588,6 +1588,140 @@
       "authRequired": false
     },
     {
+      "id": "GET-_chat_contacts",
+      "method": "GET",
+      "path": "/chat/contacts",
+      "fullPath": "/api/chat/contacts",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_conversations",
+      "method": "GET",
+      "path": "/chat/conversations",
+      "fullPath": "/api/chat/conversations",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_chat_conversations",
+      "method": "POST",
+      "path": "/chat/conversations",
+      "fullPath": "/api/chat/conversations",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_conversations__id_",
+      "method": "GET",
+      "path": "/chat/conversations/{id}",
+      "fullPath": "/api/chat/conversations/{id}",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_conversations__id__attachment__mediaId_",
+      "method": "GET",
+      "path": "/chat/conversations/{id}/attachment/{mediaId}",
+      "fullPath": "/api/chat/conversations/{id}/attachment/{mediaId}",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id",
+        "mediaId"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_conversations__id__messages",
+      "method": "GET",
+      "path": "/chat/conversations/{id}/messages",
+      "fullPath": "/api/chat/conversations/{id}/messages",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_chat_conversations__id__messages",
+      "method": "POST",
+      "path": "/chat/conversations/{id}/messages",
+      "fullPath": "/api/chat/conversations/{id}/messages",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_chat_conversations__id__read",
+      "method": "POST",
+      "path": "/chat/conversations/{id}/read",
+      "fullPath": "/api/chat/conversations/{id}/read",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_chat_conversations__id__typing",
+      "method": "POST",
+      "path": "/chat/conversations/{id}/typing",
+      "fullPath": "/api/chat/conversations/{id}/typing",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [
+        "id"
+      ],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_stream",
+      "method": "GET",
+      "path": "/chat/stream",
+      "fullPath": "/api/chat/stream",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_chat_unread",
+      "method": "GET",
+      "path": "/chat/unread",
+      "fullPath": "/api/chat/unread",
+      "handler": "closure",
+      "module": "chat",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
       "id": "GET-_config",
       "method": "GET",
       "path": "/config",
@@ -1607,6 +1741,28 @@
       "module": "dashboard",
       "pathParams": [],
       "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "GET-_developer_database-schema",
+      "method": "GET",
+      "path": "/developer/database-schema",
+      "fullPath": "/api/developer/database-schema",
+      "handler": "closure",
+      "module": "developer",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_developer_database-schema_sync",
+      "method": "POST",
+      "path": "/developer/database-schema/sync",
+      "fullPath": "/api/developer/database-schema/sync",
+      "handler": "closure",
+      "module": "developer",
+      "pathParams": [],
+      "acceptsBody": true,
       "authRequired": true
     },
     {
@@ -1957,6 +2113,28 @@
       "method": "PUT",
       "path": "/platform/branding",
       "fullPath": "/api/platform/branding",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": true,
+      "authRequired": true
+    },
+    {
+      "id": "DELETE-_platform_branding_logo",
+      "method": "DELETE",
+      "path": "/platform/branding/logo",
+      "fullPath": "/api/platform/branding/logo",
+      "handler": "closure",
+      "module": "platform",
+      "pathParams": [],
+      "acceptsBody": false,
+      "authRequired": true
+    },
+    {
+      "id": "POST-_platform_branding_logo",
+      "method": "POST",
+      "path": "/platform/branding/logo",
+      "fullPath": "/api/platform/branding/logo",
       "handler": "closure",
       "module": "platform",
       "pathParams": [],
@@ -2463,6 +2641,19 @@
       "module": "storage",
       "pathParams": [
         "mediaId",
+        "fileName"
+      ],
+      "acceptsBody": false,
+      "authRequired": false
+    },
+    {
+      "id": "GET-_storage_website-images__fileName_",
+      "method": "GET",
+      "path": "/storage/website-images/{fileName}",
+      "fullPath": "/api/storage/website-images/{fileName}",
+      "handler": "closure",
+      "module": "storage",
+      "pathParams": [
         "fileName"
       ],
       "acceptsBody": false,

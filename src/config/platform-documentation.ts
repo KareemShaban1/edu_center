@@ -103,6 +103,12 @@ export const PLATFORM_DOCUMENTATION: PlatformDocEntry[] = [
     titleKey: 'docs.demoFlows.title',
     descriptionKey: 'docs.demoFlows.desc',
   },
+  {
+    id: 'chat',
+    file: '16-chat-module.md',
+    titleKey: 'docs.chat.title',
+    descriptionKey: 'docs.chat.desc',
+  },
 ];
 
 export const DEFAULT_PLATFORM_DOC_ID = 'index';

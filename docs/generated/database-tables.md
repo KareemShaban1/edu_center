@@ -1,6 +1,6 @@
 # Database Tables (auto-generated)
 
-> Last synced: 2026-09-11T22:49:42.541Z
+> Last synced: 2026-09-19T11:29:59.921Z
 > Sources: `backend/database/migrations/`, `backend/config/centers.php`
 > Regenerate: `npm run docs:sync`
 
@@ -57,6 +57,7 @@
 | `ui_translation_overrides` | `2026_07_13_000001_create_ui_translation_overrides_table.php` |
 | `personal_todos` | `2026_07_17_000001_create_personal_productivity_tables.php` |
 | `governorates` | `2026_08_28_100000_create_location_tables.php` |
+| `chat_conversations` | `2026_09_19_000001_create_chat_tables.php` |
 
 ## Center-scoped tables (`center_id`)
 
@@ -110,6 +111,9 @@
 - `role_has_permissions`
 - `failed_jobs`
 - `password_resets`
+- `chat_conversations`
+- `chat_participants`
+- `chat_messages`
 
 ## Membership-scoped tables
 

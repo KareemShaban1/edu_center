@@ -1,6 +1,6 @@
 # Frontend Routes (auto-generated)
 
-> Last synced: 2026-09-11T22:49:42.541Z
+> Last synced: 2026-09-19T11:29:59.921Z
 > Source: `src/App.tsx`
 > Regenerate: `npm run docs:sync`
 
@@ -20,6 +20,8 @@
 | `/admin/certifications/templates` |
 | `/admin/certifications/templates/:id/edit` |
 | `/admin/certifications/templates/new` |
+| `/admin/chat` |
+| `/admin/chat/:conversationId` |
 | `/admin/classes` |
 | `/admin/exam-bank` |
 | `/admin/exam-bank/:id/builder` |
@@ -77,6 +79,8 @@
 | `/p/*` |
 | `/parent` |
 | `/parent/attendance` |
+| `/parent/chat` |
+| `/parent/chat/:conversationId` |
 | `/parent/children` |
 | `/parent/exams` |
 | `/parent/fees` |
@@ -105,6 +109,8 @@
 | `/student/attendance` |
 | `/student/attendance/check-in` |
 | `/student/certifications` |
+| `/student/chat` |
+| `/student/chat/:conversationId` |
 | `/student/courses` |
 | `/student/exams` |
 | `/student/grades` |
@@ -119,6 +125,8 @@
 | `/student/todos` |
 | `/teacher` |
 | `/teacher/attendance` |
+| `/teacher/chat` |
+| `/teacher/chat/:conversationId` |
 | `/teacher/classes` |
 | `/teacher/exams` |
 | `/teacher/homework` |

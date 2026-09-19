@@ -184,6 +184,31 @@ class ApiClient {
     return this.handleResponse<T>(res);
   }
 
+  async getBlob(path: string, useLocale = false): Promise<Blob> {
+    const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
+      headers: this.headers(),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw {
+        message: (body as { message?: string }).message || `Request failed with status ${res.status}`,
+        status: res.status,
+      };
+    }
+    return res.blob();
+  }
+
+  async openStream(path: string, useLocale = false): Promise<Response> {
+    return fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
+      headers: {
+        ...this.headers(),
+        Accept: 'text/event-stream',
+      },
+      credentials: 'include',
+    });
+  }
+
   async download(path: string, filename: string, useLocale = true): Promise<void> {
     const res = await fetch(this.resolveRequestUrl(this.withTenantQuery(path), useLocale), {
       headers: this.headers(),

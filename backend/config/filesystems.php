@@ -92,6 +92,12 @@ return [
             'url'    => env('APP_URL').'/media',
         ],
 
+        'chat' => [
+            'driver' => 'local',
+            'root' => storage_path('app/chat'),
+            'visibility' => 'private',
+        ],
+
     ],
 
     /*

@@ -1,4 +1,7 @@
 export interface AppBranding {
+  brand_name_en: string;
+  brand_name_ar: string;
+  logo_url: string;
   primary_color: string;
   font_body: string;
   font_display: string;
@@ -18,20 +21,23 @@ export interface AppBranding {
 export const BRANDING_STORAGE_KEY = 'edu_app_branding';
 
 export const DEFAULT_APP_BRANDING: AppBranding = {
+  brand_name_en: 'EduCenter',
+  brand_name_ar: 'منصتي التعليمية',
+  logo_url: '',
   primary_color: 'rgb(186, 24, 27)',
   font_body: "'Inter', sans-serif",
   font_display: "'Plus Jakarta Sans', sans-serif",
   font_arabic: "'Hajeen', 'Cairo', sans-serif",
-  text_scale: '106.25',
-  text_scale_ar: '112.5',
-  nav_font_scale: '100',
-  nav_font_scale_ar: '100',
-  button_font_scale: '100',
-  button_font_scale_ar: '100',
-  table_font_scale: '100',
-  table_font_scale_ar: '100',
-  landing_text_scale: '100',
-  landing_text_scale_ar: '100',
+  text_scale: '17',
+  text_scale_ar: '18',
+  nav_font_scale: '16',
+  nav_font_scale_ar: '16',
+  button_font_scale: '14',
+  button_font_scale_ar: '14',
+  table_font_scale: '16',
+  table_font_scale_ar: '16',
+  landing_text_scale: '18',
+  landing_text_scale_ar: '18',
 };
 
 export type FontOption = { value: string; label: string };
@@ -147,38 +153,66 @@ export const APP_FONT_OPTIONS = [...APP_LATIN_FONT_OPTIONS, ...APP_ARABIC_FONT_O
 
 export type TextScaleOption = { value: string; labelKey: string };
 
-/** Root font-size scale (% of browser default 16px). */
-export const APP_TEXT_SCALE_OPTIONS: TextScaleOption[] = [
-  { value: '87.5', labelKey: 'platform.settings.textSizeSmall' },
-  { value: '100', labelKey: 'platform.settings.textSizeDefault' },
-  { value: '106.25', labelKey: 'platform.settings.textSizeMedium' },
-  { value: '112.5', labelKey: 'platform.settings.textSizeLarge' },
-  { value: '118.75', labelKey: 'platform.settings.textSizeXLarge' },
-  { value: '125', labelKey: 'platform.settings.textSizeMaximum' },
+/** Font sizes in pixels (root / component / landing base). */
+export const APP_FONT_SIZE_OPTIONS: TextScaleOption[] = [
+  { value: '12', labelKey: 'platform.settings.textSizeSmall' },
+  { value: '14', labelKey: 'platform.settings.textSizeSmall' },
+  { value: '16', labelKey: 'platform.settings.textSizeDefault' },
+  { value: '17', labelKey: 'platform.settings.textSizeMedium' },
+  { value: '18', labelKey: 'platform.settings.textSizeLarge' },
+  { value: '19', labelKey: 'platform.settings.textSizeXLarge' },
+  { value: '20', labelKey: 'platform.settings.textSizeMaximum' },
+  { value: '22', labelKey: 'platform.settings.textSizeMaximum' },
+  { value: '24', labelKey: 'platform.settings.textSizeMaximum' },
 ];
 
-function normalizeTextScale(value: string | undefined, fallback: string): string {
+/** @deprecated Use APP_FONT_SIZE_OPTIONS */
+export const APP_TEXT_SCALE_OPTIONS = APP_FONT_SIZE_OPTIONS;
+
+const FONT_PX_MIN = 10;
+const FONT_PX_MAX = 40;
+
+/**
+ * Normalize a stored font size to pixels.
+ * Legacy percentage values (typically 80–150) are converted using `legacyPercentBase`.
+ */
+export function normalizeFontPx(
+  value: string | undefined,
+  fallbackPx: string,
+  legacyPercentBase = 16,
+): string {
   const n = Number.parseFloat(value ?? '');
-  if (Number.isNaN(n) || n < 80 || n > 150) return fallback;
-  return String(n);
+  if (Number.isNaN(n)) return fallbackPx;
+
+  // Legacy percentage of a 16px (or other) base — stored historically as 80–150.
+  if (n > FONT_PX_MAX) {
+    const converted = Math.round((legacyPercentBase * n) / 100);
+    return String(Math.min(FONT_PX_MAX, Math.max(FONT_PX_MIN, converted)));
+  }
+
+  if (n < FONT_PX_MIN) return fallbackPx;
+  return String(Math.round(n));
 }
 
 export function normalizeBranding(input: Partial<AppBranding> | null | undefined): AppBranding {
   return {
+    brand_name_en: input?.brand_name_en?.trim() || DEFAULT_APP_BRANDING.brand_name_en,
+    brand_name_ar: input?.brand_name_ar?.trim() || DEFAULT_APP_BRANDING.brand_name_ar,
+    logo_url: input?.logo_url?.trim() || '',
     primary_color: input?.primary_color?.trim() || DEFAULT_APP_BRANDING.primary_color,
     font_body: resolveFontOption(input?.font_body, APP_LATIN_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_body),
     font_display: resolveFontOption(input?.font_display, APP_LATIN_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_display),
     font_arabic: resolveFontOption(input?.font_arabic, APP_ARABIC_FONT_OPTIONS, DEFAULT_APP_BRANDING.font_arabic),
-    text_scale: normalizeTextScale(input?.text_scale, DEFAULT_APP_BRANDING.text_scale),
-    text_scale_ar: normalizeTextScale(input?.text_scale_ar, DEFAULT_APP_BRANDING.text_scale_ar),
-    nav_font_scale: normalizeTextScale(input?.nav_font_scale, DEFAULT_APP_BRANDING.nav_font_scale),
-    nav_font_scale_ar: normalizeTextScale(input?.nav_font_scale_ar, DEFAULT_APP_BRANDING.nav_font_scale_ar),
-    button_font_scale: normalizeTextScale(input?.button_font_scale, DEFAULT_APP_BRANDING.button_font_scale),
-    button_font_scale_ar: normalizeTextScale(input?.button_font_scale_ar, DEFAULT_APP_BRANDING.button_font_scale_ar),
-    table_font_scale: normalizeTextScale(input?.table_font_scale, DEFAULT_APP_BRANDING.table_font_scale),
-    table_font_scale_ar: normalizeTextScale(input?.table_font_scale_ar, DEFAULT_APP_BRANDING.table_font_scale_ar),
-    landing_text_scale: normalizeTextScale(input?.landing_text_scale, DEFAULT_APP_BRANDING.landing_text_scale),
-    landing_text_scale_ar: normalizeTextScale(input?.landing_text_scale_ar, DEFAULT_APP_BRANDING.landing_text_scale_ar),
+    text_scale: normalizeFontPx(input?.text_scale, DEFAULT_APP_BRANDING.text_scale, 16),
+    text_scale_ar: normalizeFontPx(input?.text_scale_ar, DEFAULT_APP_BRANDING.text_scale_ar, 16),
+    nav_font_scale: normalizeFontPx(input?.nav_font_scale, DEFAULT_APP_BRANDING.nav_font_scale, 16),
+    nav_font_scale_ar: normalizeFontPx(input?.nav_font_scale_ar, DEFAULT_APP_BRANDING.nav_font_scale_ar, 16),
+    button_font_scale: normalizeFontPx(input?.button_font_scale, DEFAULT_APP_BRANDING.button_font_scale, 14),
+    button_font_scale_ar: normalizeFontPx(input?.button_font_scale_ar, DEFAULT_APP_BRANDING.button_font_scale_ar, 14),
+    table_font_scale: normalizeFontPx(input?.table_font_scale, DEFAULT_APP_BRANDING.table_font_scale, 16),
+    table_font_scale_ar: normalizeFontPx(input?.table_font_scale_ar, DEFAULT_APP_BRANDING.table_font_scale_ar, 16),
+    landing_text_scale: normalizeFontPx(input?.landing_text_scale, DEFAULT_APP_BRANDING.landing_text_scale, 18),
+    landing_text_scale_ar: normalizeFontPx(input?.landing_text_scale_ar, DEFAULT_APP_BRANDING.landing_text_scale_ar, 18),
   };
 }
 
@@ -208,8 +242,8 @@ export function applyBrandingToDocument(branding: AppBranding) {
   root.style.setProperty('--font-body', normalized.font_body);
   root.style.setProperty('--font-display', normalized.font_display);
   root.style.setProperty('--font-arabic', normalized.font_arabic);
-  root.style.setProperty('--app-text-scale', `${normalized.text_scale}%`);
-  root.style.setProperty('--app-text-scale-ar', `${normalized.text_scale_ar}%`);
+  root.style.setProperty('--app-text-scale', `${normalized.text_scale}px`);
+  root.style.setProperty('--app-text-scale-ar', `${normalized.text_scale_ar}px`);
   root.style.setProperty('--app-nav-font-scale', normalized.nav_font_scale);
   root.style.setProperty('--app-nav-font-scale-ar', normalized.nav_font_scale_ar);
   root.style.setProperty('--app-button-font-scale', normalized.button_font_scale);

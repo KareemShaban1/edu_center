@@ -90,6 +90,7 @@ export const adminLinkGroups: AdminDashboardLinkGroup[] = [
     links: [
       { labelKey: 'nav.library', path: '/admin/library', icon: Library },
       { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
+      { labelKey: 'nav.chat', path: '/admin/chat', icon: MessageCircle },
       { labelKey: 'nav.notifications', path: '/admin/notifications', icon: Bell },
       { labelKey: 'nav.whatsapp', path: '/admin/whatsapp', icon: MessageCircle },
       { labelKey: 'nav.landingBuilder', path: '/admin/landing', icon: Layout },

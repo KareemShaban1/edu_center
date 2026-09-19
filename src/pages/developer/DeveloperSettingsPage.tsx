@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FormField, FormSelect } from '@/components/FormFields';
+import { FormField, FormInput, FormSelect } from '@/components/FormFields';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -7,17 +7,18 @@ import { useBranding } from '@/contexts/BrandingContext';
 import {
   APP_ARABIC_FONT_OPTIONS,
   APP_LATIN_FONT_OPTIONS,
-  APP_TEXT_SCALE_OPTIONS,
+  APP_FONT_SIZE_OPTIONS,
   applyBrandingToDocument,
   colorInputValue,
   hexToRgb,
   normalizeBranding,
   type AppBranding,
 } from '@/lib/branding';
-import { Loader2, Palette, Type, LayoutList, Globe } from 'lucide-react';
+import { resolveAssetUrl } from '@/lib/asset-url';
+import { GraduationCap, Loader2, Palette, Type, LayoutList, Globe, ImageIcon } from 'lucide-react';
 import { resolveLandingFonts } from '@/components/landing/platform-landing/typography';
 
-function ScaleSelect({
+function FontSizeSelect({
   id,
   label,
   value,
@@ -33,9 +34,9 @@ function ScaleSelect({
   return (
     <FormField label={label} id={id}>
       <FormSelect id={id} value={value} onChange={e => onChange(e.target.value)}>
-        {APP_TEXT_SCALE_OPTIONS.map(opt => (
+        {APP_FONT_SIZE_OPTIONS.map(opt => (
           <option key={`${id}-${opt.value}`} value={opt.value}>
-            {t(opt.labelKey)} ({opt.value}%)
+            {opt.value}px — {t(opt.labelKey)}
           </option>
         ))}
       </FormSelect>
@@ -45,10 +46,12 @@ function ScaleSelect({
 
 export default function DeveloperSettingsPage() {
   const { t } = useLocale();
-  const { branding, loading, save } = useBranding();
+  const { branding, loading, save, uploadLogo, clearLogo } = useBranding();
   const [form, setForm] = useState<AppBranding>(() => normalizeBranding(branding));
   const [saving, setSaving] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
   const [colorHex, setColorHex] = useState(colorInputValue(branding.primary_color));
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const savedBrandingRef = useRef(branding);
   savedBrandingRef.current = branding;
@@ -82,6 +85,34 @@ export default function DeveloperSettingsPage() {
     setForm(prev => ({ ...prev, primary_color: hexToRgb(hex) }));
   };
 
+  const handleLogoUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setLogoBusy(true);
+    try {
+      await uploadLogo(file);
+      toast({ title: t('platform.settings.logoUpdated') });
+    } catch {
+      toast({ title: t('platform.settings.logoUpdateFailed'), variant: 'destructive' });
+    } finally {
+      setLogoBusy(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoClear = async () => {
+    setLogoBusy(true);
+    try {
+      await clearLogo();
+      toast({ title: t('platform.settings.logoCleared') });
+    } catch {
+      toast({ title: t('platform.settings.logoClearFailed'), variant: 'destructive' });
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const logoPreview = resolveAssetUrl(form.logo_url);
+
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
@@ -99,6 +130,74 @@ export default function DeveloperSettingsPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-semibold">{t('platform.settings.identity')}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('platform.settings.identityDesc')}</p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label={t('platform.settings.brandNameEn')} id="brand-name-en">
+              <FormInput
+                id="brand-name-en"
+                value={form.brand_name_en}
+                onChange={e => setForm(prev => ({ ...prev, brand_name_en: e.target.value }))}
+                maxLength={120}
+              />
+            </FormField>
+            <FormField label={t('platform.settings.brandNameAr')} id="brand-name-ar">
+              <FormInput
+                id="brand-name-ar"
+                dir="rtl"
+                value={form.brand_name_ar}
+                onChange={e => setForm(prev => ({ ...prev, brand_name_ar: e.target.value }))}
+                maxLength={120}
+              />
+            </FormField>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">{t('platform.settings.logo')}</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <div
+                className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40 text-white shadow-sm"
+                style={{ backgroundColor: logoPreview ? undefined : form.primary_color }}
+              >
+                {logoPreview ? (
+                  <img src={logoPreview} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <GraduationCap className="h-7 w-7" aria-hidden />
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif"
+                  className="hidden"
+                  onChange={e => void handleLogoUpload(e.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={logoBusy}
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {logoBusy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                  {logoPreview ? t('platform.settings.logoReplace') : t('platform.settings.logoUpload')}
+                </Button>
+                {logoPreview ? (
+                  <Button type="button" variant="ghost" disabled={logoBusy} onClick={() => void handleLogoClear()}>
+                    {t('platform.settings.logoClear')}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('platform.settings.logoHint')}</p>
+          </div>
+        </div>
+
         <div className="grid items-start gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-5">
@@ -190,9 +289,9 @@ export default function DeveloperSettingsPage() {
                     value={form.text_scale}
                     onChange={e => setForm(prev => ({ ...prev, text_scale: e.target.value }))}
                   >
-                    {APP_TEXT_SCALE_OPTIONS.map(opt => (
+                    {APP_FONT_SIZE_OPTIONS.map(opt => (
                       <option key={`scale-${opt.value}`} value={opt.value}>
-                        {t(opt.labelKey)} ({opt.value}%)
+                        {opt.value}px — {t(opt.labelKey)}
                       </option>
                     ))}
                   </FormSelect>
@@ -204,9 +303,9 @@ export default function DeveloperSettingsPage() {
                     value={form.text_scale_ar}
                     onChange={e => setForm(prev => ({ ...prev, text_scale_ar: e.target.value }))}
                   >
-                    {APP_TEXT_SCALE_OPTIONS.map(opt => (
+                    {APP_FONT_SIZE_OPTIONS.map(opt => (
                       <option key={`scale-ar-${opt.value}`} value={opt.value}>
-                        {t(opt.labelKey)} ({opt.value}%)
+                        {opt.value}px — {t(opt.labelKey)}
                       </option>
                     ))}
                   </FormSelect>
@@ -215,13 +314,13 @@ export default function DeveloperSettingsPage() {
 
               <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3">
                 <p className="text-sm font-medium">{t('platform.settings.preview')}</p>
-                <p style={{ fontFamily: form.font_body, fontSize: `calc(1rem * ${form.text_scale} / 100)` }}>
+                <p style={{ fontFamily: form.font_body, fontSize: `${form.text_scale}px` }}>
                   {t('platform.settings.previewLatinBody')}
                 </p>
-                <p style={{ fontFamily: form.font_display, fontSize: `calc(1.125rem * ${form.text_scale} / 100)` }}>
+                <p style={{ fontFamily: form.font_display, fontSize: `${Math.round(Number(form.text_scale) * 1.125)}px` }}>
                   {t('platform.settings.previewLatinDisplay')}
                 </p>
-                <p dir="rtl" style={{ fontFamily: form.font_arabic, fontSize: `calc(1rem * ${form.text_scale_ar} / 100)` }}>
+                <p dir="rtl" style={{ fontFamily: form.font_arabic, fontSize: `${form.text_scale_ar}px` }}>
                   {t('platform.settings.previewArabic')}
                 </p>
               </div>
@@ -237,42 +336,42 @@ export default function DeveloperSettingsPage() {
               <p className="text-sm text-muted-foreground">{t('platform.settings.componentSizesDesc')}</p>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <ScaleSelect
+                <FontSizeSelect
                   id="nav-font-scale"
                   label={t('platform.settings.navSizeLatin')}
                   value={form.nav_font_scale}
                   onChange={value => setForm(prev => ({ ...prev, nav_font_scale: value }))}
                   t={t}
                 />
-                <ScaleSelect
+                <FontSizeSelect
                   id="nav-font-scale-ar"
                   label={t('platform.settings.navSizeArabic')}
                   value={form.nav_font_scale_ar}
                   onChange={value => setForm(prev => ({ ...prev, nav_font_scale_ar: value }))}
                   t={t}
                 />
-                <ScaleSelect
+                <FontSizeSelect
                   id="button-font-scale"
                   label={t('platform.settings.buttonSizeLatin')}
                   value={form.button_font_scale}
                   onChange={value => setForm(prev => ({ ...prev, button_font_scale: value }))}
                   t={t}
                 />
-                <ScaleSelect
+                <FontSizeSelect
                   id="button-font-scale-ar"
                   label={t('platform.settings.buttonSizeArabic')}
                   value={form.button_font_scale_ar}
                   onChange={value => setForm(prev => ({ ...prev, button_font_scale_ar: value }))}
                   t={t}
                 />
-                <ScaleSelect
+                <FontSizeSelect
                   id="table-font-scale"
                   label={t('platform.settings.tableSizeLatin')}
                   value={form.table_font_scale}
                   onChange={value => setForm(prev => ({ ...prev, table_font_scale: value }))}
                   t={t}
                 />
-                <ScaleSelect
+                <FontSizeSelect
                   id="table-font-scale-ar"
                   label={t('platform.settings.tableSizeArabic')}
                   value={form.table_font_scale_ar}
@@ -286,20 +385,20 @@ export default function DeveloperSettingsPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <span
                     className="rounded-lg bg-sidebar px-3 py-2 text-sidebar-foreground"
-                    style={{ fontSize: `calc(1rem * ${form.nav_font_scale} / 100)` }}
+                    style={{ fontSize: `${form.nav_font_scale}px` }}
                   >
                     {t('platform.settings.previewNav')}
                   </span>
                   <span
                     className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground"
-                    style={{ fontSize: `calc(0.875rem * ${form.button_font_scale} / 100)` }}
+                    style={{ fontSize: `${form.button_font_scale}px` }}
                   >
                     {t('platform.settings.previewButton')}
                   </span>
                 </div>
                 <div
                   className="overflow-hidden rounded-lg border border-border"
-                  style={{ fontSize: `calc(1rem * ${form.table_font_scale} / 100)` }}
+                  style={{ fontSize: `${form.table_font_scale}px` }}
                 >
                   <div className="grid grid-cols-2 bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
                     <span>{t('col.name')}</span>
@@ -323,14 +422,14 @@ export default function DeveloperSettingsPage() {
           <p className="text-sm text-muted-foreground">{t('platform.settings.landingSizesDesc')}</p>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <ScaleSelect
+            <FontSizeSelect
               id="landing-text-scale"
               label={t('platform.settings.landingSizeLatin')}
               value={form.landing_text_scale}
               onChange={value => setForm(prev => ({ ...prev, landing_text_scale: value }))}
               t={t}
             />
-            <ScaleSelect
+            <FontSizeSelect
               id="landing-text-scale-ar"
               label={t('platform.settings.landingSizeArabic')}
               value={form.landing_text_scale_ar}
@@ -364,7 +463,7 @@ export default function DeveloperSettingsPage() {
                 cardKey: 'platform.settings.landingSampleCardAr',
               },
             ]).map(preview => {
-              const landingFonts = resolveLandingFonts('desktop', Number(preview.scale) || 100);
+              const landingFonts = resolveLandingFonts('desktop', Number(preview.scale) || 18);
               return (
                 <div
                   key={preview.lang}

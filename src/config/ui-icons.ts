@@ -135,6 +135,7 @@ export const UI_ICONS: UiIconDefinition[] = [
   nav('/admin/payments', 'DollarSign', 'Admin navigation', 'Payments', 'دفع المصاريف', ['Admin dashboard', 'Sidebar']),
   group('admin-content', 'FolderOpen', 'Admin navigation', 'Group — Content', 'مجموعة — المحتوى والتواصل', ['Sidebar']),
   nav('/admin/announcements', 'MessageSquare', 'Admin navigation', 'Announcements', 'الإعلانات', ['Admin dashboard', 'Sidebar']),
+  nav('/admin/chat', 'MessageCircle', 'Admin navigation', 'Chat', 'المحادثات', ['Admin dashboard', 'Sidebar']),
   nav('/admin/notifications', 'Bell', 'Admin navigation', 'Notifications', 'الإشعارات', ['Admin dashboard', 'Sidebar']),
   nav('/admin/whatsapp', 'MessageCircle', 'Admin navigation', 'WhatsApp', 'واتساب', ['Admin dashboard', 'Sidebar']),
   nav('/admin/certifications', 'Award', 'Admin navigation', 'Certifications', 'الشهادات', ['Admin dashboard', 'Sidebar']),
@@ -164,6 +165,7 @@ export const UI_ICONS: UiIconDefinition[] = [
   nav('/teacher/quizzes', 'ClipboardList', 'Teacher navigation', 'Quizzes', 'الاختبارات القصيرة', ['Teacher dashboard', 'Sidebar']),
   group('teacher-resources', 'Library', 'Teacher navigation', 'Group — Resources', 'مجموعة — الموارد', ['Sidebar']),
   nav('/teacher/library', 'Library', 'Teacher navigation', 'Library', 'المكتبة', ['Teacher dashboard', 'Sidebar']),
+  nav('/teacher/chat', 'MessageCircle', 'Teacher navigation', 'Chat', 'المحادثات', ['Teacher dashboard', 'Sidebar']),
 
   // Student
   nav('/student', 'LayoutDashboard', 'Student navigation', 'Student dashboard', 'لوحة الطالب', ['Student dashboard', 'Sidebar']),
@@ -177,6 +179,7 @@ export const UI_ICONS: UiIconDefinition[] = [
   nav('/student/homework', 'FileText', 'Student navigation', 'Homework', 'الواجبات', ['Student dashboard', 'Sidebar']),
   nav('/student/library', 'Library', 'Student navigation', 'Library', 'المكتبة', ['Student dashboard', 'Sidebar']),
   nav('/student/certifications', 'Award', 'Student navigation', 'Certifications', 'الشهادات', ['Student dashboard', 'Sidebar']),
+  nav('/student/chat', 'MessageCircle', 'Student navigation', 'Chat', 'المحادثات', ['Student dashboard', 'Sidebar']),
 
   // Parent
   nav('/parent', 'LayoutDashboard', 'Parent navigation', 'Parent dashboard', 'لوحة ولي الأمر', ['Parent dashboard', 'Sidebar']),
@@ -186,6 +189,7 @@ export const UI_ICONS: UiIconDefinition[] = [
   nav('/parent/exams', 'ClipboardList', 'Parent navigation', 'Exams', 'الاختبارات', ['Parent dashboard', 'Sidebar']),
   nav('/parent/quizzes', 'ClipboardList', 'Parent navigation', 'Quizzes', 'الاختبارات القصيرة', ['Parent dashboard', 'Sidebar']),
   nav('/parent/reports', 'FileText', 'Parent navigation', 'Reports', 'التقارير', ['Parent dashboard', 'Sidebar']),
+  nav('/parent/chat', 'MessageCircle', 'Parent navigation', 'Chat', 'المحادثات', ['Parent dashboard', 'Sidebar']),
 ];
 
 export const UI_ICON_BY_KEY = new Map(UI_ICONS.map(icon => [icon.key, icon]));

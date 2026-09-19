@@ -14,5 +14,6 @@ return [
         'lessons' => 'lessons',
         'units' => 'units',
         'teachers' => 'teachers',
+        'chat' => 'attachment',
     ],
 ];

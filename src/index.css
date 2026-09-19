@@ -115,14 +115,14 @@
     --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-arabic: 'Hajeen', 'Cairo', sans-serif;
-    --app-text-scale: 106.25%;
-    --app-text-scale-ar: 112.5%;
-    --app-nav-font-scale: 100;
-    --app-nav-font-scale-ar: 100;
-    --app-button-font-scale: 100;
-    --app-button-font-scale-ar: 100;
-    --app-table-font-scale: 100;
-    --app-table-font-scale-ar: 100;
+    --app-text-scale: 17px;
+    --app-text-scale-ar: 18px;
+    --app-nav-font-scale: 16;
+    --app-nav-font-scale-ar: 16;
+    --app-button-font-scale: 14;
+    --app-button-font-scale-ar: 14;
+    --app-table-font-scale: 16;
+    --app-table-font-scale-ar: 16;
 
     --shadow-card: 0 1px 3px 0 hsl(220 25% 10% / 0.04), 0 1px 2px -1px hsl(220 25% 10% / 0.04);
     --shadow-elevated: 0 4px 6px -1px hsl(220 25% 10% / 0.06), 0 2px 4px -2px hsl(220 25% 10% / 0.04);
@@ -258,14 +258,14 @@
   }
 
   .app-nav-text {
-    font-size: calc(1rem * var(--app-nav-font-scale-active, 100) / 100);
+    font-size: calc(var(--app-nav-font-scale-active, 16) * 1px);
   }
 
   .app-btn-text {
-    font-size: calc(0.875rem * var(--app-button-font-scale-active, 100) / 100);
+    font-size: calc(var(--app-button-font-scale-active, 14) * 1px);
   }
 
   .app-table-text {
-    font-size: calc(1rem * var(--app-table-font-scale-active, 100) / 100);
+    font-size: calc(var(--app-table-font-scale-active, 16) * 1px);
   }
 }

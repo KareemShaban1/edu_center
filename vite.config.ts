@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => ({
         secure: false,
         cookieDomainRewrite: "",
         cookiePathRewrite: { "*": "/" },
+        timeout: 0,
         configure: (proxy) => {
           proxy.on("proxyReq", (proxyReq, req) => {
             const cookie = req.headers.cookie;

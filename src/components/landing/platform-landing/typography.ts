@@ -38,9 +38,10 @@ export function getLandingBreakpoint(width: number): Breakpoint {
 
 export function resolveLandingFonts(
   breakpoint: Breakpoint,
-  scalePercent = 100,
+  bodyPx = 18,
 ): Record<LandingFontKey, string> {
-  const factor = Math.max(80, Math.min(150, scalePercent)) / 100;
+  const clamped = Math.max(10, Math.min(40, Number(bodyPx) || 18));
+  const factor = clamped / LANDING_FONT_SIZES.body.desktop;
   const entries = Object.entries(LANDING_FONT_SIZES) as [LandingFontKey, SizeScale][];
   return Object.fromEntries(
     entries.map(([key, scale]) => [key, `${Math.round(scale[breakpoint] * factor)}px`]),

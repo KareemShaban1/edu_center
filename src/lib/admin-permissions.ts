@@ -56,6 +56,7 @@ const ADMIN_PATH_MODULES: Array<{ prefix: string; modules: string[] }> = [
   { prefix: '/admin/fees', modules: ['fees', 'fee'] },
   { prefix: '/admin/payments', modules: ['payments', 'payment'] },
   { prefix: '/admin/announcements', modules: ['announcements', 'announcement'] },
+  { prefix: '/admin/chat', modules: ['chat'] },
   { prefix: '/admin/notifications', modules: ['notifications', 'notification'] },
   { prefix: '/admin/whatsapp', modules: ['whatsapp'] },
   { prefix: '/admin/certifications', modules: ['certifications', 'certification'] },

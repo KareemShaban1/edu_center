@@ -14,6 +14,8 @@ interface BrandingContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
   save: (next: AppBranding) => Promise<AppBranding>;
+  uploadLogo: (file: File) => Promise<AppBranding>;
+  clearLogo: () => Promise<AppBranding>;
 }
 
 const BrandingContext = createContext<BrandingContextValue | null>(null);
@@ -48,14 +50,24 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     return apply(saved);
   }, [apply]);
 
+  const uploadLogo = useCallback(async (file: File) => {
+    const saved = await platformApi.uploadBrandLogo(file);
+    return apply(saved);
+  }, [apply]);
+
+  const clearLogo = useCallback(async () => {
+    const saved = await platformApi.clearBrandLogo();
+    return apply(saved);
+  }, [apply]);
+
   useEffect(() => {
     if (cached) applyBrandingToDocument(cached);
     void refresh();
   }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo(
-    () => ({ branding, loading, refresh, save }),
-    [branding, loading, refresh, save],
+    () => ({ branding, loading, refresh, save, uploadLogo, clearLogo }),
+    [branding, loading, refresh, save, uploadLogo, clearLogo],
   );
 
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;

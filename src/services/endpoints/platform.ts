@@ -4,6 +4,7 @@ import {
   BRANDING_STORAGE_KEY,
   DEFAULT_APP_BRANDING,
   normalizeBranding,
+  readCachedBranding,
   type AppBranding,
 } from '@/lib/branding';
 
@@ -363,6 +364,34 @@ export const platformApi = {
       return normalized;
     }
     return apiClient.put<AppBranding>('/platform/branding', normalized, false);
+  },
+
+  async uploadBrandLogo(file: File): Promise<AppBranding> {
+    if (USE_MOCK) {
+      await sleep(200);
+      const next = normalizeBranding({
+        ...readCachedBranding(),
+        logo_url: URL.createObjectURL(file),
+      });
+      localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    }
+    const form = new FormData();
+    form.append('logo', file);
+    return apiClient.upload<AppBranding>('/platform/branding/logo', form, false);
+  },
+
+  async clearBrandLogo(): Promise<AppBranding> {
+    if (USE_MOCK) {
+      await sleep(150);
+      const next = normalizeBranding({
+        ...readCachedBranding(),
+        logo_url: '',
+      });
+      localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    }
+    return apiClient.delete<AppBranding>('/platform/branding/logo', false);
   },
 
   async listGovernorates(): Promise<PlatformGovernorate[]> {

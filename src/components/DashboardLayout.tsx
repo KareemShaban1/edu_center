@@ -54,6 +54,7 @@ import HeaderUserMenu from '@/components/dashboard/HeaderUserMenu';
 import AdminTopbarQuickNav from '@/components/dashboard/AdminTopbarQuickNav';
 import { useUiIcons } from '@/contexts/UiIconsContext';
 import { navGroupIconKey, navPathIconKey } from '@/lib/lucide-icons';
+import { useChatUnread } from '@/hooks/use-chat-unread';
 
 type NavIcon = React.ElementType;
 
@@ -84,11 +85,16 @@ function flattenNavBlocks(blocks: NavBlock[]): NavLinkDef[] {
 function groupIdsActiveForPath(pathname: string, blocks: NavBlock[]): string[] {
   const ids: string[] = [];
   for (const b of blocks) {
-    if (b.type === 'group' && b.group.items.some(i => i.path === pathname)) {
+    if (b.type === 'group' && b.group.items.some(i => navPathIsActive(pathname, i.path))) {
       ids.push(b.group.id);
     }
   }
   return ids;
+}
+
+function navPathIsActive(pathname: string, navPath: string): boolean {
+  if (pathname === navPath) return true;
+  return navPath.endsWith('/chat') && pathname.startsWith(`${navPath}/`);
 }
 
 const platformNavBlocks: NavBlock[] = [
@@ -137,8 +143,19 @@ const platformNavBlocks: NavBlock[] = [
 
 const adminNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/admin', icon: LayoutDashboard } },
-  { type: 'link', item: { labelKey: 'nav.todos', path: '/admin/todos', icon: ListTodo } },
-  { type: 'link', item: { labelKey: 'nav.notes', path: '/admin/notes', icon: NotebookPen } },
+  {
+    type: 'group',
+    group: {
+      id: 'admin-todo',
+      labelKey: 'nav.group.adminTodo',
+      icon: ListTodo,
+      items: [
+        { labelKey: 'nav.todos', path: '/admin/todos', icon: ListTodo },
+        { labelKey: 'nav.notes', path: '/admin/notes', icon: NotebookPen },
+      ],
+    },
+  },
+
   {
     type: 'group',
     group: {
@@ -228,6 +245,7 @@ const adminNavBlocks: NavBlock[] = [
       icon: FolderOpen,
       items: [
         { labelKey: 'nav.announcements', path: '/admin/announcements', icon: MessageSquare },
+        { labelKey: 'nav.chat', path: '/admin/chat', icon: MessageCircle },
         { labelKey: 'nav.notifications', path: '/admin/notifications', icon: Bell },
         { labelKey: 'nav.whatsapp', path: '/admin/whatsapp', icon: MessageCircle },
         { labelKey: 'nav.certifications', path: '/admin/certifications', icon: Award },
@@ -267,9 +285,22 @@ const adminNavBlocks: NavBlock[] = [
 
 const teacherNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.dashboard', path: '/teacher', icon: LayoutDashboard } },
-  { type: 'link', item: { labelKey: 'nav.todos', path: '/teacher/todos', icon: ListTodo } },
-  { type: 'link', item: { labelKey: 'nav.notes', path: '/teacher/notes', icon: NotebookPen } },
-  {
+ 
+{
+    type: 'group',
+    group: {
+      id: 'teacher-todo',
+      labelKey: 'nav.group.teacherTodo',
+      icon: ListTodo,
+      items: [
+        { labelKey: 'nav.todos', path: '/teacher/todos', icon: ListTodo },
+  { labelKey: 'nav.notes', path: '/teacher/notes', icon: NotebookPen },
+
+      ],
+    },
+  },
+	
+{
     type: 'group',
     group: {
       id: 'teacher-teaching',
@@ -304,6 +335,7 @@ const teacherNavBlocks: NavBlock[] = [
       items: [{ labelKey: 'nav.library', path: '/teacher/library', icon: Library }],
     },
   },
+  { type: 'link', item: { labelKey: 'nav.chat', path: '/teacher/chat', icon: MessageCircle } },
 ];
 
 const studentNavBlocks: NavBlock[] = [
@@ -318,6 +350,7 @@ const studentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.homework', path: '/student/homework', icon: FileText } },
   { type: 'link', item: { labelKey: 'nav.library', path: '/student/library', icon: Library } },
   { type: 'link', item: { labelKey: 'nav.certifications', path: '/student/certifications', icon: Award } },
+  { type: 'link', item: { labelKey: 'nav.chat', path: '/student/chat', icon: MessageCircle } },
 ];
 
 const parentNavBlocks: NavBlock[] = [
@@ -328,6 +361,7 @@ const parentNavBlocks: NavBlock[] = [
   { type: 'link', item: { labelKey: 'nav.exams', path: '/parent/exams', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.quizzes', path: '/parent/quizzes', icon: ClipboardList } },
   { type: 'link', item: { labelKey: 'nav.reports', path: '/parent/reports', icon: FileText } },
+  { type: 'link', item: { labelKey: 'nav.chat', path: '/parent/chat', icon: MessageCircle } },
 ];
 
 
@@ -353,6 +387,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const chatEnabled = !!user && (user.portal_mode || user.id !== 0);
+  const { unreadCount: chatUnread } = useChatUnread(chatEnabled);
 
   const navBlocks = useMemo((): NavBlock[] => {
     const blocks = user ? roleNavBlocks[user.role] || [] : [];
@@ -385,7 +421,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!user) return null;
 
-  const currentNavLabel = flatNav.find(n => n.path === location.pathname)?.labelKey;
+  const currentNavLabel = flatNav.find(n => navPathIsActive(location.pathname, n.path))?.labelKey;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -411,7 +447,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {navBlocks.map(block => {
             if (block.type === 'link') {
               const item = block.item;
-              const isActive = location.pathname === item.path;
+              const isActive = navPathIsActive(location.pathname, item.path);
               const ItemIcon = resolveIcon(navPathIconKey(item.path), item.icon as LucideIcon);
               return (
                 <Link
@@ -426,14 +462,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   )}
                 >
                   <ItemIcon className="h-4 w-4 shrink-0" />
-                  {t(item.labelKey)}
+                  <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                  {item.path.endsWith('/chat') && chatUnread > 0 ? (
+                    <span className="rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                      {chatUnread > 9 ? '9+' : chatUnread}
+                    </span>
+                  ) : null}
                 </Link>
               );
             }
 
             const { group } = block;
             const GroupIcon = resolveIcon(navGroupIconKey(group.id), group.icon as LucideIcon);
-            const groupActive = group.items.some(i => i.path === location.pathname);
+            const groupActive = group.items.some(i => navPathIsActive(location.pathname, i.path));
             const open = openGroups[group.id] ?? false;
 
             return (
@@ -464,7 +505,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <div className="mt-1 space-y-0.5 ltr:pl-2 rtl:pr-2">
                     {group.items.map(sub => {
                       const SubIcon = resolveIcon(navPathIconKey(sub.path), sub.icon as LucideIcon);
-                      const subActive = location.pathname === sub.path;
+                      const subActive = navPathIsActive(location.pathname, sub.path);
                       return (
                         <Link
                           key={sub.path}
@@ -479,6 +520,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         >
                           <SubIcon className="h-4 w-4 shrink-0 opacity-80" />
                           <span className="truncate">{t(sub.labelKey)}</span>
+                          {sub.path.endsWith('/chat') && chatUnread > 0 ? (
+                            <span className="rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                              {chatUnread > 9 ? '9+' : chatUnread}
+                            </span>
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -540,6 +586,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </button> */}
 
             {user.role === 'admin' ? <AdminTopbarQuickNav /> : null}
+
+            {['admin', 'teacher', 'student', 'parent'].includes(user.role) ? (
+              <Link
+                to={`/${user.role}/chat`}
+                className="relative rounded-lg p-2 hover:bg-muted"
+                aria-label={t('nav.chat')}
+              >
+                <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                {chatUnread > 0 && (
+                  <span className="absolute top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ltr:right-1 rtl:left-1">
+                    {chatUnread > 9 ? '9+' : chatUnread}
+                  </span>
+                )}
+              </Link>
+            ) : null}
 
             <NotificationBell />
             <HeaderUserMenu

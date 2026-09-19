@@ -25,3 +25,4 @@ export { adminLandingApi, publicLandingApi } from './admin-landing';
 export { adminCertificationsApi } from './admin-certifications';
 export { configApi } from './config';
 export type { AppConfig, TenancyMode } from './config';
+export { chatApi } from './chat';

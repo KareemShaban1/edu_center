@@ -170,6 +170,7 @@ export const MANUAL_TEST_PLAN: ManualTestSection[] = [
     titleAr: 'الإدارة — التواصل والشهادات',
     cases: [
       c('ADM-ANN-01', 'Announcements', 'الإعلانات', 'Create / edit / delete an announcement', 'أنشئ إعلاناً', 'Listed; media optional', 'يظهر في القائمة'),
+      c('ADM-CHAT-01', 'Chat', 'المحادثات', 'Open /admin/chat, start a DM or group, send text/emoji/image/voice', 'افتح المحادثات وأرسل رسالة', 'Message appears for the recipient', 'تظهر الرسالة للمستلم'),
       c('ADM-NTF-01', 'Send notification', 'إرسال إشعار', 'Send from /admin/notifications', 'أرسل إشعاراً', 'Admin list or recipients update', 'يظهر للمستلمين'),
       c('ADM-WA-01', 'WhatsApp templates', 'قوالب واتساب', 'CRUD templates', 'أنشئ قالباً', 'Template saved', 'يُحفظ القالب'),
       c('ADM-WA-02', 'WhatsApp send/status', 'إرسال واتساب', 'Prepare/send or check status', 'جهّز أو أرسل', 'No 500; clear error if unconfigured', 'لا خطأ 500'),
@@ -226,6 +227,7 @@ export const MANUAL_TEST_PLAN: ManualTestSection[] = [
       c('TCH-08', 'Teacher homework', 'واجبات المعلم', 'Open homework', 'افتح الواجبات', 'Assigned homework visible', 'الواجبات المعيَّنة تظهر'),
       c('TCH-09', 'Teacher library', 'مكتبة المعلم', 'Open library', 'افتح المكتبة', 'Items visible', 'العناصر تظهر'),
       c('TCH-10', 'Teacher personal items', 'مهام وملاحظات المعلم', 'Todos and notes', 'المهام والملاحظات', 'Not shared with other users', 'غير مشتركة مع الآخرين'),
+      c('TCH-11', 'Teacher chat', 'محادثات المعلم', 'Open /teacher/chat and message admin/student/parent', 'افتح المحادثات', 'Only center contacts', 'جهات المركز فقط'),
     ],
   },
   {
@@ -245,6 +247,7 @@ export const MANUAL_TEST_PLAN: ManualTestSection[] = [
       c('STU-09', 'Student library', 'مكتبة الطالب', 'Open library', 'افتح المكتبة', 'Allowed items open', 'العناصر المسموحة تفتح'),
       c('STU-10', 'Student certificates', 'شهادات الطالب', 'Open certifications', 'افتح الشهادات', 'Issued certificates listed', 'الشهادات الصادرة تظهر'),
       c('STU-11', 'Student personal items', 'مهام وملاحظات الطالب', 'Todos and notes', 'المهام والملاحظات', 'Personal only', 'شخصية فقط'),
+      c('STU-12', 'Student chat', 'محادثات الطالب', 'Open /student/chat and message admin/teacher', 'افتح المحادثات', 'Cannot message students or parents', 'لا يمكن مراسلة الطلاب أو أولياء الأمور'),
     ],
   },
   {
@@ -259,6 +262,7 @@ export const MANUAL_TEST_PLAN: ManualTestSection[] = [
       c('PAR-04', 'Parent exams/quizzes', 'درجات الأبناء', 'Open exams and quizzes', 'افتح الاختبارات', 'Degrees per child', 'درجات كل ابن'),
       c('PAR-05', 'Parent fees', 'رسوم الأبناء', 'Open fees', 'افتح الرسوم', 'Fees/payments for linked children', 'رسوم الأبناء المرتبطين'),
       c('PAR-06', 'Parent reports', 'تقارير ولي الأمر', 'Open reports', 'افتح التقارير', 'Views load', 'الصفحات تفتح'),
+      c('PAR-07', 'Parent chat', 'محادثات ولي الأمر', 'Open /parent/chat and message admin/teacher', 'افتح المحادثات', 'Cannot create groups', 'لا يمكن إنشاء مجموعات'),
     ],
   },
   {

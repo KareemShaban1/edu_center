@@ -112,6 +112,7 @@ import ParentFees from "@/pages/parent/ParentFees";
 import ParentReports from "@/pages/parent/ParentReports";
 import PersonalTodosPage from "@/pages/personal/PersonalTodosPage";
 import PersonalNotesPage from "@/pages/personal/PersonalNotesPage";
+import ChatPage from "@/pages/chat/ChatPage";
 
 // Platform
 import PlatformDashboard from "@/pages/platform/PlatformDashboard";
@@ -199,6 +200,8 @@ const App = () => (
               <Route path="/admin/library" element={<ProtectedRoute allowedRoles={['admin']}><AdminLibrary /></ProtectedRoute>} />
               <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnnouncements /></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminNotifications /></ProtectedRoute>} />
+              <Route path="/admin/chat" element={<ProtectedRoute allowedRoles={['admin']}><ChatPage /></ProtectedRoute>} />
+              <Route path="/admin/chat/:conversationId" element={<ProtectedRoute allowedRoles={['admin']}><ChatPage /></ProtectedRoute>} />
               <Route path="/admin/whatsapp" element={<ProtectedRoute allowedRoles={['admin']}><AdminWhatsAppSend /></ProtectedRoute>} />
               <Route path="/admin/whatsapp/templates" element={<ProtectedRoute allowedRoles={['admin']}><AdminWhatsAppTemplates /></ProtectedRoute>} />
               <Route path="/admin/certifications" element={<ProtectedRoute allowedRoles={['admin']}><AdminCertificationsIssue /></ProtectedRoute>} />
@@ -242,6 +245,8 @@ const App = () => (
               <Route path="/teacher/library" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLibrary /></ProtectedRoute>} />
               <Route path="/teacher/todos" element={<ProtectedRoute allowedRoles={['teacher']}><PersonalTodosPage /></ProtectedRoute>} />
               <Route path="/teacher/notes" element={<ProtectedRoute allowedRoles={['teacher']}><PersonalNotesPage /></ProtectedRoute>} />
+              <Route path="/teacher/chat" element={<ProtectedRoute allowedRoles={['teacher']}><ChatPage /></ProtectedRoute>} />
+              <Route path="/teacher/chat/:conversationId" element={<ProtectedRoute allowedRoles={['teacher']}><ChatPage /></ProtectedRoute>} />
 
               {/* Student Routes */}
               <Route path="/student" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentDashboard /></ProtectedRoute>} />
@@ -258,6 +263,8 @@ const App = () => (
               <Route path="/student/certifications" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><StudentCertifications /></ProtectedRoute>} />
               <Route path="/student/todos" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><PersonalTodosPage /></ProtectedRoute>} />
               <Route path="/student/notes" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><PersonalNotesPage /></ProtectedRoute>} />
+              <Route path="/student/chat" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><ChatPage /></ProtectedRoute>} />
+              <Route path="/student/chat/:conversationId" element={<ProtectedRoute allowedRoles={['student']} loginPath="/student/login"><ChatPage /></ProtectedRoute>} />
 
               {/* Parent Routes */}
               <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentDashboard /></ProtectedRoute>} />
@@ -267,6 +274,8 @@ const App = () => (
               <Route path="/parent/quizzes" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentQuizzes /></ProtectedRoute>} />
               <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentFees /></ProtectedRoute>} />
               <Route path="/parent/reports" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ParentReports /></ProtectedRoute>} />
+              <Route path="/parent/chat" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ChatPage /></ProtectedRoute>} />
+              <Route path="/parent/chat/:conversationId" element={<ProtectedRoute allowedRoles={['parent']} loginPath="/parent/login"><ChatPage /></ProtectedRoute>} />
 
               {/* Platform Admin Routes */}
               <Route path="/platform" element={<ProtectedRoute allowedRoles={['super_admin', 'platform_admin']} loginPath="/platform/login"><PlatformDashboard /></ProtectedRoute>} />

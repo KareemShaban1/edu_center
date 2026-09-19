@@ -63,6 +63,9 @@ return [
         'role_has_permissions',
         'failed_jobs',
         'password_resets',
+        'chat_conversations',
+        'chat_participants',
+        'chat_messages',
     ],
 
     /** Tables scoped by center_memberships morph (user_id + user_type). */
@@ -124,6 +127,9 @@ return [
         'landing_page_revisions',
         'landing_page_analytics',
         'landing_media',
+        'chat_conversations',
+        'chat_participants',
+        'chat_messages',
         'media',
         'notifications',
         'model_has_roles',
@@ -227,5 +233,7 @@ return [
             'role_id' => 'roles',
             'permission_id' => 'permissions',
         ],
+        'chat_participants' => ['conversation_id' => 'chat_conversations'],
+        'chat_messages' => ['conversation_id' => 'chat_conversations'],
     ],
 ];

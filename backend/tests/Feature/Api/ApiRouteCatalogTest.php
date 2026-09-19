@@ -18,5 +18,6 @@ class ApiRouteCatalogTest extends TestCase
         $this->assertTrue($uris->contains('api/parent/bootstrap'));
         $this->assertTrue($uris->contains('api/platform/centers'));
         $this->assertTrue($uris->contains('api/public/centers'));
+        $this->assertTrue($uris->contains('api/chat/conversations'));
     }
 }

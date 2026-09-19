@@ -3,11 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GraduationCap, ArrowLeft, Check, Languages } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useBranding } from '@/contexts/BrandingContext';
 import { cn } from '@/lib/utils';
+import { resolveAssetUrl } from '@/lib/asset-url';
 import { getTenantLoginPath, getRoleLoginPath, getCenterRegisterPath } from '@/lib/tenant-routes';
 import { dashboardPreviews } from '@/components/landing/LandingDashboardPreviews';
 import { navLinks, heroBadges, features, roles, whyUs, footerTrust } from './constants';
-import { PlatformLandingHeroIllustration } from './PlatformLandingHeroIllustration';
 import PlatformLandingStats from './PlatformLandingStats';
 import PlatformLandingWhatsAppFloat from './PlatformLandingWhatsAppFloat';
 import { FeatureIconCircle } from './EgyptLandmarkIllustration';
@@ -16,7 +17,6 @@ import { useLandingBrand } from './useLandingBrand';
 import {
   heroTextReveal,
   heroTextRevealRtl,
-  heroIllustration,
   heroFloat,
   sectionHeading,
   staggerContainer,
@@ -39,6 +39,7 @@ export function PlatformLandingPage() {
   const { locale, setLocale, dir, t } = useLocale();
   const { fonts } = usePlatformLandingFonts();
   const brand = useLandingBrand();
+  const { branding } = useBranding();
   const ctaButtonPulse = useMemo(() => getCtaButtonPulse(brand.red), [brand.red]);
   const isAr = locale === 'ar';
   const [scrolled, setScrolled] = useState(false);
@@ -52,7 +53,32 @@ export function PlatformLandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const brandName = isAr ? 'منصتي التعليمية' : t('app.name');
+  const brandName = isAr
+    ? (branding.brand_name_ar || t('app.name'))
+    : (branding.brand_name_en || t('app.name'));
+  const logoSrc = resolveAssetUrl(branding.logo_url);
+
+  const BrandMark = ({ size = 'md' }: { size?: 'sm' | 'md' }) => {
+    const box = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
+    const icon = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
+    if (logoSrc) {
+      return (
+        <img
+          src={logoSrc}
+          alt=""
+          className={cn(box, 'rounded-xl object-contain shadow-md')}
+        />
+      );
+    }
+    return (
+      <div
+        className={cn('flex items-center justify-center rounded-xl text-white shadow-md', box)}
+        style={{ backgroundColor: brand.red }}
+      >
+        <GraduationCap className={icon} aria-hidden />
+      </div>
+    );
+  };
 
   return (
     <div
@@ -78,12 +104,7 @@ export function PlatformLandingPage() {
             whileHover={{ scale: 1.03 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md"
-              style={{ backgroundColor: brand.red }}
-            >
-              <GraduationCap className="h-5 w-5" aria-hidden />
-            </div>
+            <BrandMark />
             <span className="font-bold tracking-tight" style={{ fontSize: fonts.brand }}>
               {brandName}
             </span>
@@ -181,7 +202,7 @@ export function PlatformLandingPage() {
               style={{ color: brand.red, fontSize: fonts.heroTitle }}
             >
               {isAr
-                ? 'منصة تعليمية متكاملة للمراكز التعليمية في مصر'
+                ? 'منصة لأدارة المراكز التعليمية'
                 : 'An integrated educational platform for centers in Egypt'}
             </motion.h1>
 
@@ -243,11 +264,15 @@ export function PlatformLandingPage() {
             </motion.div>
           </motion.div>
 
-          <motion.div initial="hidden" animate="visible" variants={heroIllustration} className="relative">
-            <motion.div animate={heroFloat}>
-              <PlatformLandingHeroIllustration />
-            </motion.div>
-          </motion.div>
+          <div className="relative">
+            <img
+              src="/images/hero_img_2.png"
+              alt="Egypt Landmark"
+              width={500}
+              height={500}
+              className="mx-auto h-auto w-full max-w-[500px] object-contain"
+            />
+          </div>
         </div>
       </section>
 
@@ -566,12 +591,7 @@ export function PlatformLandingPage() {
       >
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-              style={{ backgroundColor: brand.red }}
-            >
-              <GraduationCap className="h-4 w-4" aria-hidden />
-            </div>
+            <BrandMark size="sm" />
             <span className="font-semibold" style={{ fontSize: fonts.footerBrand }}>
               {brandName}
             </span>

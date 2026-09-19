@@ -64,6 +64,7 @@ Route::middleware([
     require __DIR__ . '/api/teacher.php';
     require __DIR__ . '/api/student.php';
     require __DIR__ . '/api/parent.php';
+    require __DIR__ . '/api/chat.php';
     Route::get('/platform/centers', [PlatformCenterApiController::class, 'index']);
     Route::post('/platform/centers', [PlatformCenterApiController::class, 'store']);
     Route::get('/platform/centers/{id}', [PlatformCenterApiController::class, 'show']);
@@ -76,6 +77,8 @@ Route::middleware([
     Route::delete('/platform/tenants/{id}', [PlatformCenterApiController::class, 'destroy']);
     Route::get('/platform/branding', [PlatformBrandingApiController::class, 'show']);
     Route::put('/platform/branding', [PlatformBrandingApiController::class, 'update']);
+    Route::post('/platform/branding/logo', [PlatformBrandingApiController::class, 'uploadLogo']);
+    Route::delete('/platform/branding/logo', [PlatformBrandingApiController::class, 'clearLogo']);
 
     require __DIR__ . '/api/platform.php';
 

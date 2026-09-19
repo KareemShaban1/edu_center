@@ -13,7 +13,7 @@ export function usePlatformLandingFonts() {
   const scale = useMemo(() => {
     const raw = locale === 'ar' ? branding.landing_text_scale_ar : branding.landing_text_scale;
     const n = Number.parseFloat(raw);
-    return Number.isNaN(n) ? 100 : n;
+    return Number.isNaN(n) ? 18 : n;
   }, [branding.landing_text_scale, branding.landing_text_scale_ar, locale]);
 
   const [breakpoint, setBreakpoint] = useState(() =>

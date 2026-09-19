@@ -48,6 +48,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'settings' => 'setting',
         'todos' => 'todo',
         'notes' => 'note',
+        'chat' => 'chat',
     ];
 
     public function run()
